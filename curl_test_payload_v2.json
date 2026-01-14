@@ -1,0 +1,13 @@
+{
+  "type": "BUY",
+  "asset": "USDC",
+  "fiat": "GHS",
+  "price": 1.5,
+  "minLimit": 5000,
+  "maxLimit": 8000,
+  "availableAmount": 4000,
+  "paymentMethods": ["BANK_TRANSFER"],
+  "timeLimit": 30,
+  "instructions": "hhhhhhhhhhhhhhhhh",
+  "autoReply": "send money "
+}
