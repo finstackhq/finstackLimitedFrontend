@@ -38,6 +38,9 @@ export default function SettingsPage() {
   })
   
   const [paymentMethods, setPaymentMethods] = useState<any[]>([])
+  
+  // KYC status from profile API
+  const [kycStatus, setKycStatus] = useState<string>('none')
 
   // Fetch profile data
   useEffect(() => {
@@ -57,6 +60,9 @@ export default function SettingsPage() {
           email: data.data.email || "",
           phoneNumber: data.data.phoneNumber || "",
         })
+        // Capture KYC status from profile response
+        const status = data.data.kycStatus || data.data.kyc?.status || 'none'
+        setKycStatus(status.toLowerCase())
       }
     } catch (error) {
       console.error('Failed to fetch profile:', error)
@@ -206,8 +212,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Tabs */}
+        {/* Dynamic grid columns based on whether KYC tab is shown */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
-          <TabsList className="grid w-full grid-cols-4 h-auto gap-1 md:gap-2 bg-transparent p-0">
+          <TabsList className={`grid w-full h-auto gap-1 md:gap-2 bg-transparent p-0 ${kycStatus === 'approved' ? 'grid-cols-3' : 'grid-cols-4'}`}>
             <TabsTrigger
               value="profile"
               className="data-[state=active]:bg-blue-600 data-[state=active]:text-white border border-gray-200 data-[state=active]:border-blue-600 text-xs md:text-sm px-2 py-2 md:px-4 md:py-2.5"
@@ -215,13 +222,21 @@ export default function SettingsPage() {
               <User className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
               <span className="hidden md:inline">Profile</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="kyc"
-              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white border border-gray-200 data-[state=active]:border-blue-600 text-xs md:text-sm px-2 py-2 md:px-4 md:py-2.5"
-            >
-              <Upload className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-              <span className="hidden md:inline">KYC</span>
-            </TabsTrigger>
+            {/* Hide KYC tab for verified users */}
+            {kycStatus !== 'approved' && (
+              <TabsTrigger
+                value="kyc"
+                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white border border-gray-200 data-[state=active]:border-blue-600 text-xs md:text-sm px-2 py-2 md:px-4 md:py-2.5 relative"
+              >
+                <Upload className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                <span className="hidden md:inline">KYC</span>
+                {kycStatus === 'pending' && (
+                  <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
+                    Pending
+                  </span>
+                )}
+              </TabsTrigger>
+            )}
             <TabsTrigger
               value="notifications"
               className="data-[state=active]:bg-blue-600 data-[state=active]:text-white border border-gray-200 data-[state=active]:border-blue-600 text-xs md:text-sm px-2 py-2 md:px-4 md:py-2.5"

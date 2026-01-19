@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
 // GET /api/fstack/deposit - Proxy to backend deposit endpoint
+// Supports ?type=wallet to fetch virtual account details from getWallet endpoint
 export async function GET(request: NextRequest) {
     try {
         const baseUrl = process.env.FINSTACK_BACKEND_API_URL
@@ -10,9 +11,17 @@ export async function GET(request: NextRequest) {
         }
 
         const { searchParams } = new URL(request.url)
+        const type = searchParams.get('type')
         const currency = searchParams.get('currency') || 'USDC'
 
-        const endpoint = `${baseUrl}deposit?currency=${encodeURIComponent(currency)}`
+        // If type=wallet, fetch virtual account details from getWallet endpoint
+        let endpoint: string
+        if (type === 'wallet') {
+            endpoint = `${baseUrl}getWallet`
+        } else {
+            endpoint = `${baseUrl}deposit?currency=${encodeURIComponent(currency)}`
+        }
+
         const token = request.cookies.get('access_token')?.value
 
         const res = await fetch(endpoint, {
@@ -32,7 +41,7 @@ export async function GET(request: NextRequest) {
             data = {}
         }
 
-        console.log('[fstack/deposit] GET status:', res.status, 'currency:', currency)
+        console.log('[fstack/deposit] GET status:', res.status, type === 'wallet' ? 'type: wallet' : `currency: ${currency}`)
 
         // Auto-logout on unauthorized
         if (res.status === 401) {

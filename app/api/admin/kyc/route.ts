@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
           sameSite: 'lax',
           secure: process.env.NODE_ENV === 'production',
         })
-      } catch {}
+      } catch { }
       return out
     }
     return NextResponse.json(data, { status: res.status })
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PUT /api/admin/kyc -> proxy to backend updateKyc with { id, status }
+// PUT /api/admin/kyc -> proxy to backend updateKyc with { id, status, reason? }
 export async function PUT(request: NextRequest) {
   const baseUrl = process.env.FINSTACK_BACKEND_API_URL
   const endpoint = baseUrl ? `${baseUrl}admin/updateKyc` : undefined
@@ -52,6 +52,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     const id = body?.id
     const status = body?.status
+    const reason = body?.reason // Optional rejection reason
     if (!id || !status) {
       return NextResponse.json({ error: 'id and status are required' }, { status: 400 })
     }
@@ -62,18 +63,25 @@ export async function PUT(request: NextRequest) {
     }
 
     const token = request.cookies.get('access_token')?.value
+
+    // Build request body, include reason if provided
+    const requestBody: { id: string; status: string; reason?: string } = { id, status }
+    if (reason) {
+      requestBody.reason = reason
+    }
+
     const res = await fetch(endpoint, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ id, status }),
+      body: JSON.stringify(requestBody),
       cache: 'no-store',
     })
 
     const data = await res.json().catch(() => ({ message: 'No JSON body' }))
-    console.log('[admin/kyc] updateKyc status:', res.status, ' id=', id, ' status=', status)
+    console.log('[admin/kyc] updateKyc status:', res.status, ' id=', id, ' status=', status, reason ? ` reason=${reason}` : '')
     // If unauthorized, clear cookies so admin is logged out automatically
     if (res.status === 401) {
       const out = NextResponse.json(data, { status: 401 })
@@ -86,7 +94,7 @@ export async function PUT(request: NextRequest) {
           sameSite: 'lax',
           secure: process.env.NODE_ENV === 'production',
         })
-      } catch {}
+      } catch { }
       return out
     }
     return NextResponse.json(data, { status: res.status })
