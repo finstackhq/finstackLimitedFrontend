@@ -96,8 +96,8 @@ export default function UsersPage() {
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      const response = await fetch('/api/admin/users/role', {
-        method: 'PATCH',
+      const response = await fetch('/api/admin/update-role', {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, role: newRole }),
       });

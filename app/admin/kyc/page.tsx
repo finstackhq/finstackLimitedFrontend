@@ -116,7 +116,7 @@ export default function KYCPage() {
       const response = await fetch('/api/admin/kyc', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: 'REJECTED', reason }),
+        body: JSON.stringify({ id, status: 'REJECTED', rejectionReason: reason }),
       });
       if (response.ok) {
         setRequests(prev => prev.filter(r => r.id !== id));

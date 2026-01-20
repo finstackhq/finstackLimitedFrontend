@@ -9,7 +9,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Eye, UserX, UserCheck, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Eye, UserX, UserCheck, Trash2, ArrowRightLeft } from 'lucide-react';
 import { UserDetailsModal } from './UserDetailsModal';
 
 interface User {
@@ -186,6 +186,13 @@ export function UsersTable({ users, onAction, onRoleChange }: UsersTableProps) {
                       <DropdownMenuItem onClick={() => handleViewUser(user)}>
                         <Eye className="w-4 h-4 mr-2" />
                         View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleViewUser(user)}
+                        className="text-blue-600"
+                      >
+                        <ArrowRightLeft className="w-4 h-4 mr-2" />
+                        Update User Role
                       </DropdownMenuItem>
                       {user.status === 'active' ? (
                         <DropdownMenuItem 

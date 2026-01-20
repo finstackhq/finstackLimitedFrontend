@@ -29,7 +29,7 @@ export function WalletCard({ wallet }: WalletCardProps) {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-foreground">{wallet.type} Wallet</h3>
-            <p className="text-sm text-gray-600">{wallet.type === "NGN" ? "9PSB Account" : "Blockradar Wallet"}</p>
+            <p className="text-sm text-gray-600">{wallet.type === "NGN" ? "Naira Wallet" : "Crypto Wallet"}</p>
           </div>
           <div className="w-12 h-12 rounded-full bg-[#2F67FA]/10 flex items-center justify-center">
             <span className="text-xl font-bold text-[#2F67FA]">{wallet.type === "NGN" ? "₦" : "$"}</span>

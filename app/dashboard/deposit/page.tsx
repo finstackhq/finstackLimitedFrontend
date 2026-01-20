@@ -352,7 +352,7 @@ export default function DepositPage() {
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Provider</Label>
-                    <p className="text-sm font-medium text-foreground">{depositData.provider}</p>
+                    <p className="text-sm font-medium text-foreground">FINSTACK</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Wallet Address</Label>
@@ -459,7 +459,7 @@ export default function DepositPage() {
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Account Name</Label>
-                    <p className="text-sm font-medium text-foreground">{ngnWallet.accountName}</p>
+                    <p className="text-sm font-medium text-foreground uppercase">{ngnWallet.accountName}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Account Number</Label>

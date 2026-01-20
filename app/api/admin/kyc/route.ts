@@ -52,7 +52,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     const id = body?.id
     const status = body?.status
-    const reason = body?.reason // Optional rejection reason
+    const rejectionReason = body?.rejectionReason // Optional rejection reason
     if (!id || !status) {
       return NextResponse.json({ error: 'id and status are required' }, { status: 400 })
     }
@@ -64,10 +64,10 @@ export async function PUT(request: NextRequest) {
 
     const token = request.cookies.get('access_token')?.value
 
-    // Build request body, include reason if provided
-    const requestBody: { id: string; status: string; reason?: string } = { id, status }
-    if (reason) {
-      requestBody.reason = reason
+    // Build request body, include rejectionReason if provided
+    const requestBody: { id: string; status: string; rejectionReason?: string } = { id, status }
+    if (rejectionReason) {
+      requestBody.rejectionReason = rejectionReason
     }
 
     const res = await fetch(endpoint, {
@@ -81,7 +81,7 @@ export async function PUT(request: NextRequest) {
     })
 
     const data = await res.json().catch(() => ({ message: 'No JSON body' }))
-    console.log('[admin/kyc] updateKyc status:', res.status, ' id=', id, ' status=', status, reason ? ` reason=${reason}` : '')
+    console.log('[admin/kyc] updateKyc status:', res.status, ' id=', id, ' status=', status, rejectionReason ? ` rejectionReason=${rejectionReason}` : '')
     // If unauthorized, clear cookies so admin is logged out automatically
     if (res.status === 401) {
       const out = NextResponse.json(data, { status: 401 })
