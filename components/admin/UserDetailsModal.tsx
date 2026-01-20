@@ -108,11 +108,19 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
   };
 
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-    }).format(amount);
+    // Handle invalid or missing currency codes
+    const validCurrency = currency && /^[A-Z]{3}$/i.test(currency) ? currency.toUpperCase() : 'USD';
+    
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: validCurrency,
+        minimumFractionDigits: 2,
+      }).format(amount);
+    } catch {
+      // Fallback for any other issues
+      return `${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${validCurrency}`;
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -167,12 +175,8 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
     }
   };
 
-  // Mock transaction data if not provided
-  const userTransactions = transactions.length > 0 ? transactions : [
-    { id: '1', type: 'Deposit', amount: 5000, currency: user.currency, date: new Date().toISOString(), status: 'completed' },
-    { id: '2', type: 'Withdrawal', amount: 1000, currency: user.currency, date: new Date(Date.now() - 86400000).toISOString(), status: 'completed' },
-    { id: '3', type: 'P2P Trade', amount: 2500, currency: user.currency, date: new Date(Date.now() - 172800000).toISOString(), status: 'completed' },
-  ];
+  // Use provided transactions or show empty state
+  const userTransactions = transactions;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -447,6 +451,28 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
             <div className="space-y-3">
               <p className="text-sm font-medium text-gray-900">Select New Role:</p>
               
+              <Button
+                onClick={() => handleRoleChange('admin')}
+                disabled={changingRole || user?.role === 'admin'}
+                className="w-full justify-start h-auto p-4 bg-white border-2 border-gray-200 hover:border-[#2F67FA] hover:bg-blue-50 text-left"
+                variant="outline"
+              >
+                <div className="flex items-start gap-3 w-full">
+                  <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900">Admin</p>
+                    <p className="text-xs text-gray-600">
+                      Full administrative access to manage users, settings, and system
+                    </p>
+                  </div>
+                  {user?.role === 'admin' && (
+                    <Badge className="bg-green-100 text-green-800 text-xs">Current</Badge>
+                  )}
+                </div>
+              </Button>
+
               <Button
                 onClick={() => handleRoleChange('merchant')}
                 disabled={changingRole || user?.role === 'merchant'}

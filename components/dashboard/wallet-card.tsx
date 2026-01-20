@@ -7,8 +7,14 @@ import { Copy, Check, ArrowDownToLine, ArrowUpFromLine } from "lucide-react"
 import Link from "next/link"
 import type { Wallet } from "@/lib/mock-api"
 
+// Extended wallet type that includes bank details
+interface WalletWithBankDetails extends Wallet {
+  bankName?: string
+  accountName?: string
+}
+
 interface WalletCardProps {
-  wallet: Wallet
+  wallet: WalletWithBankDetails
 }
 
 export function WalletCard({ wallet }: WalletCardProps) {
@@ -30,9 +36,9 @@ export function WalletCard({ wallet }: WalletCardProps) {
           <div className="flex-1">
             <h3 className="text-sm md:text-base lg:text-lg font-semibold text-foreground truncate">{wallet.type} Wallet</h3>
              <p className="text-xs md:text-sm text-gray-600">
-               {wallet.type === "NGN" ? "9PSB Account" : 
+               {wallet.type === "NGN" ? "Naira Wallet" : 
                 wallet.type === "CNGN" ? "Crypto Naira Wallet" : 
-                "Blockradar Wallet"}
+                "Crypto Wallet"}
              </p>
           </div>
           <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#2F67FA]/10 flex items-center justify-center flex-shrink-0 ml-2">
@@ -54,8 +60,22 @@ export function WalletCard({ wallet }: WalletCardProps) {
           </p>
         </div>
 
-        {/* Account Info */}
+        {/* Account Info - Enhanced for NGN with bank details */}
         <div className="space-y-1.5">
+          {/* For NGN, show bank name and account name if available */}
+          {wallet.type === "NGN" && wallet.bankName && (
+            <div className="mb-2">
+              <p className="text-xs md:text-sm font-medium text-gray-600">Bank Name</p>
+              <p className="text-sm md:text-base font-semibold text-foreground">{wallet.bankName}</p>
+            </div>
+          )}
+          {wallet.type === "NGN" && wallet.accountName && (
+            <div className="mb-2">
+              <p className="text-xs md:text-sm font-medium text-gray-600">Account Name</p>
+              <p className="text-sm md:text-base font-semibold text-foreground uppercase">{wallet.accountName}</p>
+            </div>
+          )}
+          
           <p className="text-xs md:text-sm font-medium text-gray-600">
             {wallet.type === "NGN" ? "Account Number" : "Wallet Address"}
           </p>

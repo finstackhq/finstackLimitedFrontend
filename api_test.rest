@@ -1,3 +1,11 @@
 
+
+
+Get Admin Users
+GET https://finstack-backend-api.onrender.com/api/admin/users
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5NmEyNmU0ZjVjZmMzMjI5YjE2Y2M1ZCIsImVtYWlsIjoiaXdlZ2J1dmljdG9ydnBAZ21haWwuY29tIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzY4ODgzNDkwLCJleHAiOjE3Njg4ODcwOTB9.WZpKUu963-D8dLBC22KuYvV-bi3Fo__bhNO6t67jB0I
+
+###
+
 GET https://finstack-backend-api.onrender.com/api/orders?status=PENDING_PAYMENT
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZGZiODBmNTdjZTM2ZWUwMmU4MWU0YSIsImVtYWlsIjoiaXdlZ2J1dmljdG9yMDIwQGdtYWlsLmNvbSIsInJvbGUiOiJtZXJjaGFudCIsImlhdCI6MTc2NzIyNjUxNywiZXhwIjoxNzY3MjMwMTE3fQ.Kvyz6IYgyLD7RG1kviUilYTGa8f3hSoY9ZBd0EvjD90

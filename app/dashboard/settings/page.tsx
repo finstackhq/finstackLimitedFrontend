@@ -39,8 +39,9 @@ export default function SettingsPage() {
   
   const [paymentMethods, setPaymentMethods] = useState<any[]>([])
   
-  // KYC status from profile API
-  const [kycStatus, setKycStatus] = useState<string>('none')
+  // KYC verification status from profile API
+  // Can be: false (not submitted), "pending" (under review), true (approved)
+  const [kycVerified, setKycVerified] = useState<boolean | string | null>(null)
 
   // Fetch profile data
   useEffect(() => {
@@ -60,9 +61,10 @@ export default function SettingsPage() {
           email: data.data.email || "",
           phoneNumber: data.data.phoneNumber || "",
         })
-        // Capture KYC status from profile response
-        const status = data.data.kycStatus || data.data.kyc?.status || 'none'
-        setKycStatus(status.toLowerCase())
+        // Capture kycVerified from profile response
+        // kycVerified can be: false (not submitted/rejected), "pending" (under review), true (approved)
+        const verified = data.data.kycVerified
+        setKycVerified(verified)
       }
     } catch (error) {
       console.error('Failed to fetch profile:', error)
@@ -214,7 +216,7 @@ export default function SettingsPage() {
         {/* Tabs */}
         {/* Dynamic grid columns based on whether KYC tab is shown */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
-          <TabsList className={`grid w-full h-auto gap-1 md:gap-2 bg-transparent p-0 ${kycStatus === 'approved' ? 'grid-cols-3' : 'grid-cols-4'}`}>
+          <TabsList className={`grid w-full h-auto gap-1 md:gap-2 bg-transparent p-0 ${kycVerified === true ? 'grid-cols-3' : 'grid-cols-4'}`}>
             <TabsTrigger
               value="profile"
               className="data-[state=active]:bg-blue-600 data-[state=active]:text-white border border-gray-200 data-[state=active]:border-blue-600 text-xs md:text-sm px-2 py-2 md:px-4 md:py-2.5"
@@ -222,15 +224,15 @@ export default function SettingsPage() {
               <User className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
               <span className="hidden md:inline">Profile</span>
             </TabsTrigger>
-            {/* Hide KYC tab for verified users */}
-            {kycStatus !== 'approved' && (
+            {/* Hide KYC tab for verified users (kycVerified === true) */}
+            {kycVerified !== true && (
               <TabsTrigger
                 value="kyc"
                 className="data-[state=active]:bg-blue-600 data-[state=active]:text-white border border-gray-200 data-[state=active]:border-blue-600 text-xs md:text-sm px-2 py-2 md:px-4 md:py-2.5 relative"
               >
                 <Upload className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
                 <span className="hidden md:inline">KYC</span>
-                {kycStatus === 'pending' && (
+                {kycVerified === 'pending' && (
                   <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
                     Pending
                   </span>
@@ -357,11 +359,35 @@ export default function SettingsPage() {
 
           {/* KYC Tab */}
           <TabsContent value="kyc" className="space-y-4 md:space-y-6">
-            <div className="mb-4">
-              <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-1">KYC Verification</h2>
-              <p className="text-xs md:text-sm text-gray-600">Complete all steps to verify your identity and unlock full platform features</p>
-            </div>
-            <KYCForm />
+            {kycVerified === 'pending' ? (
+              /* KYC Under Review - Pending State */
+              <Card className="p-6 md:p-8 border-gray-200 shadow-sm">
+                <div className="text-center py-8">
+                  <div className="w-20 h-20 mx-auto mb-6 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <Loader2 className="w-10 h-10 text-yellow-600 animate-spin" />
+                  </div>
+                  <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-3">KYC Under Review</h2>
+                  <p className="text-sm md:text-base text-gray-600 max-w-md mx-auto mb-6">
+                    Your KYC application has been submitted and is currently being reviewed by our team. 
+                    This process typically takes 1-3 business days.
+                  </p>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-md mx-auto">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Note:</strong> You will receive an email notification once your verification is complete.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              /* KYC Application Form - Not Submitted State (kycVerified === false) */
+              <>
+                <div className="mb-4">
+                  <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-1">KYC Verification</h2>
+                  <p className="text-xs md:text-sm text-gray-600">Complete all steps to verify your identity and unlock full platform features</p>
+                </div>
+                <KYCForm />
+              </>
+            )}
           </TabsContent>
 
           {/* Notifications Tab */}

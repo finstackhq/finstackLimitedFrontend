@@ -120,11 +120,11 @@ export default function MerchantDashboard() {
     } catch (e) {}
   }, []);
   const [merchantStats, setMerchantStats] = useState<MerchantStats>({
-    totalTrades: 245,
-    completedTrades: 238,
-    totalVolume: 1250000,
-    rating: 4.9,
-    activeOffers: 4
+    totalTrades: 0,
+    completedTrades: 0,
+    totalVolume: 0,
+    rating: 0,
+    activeOffers: 0
   });
 
   const [walletBalance, setWalletBalance] = useState<WalletBalance>({
@@ -456,8 +456,8 @@ export default function MerchantDashboard() {
     <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-6">
       {/* Header and merchant application */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-semibold text-foreground mb-1">Merchant Center</h1>
+        <div className="text-center md:text-left">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-semibold text-foreground mb-2">Merchant Dashboard</h1>
           <p className="text-sm md:text-base text-gray-600">Manage your P2P trading business and monitor performance</p>
         </div>
         {!isMerchant && (
@@ -465,10 +465,6 @@ export default function MerchantDashboard() {
             <BadgeCheck className="w-4 h-4" /> Become a Merchant
           </Button>
         )}
-      </div>
-      <div className="text-center md:text-left">
-        <h1 className="text-xl md:text-2xl lg:text-3xl font-semibold text-foreground mb-2">Merchant Dashboard</h1>
-        <p className="text-sm md:text-base text-gray-600">Manage your P2P trading business and monitor performance</p>
       </div>
       {/* Merchant Status Card */}
       <Card className="p-4 md:p-6">
