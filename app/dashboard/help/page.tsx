@@ -126,32 +126,27 @@ export default function HelpPage() {
         </div>
 
         {/* Contact Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-          <Card className="p-6 border-gray-200 hover:border-blue-600 transition-colors cursor-pointer">
-            <MessageCircle className="h-8 w-8 text-blue-600 mb-3" />
-            <h3 className="font-medium text-gray-900 mb-1">Live Chat</h3>
-            <p className="text-sm text-gray-600 mb-3">Chat with our support team</p>
-            <Button variant="link" className="p-0 h-auto text-blue-600 font-medium">
-              Start Chat <ExternalLink className="ml-1 h-3 w-3" />
-            </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
+          <Card className="p-6 border-gray-200 hover:border-green-600 transition-colors cursor-pointer">
+            <MessageCircle className="h-8 w-8 text-green-600 mb-3" />
+            <h3 className="font-medium text-gray-900 mb-1">WhatsApp Support</h3>
+            <p className="text-sm text-gray-600 mb-3">+234 816 445 8437</p>
+            <a href="https://wa.me/2348164458437" target="_blank" rel="noopener noreferrer">
+              <Button variant="link" className="p-0 h-auto text-green-600 font-medium">
+                Chat on WhatsApp <ExternalLink className="ml-1 h-3 w-3" />
+              </Button>
+            </a>
           </Card>
 
           <Card className="p-6 border-gray-200 hover:border-blue-600 transition-colors cursor-pointer">
             <Mail className="h-8 w-8 text-blue-600 mb-3" />
             <h3 className="font-medium text-gray-900 mb-1">Email Support</h3>
-            <p className="text-sm text-gray-600 mb-3">support@finstack.com</p>
-            <Button variant="link" className="p-0 h-auto text-blue-600 font-medium">
-              Send Email <ExternalLink className="ml-1 h-3 w-3" />
-            </Button>
-          </Card>
-
-          <Card className="p-6 border-gray-200 hover:border-blue-600 transition-colors cursor-pointer">
-            <Phone className="h-8 w-8 text-blue-600 mb-3" />
-            <h3 className="font-medium text-gray-900 mb-1">Phone Support</h3>
-            <p className="text-sm text-gray-600 mb-3">+234 800 123 4567</p>
-            <Button variant="link" className="p-0 h-auto text-blue-600 font-medium">
-              Call Now <ExternalLink className="ml-1 h-3 w-3" />
-            </Button>
+            <p className="text-sm text-gray-600 mb-3">hello@usefinstack.co</p>
+            <a href="mailto:hello@usefinstack.co">
+              <Button variant="link" className="p-0 h-auto text-blue-600 font-medium">
+                Send Email <ExternalLink className="ml-1 h-3 w-3" />
+              </Button>
+            </a>
           </Card>
         </div>
 

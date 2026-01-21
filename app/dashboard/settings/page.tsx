@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { AddAccountDialog } from "@/components/dashboard/add-account-dialog"
 import { KYCForm } from "@/components/dashboard/KYCForm"
+import { CustomAccountForm } from "@/components/dashboard/CustomAccountForm"
 import { useToast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
@@ -548,6 +549,18 @@ export default function SettingsPage() {
                   ))
                 )}
               </div>
+            </Card>
+
+            {/* Custom Account Section for Non-Nigerians */}
+            <Card className="p-4 md:p-6 border-gray-200 shadow-sm">
+              <div className="mb-4 md:mb-6">
+                <h2 className="text-lg md:text-xl font-semibold text-gray-900">Custom Account</h2>
+                <p className="text-xs md:text-sm text-gray-600 mt-1">
+                  For users outside Nigeria - add your bank, mobile money, or wallet details manually
+                </p>
+              </div>
+
+              <CustomAccountForm onAccountAdded={handleAddPayment} />
             </Card>
           </TabsContent>
         </Tabs>
