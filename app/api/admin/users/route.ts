@@ -45,17 +45,17 @@ export async function GET(request: NextRequest) {
           sameSite: 'lax',
           secure: process.env.NODE_ENV === 'production',
         });
-      } catch {}
+      } catch { }
       return out;
     }
 
     const list = Array.isArray(upstream?.users)
       ? upstream.users
       : Array.isArray(upstream?.data)
-      ? upstream.data
-      : Array.isArray(upstream)
-      ? upstream
-      : [];
+        ? upstream.data
+        : Array.isArray(upstream)
+          ? upstream
+          : [];
 
     // Normalize to frontend User shape
     type NormalizedUser = {
@@ -68,6 +68,41 @@ export async function GET(request: NextRequest) {
       kycStatus: string;
       status: string;
       joinedAt: string;
+      role?: string;
+      balances?: any[];
+      totalBalance?: number;
+    };
+
+    // Helper function to extract total balance from various payload structures
+    const extractBalance = (u: any): number => {
+      // Try totalBalance field first (from backend)
+      if (u?.totalBalance !== undefined) {
+        return Number(u.totalBalance) || 0;
+      }
+      // Try wallet.totalBalance
+      if (u?.wallet?.totalBalance !== undefined) {
+        return Number(u.wallet.totalBalance) || 0;
+      }
+      // Sum from balances array with balance.total structure
+      if (Array.isArray(u?.balances)) {
+        return u.balances.reduce((sum: number, b: any) => {
+          // Handle balance as object with total field
+          if (b?.balance?.total !== undefined) {
+            return sum + (Number(b.balance.total) || 0);
+          }
+          // Handle balance as direct number
+          return sum + (Number(b?.balance) || 0);
+        }, 0);
+      }
+      // Try balance.total object
+      if (u?.balance?.total !== undefined) {
+        return Number(u.balance.total) || 0;
+      }
+      // Try direct balance field
+      if (u?.balance !== undefined && typeof u?.balance !== 'object') {
+        return Number(u.balance) || 0;
+      }
+      return 0;
     };
 
     let users: NormalizedUser[] = list.map((u: any) => ({
@@ -77,11 +112,15 @@ export async function GET(request: NextRequest) {
         : (typeof u?.email === 'string' ? u.email.split('@')[0] : '—'),
       email: String(u?.email || '—'),
       country: String(u?.country || '—'),
-      balance: Number(u?.balance?.total ?? u?.balance ?? 0) || 0,
-      currency: String(u?.currency || '—'),
-      kycStatus: String(u?.kycStatus || 'not_required'),
+      balance: extractBalance(u),
+      currency: String(u?.currency || 'NGN'),
+      kycStatus: String(u?.kycStatus || 'not_required').toLowerCase(),
       status: String(u?.status || 'active'),
       joinedAt: String(u?.createdAt || u?.joinedAt || ''),
+      role: String(u?.role || 'user'),
+      // Pass the full balances array with walletAddress, externalWalletId, currency, balance details
+      balances: Array.isArray(u?.balances) ? u.balances : [],
+      totalBalance: Number(u?.totalBalance) || extractBalance(u),
     }));
 
     // Apply filters client-side
@@ -110,20 +149,20 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const { id, action } = await request.json();
-    
+
     if (!id || !action || !['suspend', 'activate', 'delete'].includes(action)) {
       return NextResponse.json(
         { error: 'Invalid request data' },
         { status: 400 }
       );
     }
-    
+
     // Mock user action - replace with actual API calls
     console.log(`${action} user ${id}`);
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: `User ${action}d successfully` 
+
+    return NextResponse.json({
+      success: true,
+      message: `User ${action}d successfully`
     });
   } catch (error) {
     return NextResponse.json(

@@ -22,6 +22,9 @@ interface User {
   kycStatus: string;
   status: string;
   joinedAt: string;
+  role?: string;
+  balances?: any[];
+  totalBalance?: number;
 }
 
 interface UsersTableProps {

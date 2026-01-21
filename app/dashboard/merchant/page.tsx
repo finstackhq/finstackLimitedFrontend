@@ -78,46 +78,56 @@ export default function MerchantDashboard() {
   const router = useRouter();
   const { toast } = useToast();
   const [applicationOpen, setApplicationOpen] = useState(false);
-  const [merchantStatus, setMerchantStatus] = useState<string>(() => {
-    try { 
-        // We'll re-verify this on mount to be safe, but init from storage
-        return localStorage.getItem('merchant-status') || 'not_applied'; 
-    } catch { return 'not_applied'; }
-  });
+  const [merchantStatus, setMerchantStatus] = useState<string>('loading');
+  const [kycVerified, setKycVerified] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
   // Derived state: only 'approved' means full access
   const isMerchant = merchantStatus === 'approved';
-  
-  // KYC verification state (initialized from storage, similar to auth-form)
-  const [kycVerified, setKycVerified] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('isKycVerified') === 'true';
-    } catch {
-      return false;
-    }
-  });
 
-  // We need to double-check the actual user data from localStorage to ensure security
-  // effectively re-validating the "approved" status on mount
+  // Fetch user profile to verify merchant status from server
   useEffect(() => {
-    try {
-        // Just reading raw values from what was saved during login
-        // In a real app, this should probably come from a user context or /me endpoint
-        // but for now we rely on the same localStorage keys set by auth-form
-        // Note: We don't have the full user object here, but we can check if we should
-        // downgrade 'approved' to 'not_applied' if the conditions aren't met.
-        // HOWEVER, auth-form already sets 'merchant-status' correctly based on the logic:
-        // (role === 'merchant' && kycVerified === true) -> 'approved'
-        // else -> 'not_applied'
+    const verifyMerchantStatus = async () => {
+      try {
+        const res = await fetch('/api/fstack/profile');
+        const data = await res.json();
         
-        // Let's add a listener or check to enforce the rule if the storage was manually tampered or stale
-        // But since we don't have the user object here, we rely on the `merchant-status` key being correct.
-        // If the user is supposed to be blocked, `merchant-status` should be 'not_applied'.
-        
-        const status = localStorage.getItem('merchant-status');
-        if (status) {
-            setMerchantStatus(status);
+        if (data.success && data.data) {
+          const userRole = data.data.role?.toLowerCase();
+          const isKyc = data.data.kycVerified === true;
+          
+          setKycVerified(isKyc);
+          
+          // Only approved if user role is 'merchant' and KYC is verified
+          if (userRole === 'merchant' && isKyc) {
+            setMerchantStatus('approved');
+            try { localStorage.setItem('merchant-status', 'approved'); } catch {}
+          } else if (userRole === 'merchant' && !isKyc) {
+            setMerchantStatus('pending_kyc');
+            try { localStorage.setItem('merchant-status', 'pending_kyc'); } catch {}
+          } else {
+            setMerchantStatus('not_applied');
+            try { localStorage.setItem('merchant-status', 'not_applied'); } catch {}
+          }
+        } else {
+          setMerchantStatus('not_applied');
         }
-    } catch (e) {}
+      } catch (error) {
+        console.error('Failed to verify merchant status:', error);
+        // Fallback to localStorage if API fails
+        try {
+          const storedStatus = localStorage.getItem('merchant-status');
+          setMerchantStatus(storedStatus || 'not_applied');
+          setKycVerified(localStorage.getItem('isKycVerified') === 'true');
+        } catch {
+          setMerchantStatus('not_applied');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    verifyMerchantStatus();
   }, []);
   const [merchantStats, setMerchantStats] = useState<MerchantStats>({
     totalTrades: 0,
@@ -452,6 +462,73 @@ export default function MerchantDashboard() {
 
   const completionRate = ((merchantStats.completedTrades / merchantStats.totalTrades) * 100).toFixed(1);
 
+  // Loading state while verifying merchant status
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Verifying merchant status...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Non-merchant view - show only application info
+  if (!isMerchant) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-6">
+        <div className="text-center md:text-left">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-semibold text-foreground mb-2">Merchant Dashboard</h1>
+          <p className="text-sm md:text-base text-gray-600">Become a merchant to unlock P2P trading features</p>
+        </div>
+        
+        {/* Merchant Status Card */}
+        <Card className="p-4 md:p-6">
+          <div className="flex items-center gap-3">
+            <Store className="w-5 h-5 text-[#2F67FA]" />
+            <div>
+              <h2 className="text-lg font-semibold">Merchant Status</h2>
+              <p className="text-sm text-gray-600">Status: {merchantStatus.replace('_', ' ')}</p>
+              <p className="text-sm text-gray-600">KYC: {kycVerified ? 'Verified' : 'Pending'}</p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Merchant Benefits Info */}
+        <Card className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+              <BadgeCheck className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Unlock Merchant Features</h3>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li>• Create and manage buy/sell ads on P2P marketplace</li>
+                <li>• Higher trading limits and faster settlements</li>
+                <li>• Access to merchant analytics and order management</li>
+                <li>• Priority customer support</li>
+              </ul>
+            </div>
+            <Button 
+              onClick={() => setApplicationOpen(true)} 
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+            >
+              <BadgeCheck className="w-4 h-4" /> Apply Now
+            </Button>
+          </div>
+        </Card>
+
+        <BecomeMerchantModal 
+          open={applicationOpen} 
+          onOpenChange={setApplicationOpen} 
+          kycVerified={kycVerified}
+        />
+      </div>
+    );
+  }
+
+  // Approved merchant view - full dashboard
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-6">
       {/* Header and merchant application */}
@@ -460,11 +537,6 @@ export default function MerchantDashboard() {
           <h1 className="text-xl md:text-2xl lg:text-3xl font-semibold text-foreground mb-2">Merchant Dashboard</h1>
           <p className="text-sm md:text-base text-gray-600">Manage your P2P trading business and monitor performance</p>
         </div>
-        {!isMerchant && (
-          <Button onClick={() => setApplicationOpen(true)} className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2">
-            <BadgeCheck className="w-4 h-4" /> Become a Merchant
-          </Button>
-        )}
       </div>
       {/* Merchant Status Card */}
       <Card className="p-4 md:p-6">

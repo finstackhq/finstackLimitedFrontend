@@ -49,6 +49,8 @@ interface User {
   totalTransactions?: number;
   flags?: string[];
   notes?: string;
+  balances?: any[];
+  totalBalance?: number;
 }
 
 interface UserDetailsModalProps {
@@ -321,6 +323,73 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
               </div>
             </div>
           </div>
+
+          {/* Wallet Breakdown - Show individual currency balances */}
+          {user.balances && user.balances.length > 0 && (
+            <div className="bg-gray-50 rounded-lg p-5">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-green-600" />
+                Wallet Details
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {user.balances.map((wallet: any, index: number) => (
+                  <div key={index} className="bg-white rounded-lg p-4 border border-gray-200">
+                    {/* Currency Header */}
+                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
+                      <span className="text-sm font-semibold text-gray-900">
+                        {wallet.currency || 'Unknown'}
+                      </span>
+                      <span className="text-lg font-bold text-green-600">
+                        {typeof wallet.balance?.total === 'number' 
+                          ? wallet.balance.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          : '0.00'}
+                      </span>
+                    </div>
+                    
+                    {/* Balance Breakdown */}
+                    <div className="space-y-2 mb-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">Available</span>
+                        <span className="text-gray-900 font-medium">
+                          {typeof wallet.balance?.available === 'number' 
+                            ? wallet.balance.available.toLocaleString('en-US', { minimumFractionDigits: 2 })
+                            : '0.00'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">Locked</span>
+                        <span className="text-gray-900 font-medium">
+                          {typeof wallet.balance?.locked === 'number' 
+                            ? wallet.balance.locked.toLocaleString('en-US', { minimumFractionDigits: 2 })
+                            : '0.00'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Wallet Address */}
+                    {wallet.walletAddress && (
+                      <div className="pt-3 border-t border-gray-100">
+                        <p className="text-xs text-gray-500 mb-1">Wallet Address</p>
+                        <p className="text-xs font-mono text-gray-700 break-all bg-gray-50 px-2 py-1.5 rounded">
+                          {wallet.walletAddress}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* External Wallet ID */}
+                    {wallet.externalWalletId && (
+                      <div className="pt-2">
+                        <p className="text-xs text-gray-500 mb-1">External ID</p>
+                        <p className="text-xs font-mono text-gray-600 break-all">
+                          {wallet.externalWalletId}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Transaction History Summary */}
           <div className="bg-gray-50 rounded-lg p-5">

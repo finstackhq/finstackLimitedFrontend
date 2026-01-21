@@ -69,11 +69,26 @@ export function Sidebar() {
     <button
           onClick={async () => {
             try {
-              await fetch("/api/fstack/logout", { method: "POST" })
+              // First hit the logout endpoint
+              const res = await fetch("/api/fstack/logout", { method: "POST" })
+              const data = await res.json().catch(() => ({}))
+              console.log("[sidebar] logout response:", data)
             } catch (e) {
               console.warn("[sidebar] logout proxy failed:", e)
+            } finally {
+              // Always clear localStorage tokens after attempting logout
+              try {
+                localStorage.removeItem('access_token')
+                localStorage.removeItem('merchant-status')
+                localStorage.removeItem('isKycVerified')
+                localStorage.removeItem('user')
+                localStorage.removeItem('role-change-logs')
+              } catch (e) {
+                console.warn("[sidebar] failed to clear localStorage:", e)
+              }
+              // Redirect to login
+              router.push("/login")
             }
-            router.push("/login")
           }}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full transition-all duration-200 text-red-600 hover:bg-red-50 group"
         >
