@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { MerchantAdWizard } from '@/components/merchant/MerchantAdWizard';
 import { BecomeMerchantModal } from '@/components/merchant/BecomeMerchantModal';
+import { AddAccountDialog } from '@/components/dashboard/add-account-dialog';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +28,11 @@ import {
   BadgeCheck,
   Trash2,
   Edit,
-  Loader2
+  Loader2,
+  CreditCard,
+  X,
+  Activity,
+  ShoppingCart
 } from 'lucide-react';
 import { 
   AlertDialog,
@@ -53,10 +58,25 @@ interface MerchantStats {
   activeOffers: number;
 }
 
+interface TradeSummary {
+  totalAds: number;
+  totalTrades: number;
+  totalCompleted: number;
+  activeOffers: number;
+}
+
 interface WalletBalance {
   NGN: number;
   USDT: number;
   CNGN: number;
+}
+
+interface BankAccount {
+  id: number | string;
+  bank: string;
+  accountNumber: string;
+  accountName: string;
+  primary?: boolean;
 }
 
 interface StoredAd {
@@ -148,6 +168,19 @@ export default function MerchantDashboard() {
     completedToday: 0
   });
 
+  // Trade summary state
+  const [tradeSummary, setTradeSummary] = useState<TradeSummary>({
+    totalAds: 0,
+    totalTrades: 0,
+    totalCompleted: 0,
+    activeOffers: 0
+  });
+  const [loadingTradeSummary, setLoadingTradeSummary] = useState(false);
+
+  // Bank accounts state
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [loadingBankAccounts, setLoadingBankAccounts] = useState(false);
+
   // Edit modal state
   const [selectedAd, setSelectedAd] = useState<P2PAd | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -207,6 +240,59 @@ export default function MerchantDashboard() {
 
     fetchOrderStats();
   }, []);
+
+  // Fetch trade summary
+  useEffect(() => {
+    if (!isMerchant) return;
+
+    const fetchTradeSummary = async () => {
+      setLoadingTradeSummary(true);
+      try {
+        const res = await fetch('/api/fstack/merchant/trades-summary');
+        const json = await res.json();
+        
+        if (json.success && json.data) {
+          setTradeSummary(json.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch trade summary:', err);
+      } finally {
+        setLoadingTradeSummary(false);
+      }
+    };
+
+    fetchTradeSummary();
+  }, [isMerchant]);
+
+  // Fetch bank accounts
+  useEffect(() => {
+    if (!isMerchant) return;
+
+    const fetchBankAccounts = async () => {
+      setLoadingBankAccounts(true);
+      try {
+        const res = await fetch('/api/fstack/profile?type=bank-accounts');
+        const data = await res.json();
+        
+        if (data.success && Array.isArray(data.data)) {
+          const mappedAccounts: BankAccount[] = data.data.map((acc: any, index: number) => ({
+            id: acc._id || index + 1,
+            bank: acc.bankName,
+            accountNumber: acc.accountNumber,
+            accountName: acc.accountName,
+            primary: false
+          }));
+          setBankAccounts(mappedAccounts);
+        }
+      } catch (err) {
+        console.error('Failed to fetch bank accounts:', err);
+      } finally {
+        setLoadingBankAccounts(false);
+      }
+    };
+
+    fetchBankAccounts();
+  }, [isMerchant]);
 
   // Fetch real ads from backend
   useEffect(() => {
@@ -551,15 +637,27 @@ export default function MerchantDashboard() {
       </Card>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-3 md:p-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <Users className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+              <ShoppingCart className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs md:text-sm text-gray-600">Total Ads</p>
+              <p className="text-lg md:text-xl font-semibold">{loadingTradeSummary ? '...' : tradeSummary.totalAds}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-3 md:p-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-purple-100 flex items-center justify-center">
+              <Users className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
             </div>
             <div>
               <p className="text-xs md:text-sm text-gray-600">Total Trades</p>
-              <p className="text-lg md:text-xl font-semibold">{merchantStats.totalTrades}</p>
+              <p className="text-lg md:text-xl font-semibold">{loadingTradeSummary ? '...' : tradeSummary.totalTrades}</p>
             </div>
           </div>
         </Card>
@@ -570,32 +668,8 @@ export default function MerchantDashboard() {
               <Check className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-xs md:text-sm text-gray-600">Completion</p>
-              <p className="text-lg md:text-xl font-semibold text-green-600">{completionRate}%</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-3 md:p-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-purple-100 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-xs md:text-sm text-gray-600">Volume</p>
-              <p className="text-lg md:text-xl font-semibold">₦{(merchantStats.totalVolume / 1000000).toFixed(1)}M</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-3 md:p-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-yellow-100 flex items-center justify-center">
-              <Star className="w-4 h-4 md:w-5 md:h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-xs md:text-sm text-gray-600">Rating</p>
-              <p className="text-lg md:text-xl font-semibold">{merchantStats.rating}/5</p>
+              <p className="text-xs md:text-sm text-gray-600">Completed</p>
+              <p className="text-lg md:text-xl font-semibold text-green-600">{loadingTradeSummary ? '...' : tradeSummary.totalCompleted}</p>
             </div>
           </div>
         </Card>
@@ -607,7 +681,7 @@ export default function MerchantDashboard() {
             </div>
             <div>
               <p className="text-xs md:text-sm text-gray-600">Active Offers</p>
-              <p className="text-lg md:text-xl font-semibold">{merchantStats.activeOffers}</p>
+              <p className="text-lg md:text-xl font-semibold">{loadingTradeSummary ? '...' : tradeSummary.activeOffers}</p>
             </div>
           </div>
         </Card>
@@ -812,54 +886,6 @@ export default function MerchantDashboard() {
         )}
       </Card>
 
-  {/* Recent Trades */}
-      <Card className="p-4 md:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Recent Trades</h3>
-          <Button variant="outline" size="sm">
-            View All
-          </Button>
-        </div>
-
-        <div className="space-y-3">
-          {[
-            { id: 1, user: 'User123', type: 'buy', amount: 100, rate: 1620, status: 'completed', time: '2 hours ago' },
-            { id: 2, user: 'Trader456', type: 'sell', amount: 50, rate: 1650, status: 'pending', time: '5 hours ago' },
-            { id: 3, user: 'Crypto789', type: 'buy', amount: 200, rate: 1615, status: 'completed', time: '1 day ago' },
-          ].map((trade) => (
-            <div key={trade.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-                  trade.type === 'buy' ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
-                )}>
-                  {trade.type === 'buy' ? 'B' : 'S'}
-                </div>
-                <div>
-                  <p className="font-medium text-sm">{trade.user}</p>
-                  <p className="text-xs text-gray-600">
-                    {trade.type === 'buy' ? 'Bought' : 'Sold'} ${trade.amount} USDT
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-medium">₦{trade.rate.toLocaleString()}</p>
-                <div className="flex items-center gap-2">
-                  <span className={cn(
-                    "text-xs px-2 py-1 rounded-full",
-                    trade.status === 'completed' 
-                      ? "bg-green-100 text-green-800" 
-                      : "bg-yellow-100 text-yellow-800"
-                  )}>
-                    {trade.status}
-                  </span>
-                  <span className="text-xs text-gray-500">{trade.time}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
       <BecomeMerchantModal 
         open={applicationOpen} 
         onOpenChange={handleModalChange} 
