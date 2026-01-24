@@ -12,6 +12,7 @@ const QuickActions = dynamic(() => import("@/components/dashboard/quick-actions"
 const RecentActivity = dynamic(() => import("@/components/dashboard/recent-activity").then(mod => ({ default: mod.RecentActivity })), { ssr: false })
 const MoneyQuote = dynamic(() => import("@/components/dashboard/money-quote").then(mod => ({ default: mod.MoneyQuote })), { ssr: false })
 const DidYouKnow = dynamic(() => import("@/components/dashboard/did-you-know").then(mod => ({ default: mod.DidYouKnow })), { ssr: false })
+const BankAccountsCard = dynamic(() => import("@/components/dashboard/bank-accounts-card").then(mod => ({ default: mod.BankAccountsCard })), { ssr: false })
 
 import { KYCPopup } from "@/components/kyc-popup"
 
@@ -121,6 +122,11 @@ export default function DashboardPage() {
       {/* Recent Activity */}
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-400">
         <RecentActivity transactions={transactions} />
+      </div>
+
+      {/* Bank Accounts */}
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-500">
+        <BankAccountsCard />
       </div>
     </div>
   )
