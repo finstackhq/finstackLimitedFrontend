@@ -90,7 +90,7 @@ export default function P2PMarketplacePage() {
             available: item.availableAmount || 0,
             minLimit: item.minLimit || 0,
             maxLimit: item.maxLimit || 0,
-            paymentMethods: ['Bank Transfer'], // Default map
+            paymentMethods: Array.isArray(item.paymentMethods) ? item.paymentMethods : ['Bank Transfer'],
             paymentWindow: item.timeLimit || 15,
             instructions: item.instructions || '',
             autoReply: item.autoReply || '',
@@ -339,19 +339,11 @@ export default function P2PMarketplacePage() {
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Payment</p>
           <div className="flex flex-wrap gap-1">
-            {ad.paymentMethods.slice(0, 2).map((method) => (
-              <span key={method} className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full whitespace-nowrap">
+            {ad.paymentMethods.map((method) => (
+              <span key={method} className="text-[10px] md:text-sm px-2 py-1 bg-gray-100 text-gray-700 rounded-md border border-gray-200 break-words leading-relaxed md:whitespace-nowrap md:overflow-hidden md:text-ellipsis md:max-w-[140px]" title={method}>
                 {method}
               </span>
             ))}
-            {ad.paymentMethods.length > 2 && (
-              <span 
-                className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium cursor-help whitespace-nowrap"
-                title={ad.paymentMethods.slice(2).join(', ')}
-              >
-                +{ad.paymentMethods.length - 2} more
-              </span>
-            )}
           </div>
           <div className="flex items-center gap-1 text-xs text-gray-600">
             <Clock className="w-3 h-3" />

@@ -57,6 +57,7 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otpError, setOtpError] = useState('');
+  const [localPaid, setLocalPaid] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -86,26 +87,32 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
     const paymentWindowMinutes = Number(ctx.paymentWindow) || 0;
     if (!ctx.createdAt || !paymentWindowMinutes) return;
 
-    const timer = setInterval(() => {
-      const created = new Date(ctx.createdAt).getTime();
-      const windowMs = paymentWindowMinutes * 60 * 1000;
-      const expireTime = created + windowMs;
-      const now = new Date().getTime();
-      const diff = expireTime - now;
-
-      if (diff <= 0) {
-        setTimeLeft('00:00');
-        setIsExpired(true);
-        clearInterval(timer);
-      } else {
+    const computeTime = () => {
+        const created = new Date(ctx.createdAt).getTime();
+        const windowMs = paymentWindowMinutes * 60 * 1000;
+        const expireTime = created + windowMs;
+        const now = new Date().getTime();
+        const diff = Math.max(0, expireTime - now);
         const minutes = Math.floor(diff / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
-        setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-      }
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    // Set initial or paused time
+    setTimeLeft(computeTime());
+
+    // Pause timer if status is 'paid' or 'completed' or locally marked as paid
+    const status = (ctx.status || 'pending_payment').toLowerCase();
+    if (status === 'paid' || status === 'completed' || localPaid) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft(computeTime());
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [ctx]);
+  }, [ctx, ctx?.status, localPaid]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -118,6 +125,7 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
   // User Buying: User clicks "I have paid" -> Calls confirm-payment
   const handleMarkPaid = async () => {
     try {
+      setLocalPaid(true); // Optimistically pause timer and change button
       setUpdating(true);
       const reference = ctx?.initiate?.reference;
       if (!reference) throw new Error('Trade reference not found');
@@ -129,7 +137,10 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
       });
 
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || data.message || 'Failed to confirm payment');
+      if (!res.ok || !data.success) {
+          setLocalPaid(false); // Revert on failure
+          throw new Error(data.error || data.message || 'Failed to confirm payment');
+      }
 
       updateLocalStatus('paid');
       toast({ 
@@ -138,6 +149,7 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
         duration: 5000,
       });
     } catch (error: any) {
+      setLocalPaid(false); // Revert on failure
       console.error('Failed to confirm payment:', error);
       toast({ title: 'Error', description: error.message || 'Failed to confirm payment', variant: 'destructive' });
     } finally {
@@ -380,17 +392,29 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
                     </AlertDescription>
                 </Alert>
                 
-                <Button 
-                    size="lg" 
-                    className="w-full text-lg font-bold h-14" 
-                    onClick={ctx.initiate?.side === 'SELL' ? handleInitiateRelease : handleMarkPaid}
-                    disabled={isExpired || status !== 'pending_payment' || updating}
-                >
-                    {updating ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                    {updating 
-                      ? 'Processing...' 
-                      : (ctx.initiate?.side === 'SELL' ? 'Payment Received' : 'I have paid')}
-                </Button>
+                {(status === 'paid' || localPaid) && ctx.initiate?.side !== 'SELL' ? (
+                   <div className="bg-primary/5 border border-primary/20 rounded-xl p-8 text-center space-y-3 animate-in fade-in zoom-in duration-300">
+                       <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <CheckCircle className="w-8 h-8 text-primary" />
+                       </div>
+                       <h3 className="text-xl font-bold text-primary">Awaiting Merchant Release</h3>
+                       <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                           You've successfully marked this as paid. The seller is verifying your payment. Once confirmed, they will release the crypto to your wallet.
+                       </p>
+                   </div>
+                ) : (
+                    <Button 
+                        size="lg" 
+                        className={`w-full text-lg font-bold h-14 ${status === 'paid' ? 'bg-muted text-muted-foreground hover:bg-muted' : ''}`} 
+                        onClick={ctx.initiate?.side === 'SELL' ? handleInitiateRelease : handleMarkPaid}
+                        disabled={isExpired || (status !== 'pending_payment' && ctx.initiate?.side !== 'SELL') || updating}
+                    >
+                        {updating ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
+                        {updating 
+                          ? 'Processing...' 
+                          : (ctx.initiate?.side === 'SELL' ? 'Payment Received' : 'I have paid')}
+                    </Button>
+                )}
                 
                 {isExpired && (
                     <Button variant="destructive" className="w-full" disabled>
