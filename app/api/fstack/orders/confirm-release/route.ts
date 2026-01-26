@@ -11,10 +11,10 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { reference, otp } = body
+        const { reference, otpCode } = body
 
-        if (!reference || !otp) {
-            return NextResponse.json({ error: 'reference and otp are required' }, { status: 400 })
+        if (!reference || !otpCode) {
+            return NextResponse.json({ error: 'reference and otpCode are required' }, { status: 400 })
         }
 
         // Build dynamic endpoint: /api/trade/{reference}/confirm-release
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
                 'Content-Type': 'application/json',
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
-            body: JSON.stringify({ otpCode: otp }),
+            body: JSON.stringify({ otpCode: otpCode }),
             cache: 'no-store',
         })
 

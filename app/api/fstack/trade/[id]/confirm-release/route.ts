@@ -14,9 +14,9 @@ export async function POST(
         }
 
         const tradeId = params.id;
-        const body = await req.json();
+        const { otpCode } = await req.json();
 
-        // Expect body to contain { otp: "123456" }
+        // Expect body to contain { otpCode: "123456" }
 
         const backendUrl = `${process.env.FINSTACK_BACKEND_API_URL}trade/${tradeId}/confirm-release`;
 
@@ -26,7 +26,7 @@ export async function POST(
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify(body),
+            body: JSON.stringify({ otpCode }),
         });
 
         const data = await response.json();

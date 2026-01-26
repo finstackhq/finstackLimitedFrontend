@@ -44,7 +44,6 @@ interface MerchantAdDraft {
   alipayEmail?: string;
   alipayQrImage?: string; // base64 or url
   customAccountDetails?: string;
-  autoReply?: string;
   instructions?: string;
   timeLimit?: number; // in minutes
 }
@@ -80,8 +79,7 @@ export function MerchantAdWizard() {
     baseRate: 1,
     priceType: 'fixed',
     fixedPrice: 1,
-    paymentMethods: ['Bank Transfer'],
-    autoReply: '',
+    paymentMethods: [],
     instructions: '',
     timeLimit: 30
   });
@@ -106,6 +104,28 @@ export function MerchantAdWizard() {
     fetchRates();
     const id = setInterval(fetchRates, 5 * 60 * 1000);
     return () => clearInterval(id);
+  }, []);
+
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [fetchingBanks, setFetchingBanks] = useState(false);
+
+  // Fetch saved bank accounts
+  useEffect(() => {
+    const fetchBanks = async () => {
+      setFetchingBanks(true);
+      try {
+        const res = await fetch('/api/fstack/profile?type=bank-accounts');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data)) {
+          setBankAccounts(data.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch bank accounts:', err);
+      } finally {
+        setFetchingBanks(false);
+      }
+    };
+    fetchBanks();
   }, []);
 
   // Compute base rate for selected pair
@@ -205,8 +225,7 @@ export function MerchantAdWizard() {
          availableAmount: ad.totalAvailable || 0,
          paymentMethods: ad.paymentMethods,
          timeLimit: ad.timeLimit || 30,
-         instructions: ad.instructions || "Transfer only from your own account.",
-         autoReply: ad.autoReply || "I am active."
+         instructions: ad.instructions || "Transfer only from your own account."
       };
 
       const res = await fetch('/api/fstack/merchant', {
@@ -234,9 +253,23 @@ export function MerchantAdWizard() {
 
     } catch (err: any) {
       console.error('Error saving ad:', err);
+      
+      let errorMessage = err.message || 'Failed to publish ad';
+      
+      // Try to parse nested error messages (e.g. "Backend returned 400: {...}")
+      if (errorMessage.includes('Backend returned 400:')) {
+        try {
+          const jsonStr = errorMessage.split('Backend returned 400:')[1].trim();
+          const parsed = JSON.parse(jsonStr);
+          if (parsed.message) errorMessage = parsed.message;
+        } catch (e) {
+          // Fallback to original
+        }
+      }
+
       toast({
         title: 'Error',
-        description: err.message || 'Failed to publish ad',
+        description: errorMessage,
         variant: 'destructive'
       });
     }
@@ -416,85 +449,67 @@ export function MerchantAdWizard() {
             {current === 4 && (
               <div>
                 <h2 className="text-xl font-semibold mb-4">Payment Methods</h2>
-                <div className="space-y-4">
-                  {['Bank Transfer','Mobile Money','Alipay','Custom Account'].map(method => (
-                    <label key={method} className="flex items-center gap-3 p-3 border rounded-md cursor-pointer hover:bg-gray-50">
-                      <input type="checkbox" checked={ad.paymentMethods.includes(method)} onChange={() => togglePaymentMethod(method)} className="w-4 h-4" />
-                      <span className="text-sm font-medium">{method}</span>
-                    </label>
-                  ))}
-                  {/* Alipay details */}
-                  {ad.paymentMethods.includes('Alipay') && (
-                    <div className="mt-4 space-y-3 p-4 border rounded-lg bg-gray-50">
-                      <h4 className="font-medium text-sm">Alipay Payment Details</h4>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Account Name</label>
-                        <Input
-                          type="text"
-                          placeholder="Enter Alipay account name"
-                          value={(ad as any).alipayAccountName ?? ''}
-                          onChange={e => update('alipayAccountName' as any, e.target.value)}
-                        />
+                <div className="space-y-6">
+                  {/* Saved Bank Accounts Section */}
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Your Bank Accounts</p>
+                    {fetchingBanks ? (
+                      <p className="text-sm text-gray-400">Loading bank accounts...</p>
+                    ) : bankAccounts.length > 0 ? (
+                      <div className="grid gap-3">
+                        {bankAccounts.map(acc => {
+                          const displayStr = `${acc.bankName} - ${acc.accountNumber} (${acc.accountName})`;
+                          const isSelected = ad.paymentMethods.includes(displayStr);
+                          return (
+                            <label key={acc._id} className={cn(
+                              "flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all",
+                              isSelected ? "border-blue-600 bg-blue-50 ring-1 ring-blue-600" : "hover:bg-gray-50"
+                            )}>
+                              <input 
+                                type="checkbox" 
+                                checked={isSelected} 
+                                onChange={() => togglePaymentMethod(displayStr)} 
+                                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" 
+                              />
+                              <div>
+                                <p className="font-semibold text-sm">{acc.bankName}</p>
+                                <p className="text-xs text-gray-600">{acc.accountNumber} • {acc.accountName}</p>
+                              </div>
+                            </label>
+                          );
+                        })}
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Email/Phone</label>
-                        <Input
-                          type="text"
-                          placeholder="Enter Alipay email or phone"
-                          value={(ad as any).alipayEmail ?? ''}
-                          onChange={e => update('alipayEmail' as any, e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Alipay QR Code Image</label>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              update('alipayQrImage', ev.target?.result as string);
-                            };
-                            reader.readAsDataURL(file);
-                          }}
-                        />
-                        {ad.alipayQrImage && (
-                          <div className="mt-2">
-                            <img src={ad.alipayQrImage} alt="Alipay QR" className="w-32 h-32 object-contain border rounded bg-white" />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {/* Custom Account details */}
-                  {ad.paymentMethods.includes('Custom Account') && (
-                    <div className="mt-4 space-y-3 p-4 border rounded-lg bg-gray-50">
-                      <h4 className="font-medium text-sm">Custom Account Details</h4>
-                      <Textarea
-                        value={ad.customAccountDetails ?? ''}
-                        onChange={e => update('customAccountDetails', e.target.value)}
-                        placeholder="Enter account details, instructions, etc."
-                        className="min-h-[80px]"
-                      />
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <Input placeholder="Add custom method" value={customMethod} onChange={e => setCustomMethod(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomMethod(); } }} />
-                    <Button type="button" onClick={addCustomMethod} disabled={!customMethod.trim()}>Add</Button>
+                    ) : (
+                      <p className="text-sm text-gray-500 italic">No bank accounts found in your profile.</p>
+                    )}
                   </div>
+
+                  <div className="pt-4 border-t border-gray-100">
+                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Add Custom Methods</p>
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="e.g. OPay 7013871541" 
+                        value={customMethod} 
+                        onChange={e => setCustomMethod(e.target.value)} 
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomMethod(); } }} 
+                      />
+                      <Button type="button" onClick={addCustomMethod} disabled={!customMethod.trim()}>Add</Button>
+                    </div>
+                  </div>
+
                   {ad.paymentMethods.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      {ad.paymentMethods.map(m => (
-                        <span key={m} className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs flex items-center gap-1">
-                          {m}
-                          {(['Bank Transfer','Mobile Money','Alipay','Custom Account'].includes(m)) ? null : (
-                            <button onClick={() => togglePaymentMethod(m)} className="text-blue-700 hover:text-blue-900">×</button>
-                          )}
-                        </span>
-                      ))}
+                    <div className="pt-4">
+                      <p className="text-xs font-medium text-gray-500 mb-2">Selected Methods:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {ad.paymentMethods.map(m => (
+                          <span key={m} className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-1.5 border border-blue-200">
+                            {m}
+                            <button onClick={() => togglePaymentMethod(m)} className="text-blue-500 hover:text-blue-700 transition-colors ml-1">
+                              <Check className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -503,12 +518,8 @@ export function MerchantAdWizard() {
 
             {current === 5 && (
               <div>
-                <h2 className="text-xl font-semibold mb-4">Instructions & Auto Reply</h2>
+                <h2 className="text-xl font-semibold mb-4">Instructions</h2>
                 <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Auto Reply (optional)</label>
-                    <Textarea value={ad.autoReply} onChange={e => update('autoReply', e.target.value)} placeholder="Message sent automatically after user places an order." />
-                  </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">Instructions / Terms (optional)</label>
                     <Textarea value={ad.instructions} onChange={e => update('instructions', e.target.value)} placeholder="Provide detailed instructions for the counterparty." className="min-h-[140px]" />
@@ -529,7 +540,6 @@ export function MerchantAdWizard() {
                   <ReviewRow label="Time Limit" value={ad.timeLimit ? (ad.timeLimit === 60 ? '1 Hour' : ad.timeLimit + ' mins') : '—'} />
                   <ReviewRow label="Total Available" value={`${ad.totalAvailable ?? 0} ${ad.pair.split('/')[0]}`} />
                   <ReviewRow label="Payment Methods" value={ad.paymentMethods.join(', ')} />
-                  <ReviewRow label="Auto Reply" value={ad.autoReply || '—'} />
                   <ReviewRow label="Instructions" value={ad.instructions || '—'} />
                 </div>
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">

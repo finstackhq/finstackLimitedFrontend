@@ -198,13 +198,24 @@ export default function MerchantDashboard() {
         const res = await fetch('/api/fstack/wallet/user-balances');
         const json = await res.json();
         
-        if (json.success && Array.isArray(json.balances)) {
+        // Handle different possible response structures (data wrapper or direct balances array)
+        const balancesList: any[] = Array.isArray(json?.data) ? json.data : (Array.isArray(json?.balances) ? json.balances : []);
+        
+        if (balancesList.length > 0) {
           const balances: WalletBalance = { NGN: 0, USDT: 0, CNGN: 0 };
-          json.balances.forEach((bal: any) => {
-            if (bal.currency === 'NGN') balances.NGN = bal.balance || 0;
-            if (bal.currency === 'USDT' || bal.currency === 'USDC') balances.USDT = bal.balance || 0;
-            if (bal.currency === 'CNGN') balances.CNGN = bal.balance || 0;
+          
+          balancesList.forEach((bal: any) => {
+            const currency = (bal.currency || '').toUpperCase();
+            // Extract balance which might be a number or an object {total, available}
+            const balanceAmount = typeof bal.balance === 'object' 
+              ? (Number(bal.balance?.total) || Number(bal.balance?.available) || 0)
+              : (Number(bal.balance) || 0);
+
+            if (currency === 'NGN') balances.NGN = balanceAmount;
+            if (currency === 'USDT' || currency === 'USDC') balances.USDT = balanceAmount;
+            if (currency === 'CNGN') balances.CNGN = balanceAmount;
           });
+          
           setWalletBalance(balances);
         }
       } catch (err) {

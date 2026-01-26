@@ -310,20 +310,21 @@ export function OrderModal({ ad, trader, open, onClose, onOrderCreated }: OrderM
 
           {/* Payment Method */}
           <div>
-            <Label>Payment Method</Label>
-            <div className="flex gap-2 mt-2">
+            <Label>Select Payment Method</Label>
+            <div className="grid grid-cols-1 gap-2 mt-2 max-h-[160px] overflow-y-auto pr-1">
               {ad.paymentMethods.map(method => (
                 <button
                   key={method}
+                  type="button"
                   onClick={() => setSelectedPayment(method)}
                   disabled={isLoading}
-                  className={`flex-1 px-3 py-2 rounded-md border text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`flex flex-col items-start p-3 rounded-lg border text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
                     selectedPayment === method
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white hover:bg-gray-50'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-white hover:bg-gray-50 border-gray-200'
                   }`}
                 >
-                  {method}
+                  <span className="font-semibold">{method}</span>
                 </button>
               ))}
             </div>
