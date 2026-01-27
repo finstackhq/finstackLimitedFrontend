@@ -1,5 +1,13 @@
 
-export type OrderStatus = 'pending_payment' | 'awaiting_release' | 'PAYMENT_CONFIRMED_BY_BUYER' | 'completed' | 'cancelled' | 'disputed';
+export type OrderStatus =
+  | 'pending_payment'                 // Initial state - waiting for payment
+  | 'awaiting_release'                // Legacy - waiting for crypto release
+  | 'awaiting_merchant_confirmation'  // After user marks as paid
+  | 'PAYMENT_CONFIRMED_BY_BUYER'      // Alias for awaiting_merchant_confirmation
+  | 'paid'                           // Payment confirmed by buyer
+  | 'completed'                      // Trade successfully completed
+  | 'cancelled'                      // Trade cancelled by user/merchant
+  | 'disputed';                      // Trade under dispute
 export type PaymentMethod = 'Bank Transfer' | 'MTN Mobile Money' | 'Alipay' | 'Custom Account' | 'CNGN Wallet';
 export type AdType = 'buy' | 'sell';
 export type RatingType = 'positive' | 'neutral' | 'negative';
@@ -77,4 +85,15 @@ export interface P2POrder {
   userAccountDetails?: string; // User's wallet address or payment details (when user is selling)
   escrowAddress?: string; // Escrow wallet address (for crypto held during transaction)
   paymentProof?: string; // Base64 image of payment proof
+  // Cancel tracking
+  cancelledBy?: 'buyer' | 'merchant' | 'system';
+  cancelReason?: string;
+  // Dispute tracking
+  disputedAt?: Date;
+  disputeReason?: string;
+  disputeDetails?: string;
+  disputeEvidence?: string; // Base64 image of dispute evidence
+  disputeId?: string;
+  disputeStatus?: 'pending' | 'resolved_buyer' | 'resolved_merchant' | 'rejected';
+  disputeResolvedAt?: Date;
 }
