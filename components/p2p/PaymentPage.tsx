@@ -6,9 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Clock, CheckCircle, AlertTriangle, Copy, ArrowRight } from 'lucide-react';
+import { Loader2, Clock, CheckCircle, AlertTriangle, Copy, ArrowRight, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { TradeCancelScreen } from './TradeCancelScreen';
+import { TradeDisputeScreen } from './TradeDisputeScreen';
+import { TradeCompletionScreen } from './TradeCompletionScreen';
+import { CancelConfirmationDialog } from './CancelConfirmationDialog';
 
 type StoredTradeContext = {
   tradeId: string;
@@ -40,7 +44,12 @@ type StoredTradeContext = {
     marketRate?: number;
     listingRate?: number;
   };
-  status?: 'pending_payment' | 'paid' | string;
+  status?: 'pending_payment' | 'paid' | 'awaiting_merchant_confirmation' | 'completed' | 'cancelled' | 'disputed' | string;
+  cancelledAt?: string;
+  cancelledBy?: 'buyer' | 'merchant' | 'system';
+  cancelReason?: string;
+  completedAt?: string;
+  disputedAt?: string;
 };
 
 interface PaymentPageProps {
@@ -58,6 +67,8 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otpError, setOtpError] = useState('');
   const [localPaid, setLocalPaid] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -184,45 +195,87 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
   };
 
   // User Selling: Verify OTP -> Calls confirm-release
-  const handleVerifyRelease = async () => {
-     const otpCode = otp.join('');
-     if (otpCode.length !== 6) {
-        setOtpError('Please enter all 6 digits');
-        return;
-     }
+   const handleVerifyRelease = async () => {
+      const otpCode = otp.join('');
+      if (otpCode.length !== 6) {
+         setOtpError('Please enter all 6 digits');
+         return;
+      }
 
-     setVerifyingOtp(true);
-     setOtpError('');
-     
+      setVerifyingOtp(true);
+      setOtpError('');
+      
+      try {
+        const reference = ctx?.initiate?.reference;
+        // Changed from tradeId to reference for backend compatibility
+        const res = await fetch(`/api/fstack/trade/${reference}/confirm-release`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ otpCode: otpCode }) // Backend expects { otpCode: "..." }
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            throw new Error(data.error || data.message || 'Invalid OTP');
+        }
+
+        setShowOtpModal(false);
+        const now = new Date().toISOString();
+        updateLocalStatus('completed', { completedAt: now });
+        toast({ title: 'Transaction Successful', description: 'Crypto released successfully.' });
+      } catch (error: any) {
+          setOtpError(error.message || 'Verification failed');
+      } finally {
+          setVerifyingOtp(false);
+      }
+   };
+
+   // Cancel trade handler
+   const handleCancelTrade = async (reason?: string) => {
+     setCancelling(true);
      try {
        const reference = ctx?.initiate?.reference;
-       // Changed from tradeId to reference for backend compatibility
-       const res = await fetch(`/api/fstack/trade/${reference}/confirm-release`, {
+       if (!reference) throw new Error('Trade reference not found');
+
+       // TODO: Replace with actual API call when backend is ready
+       const res = await fetch('/api/fstack/p2p/cancel-trade', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ otpCode: otpCode }) // Backend expects { otpCode: "..." }
+         body: JSON.stringify({ reference, reason })
        });
 
-       const data = await res.json();
-       if (!res.ok || !data.success) {
-           throw new Error(data.error || data.message || 'Invalid OTP');
-       }
+       // Simulate success for now
+       await new Promise(resolve => setTimeout(resolve, 500));
 
-       setShowOtpModal(false);
-       updateLocalStatus('completed'); // or whatever status indicates finished
-       toast({ title: 'Transaction Successful', description: 'Crypto released successfully.' });
+       const now = new Date().toISOString();
+       updateLocalStatus('cancelled', {
+         cancelledAt: now,
+         cancelledBy: 'buyer',
+         cancelReason: reason
+       });
+
+       setShowCancelDialog(false);
+       toast({ 
+         title: 'Trade Cancelled', 
+         description: 'Your order has been cancelled successfully.'
+       });
      } catch (error: any) {
-         setOtpError(error.message || 'Verification failed');
+       console.error('Failed to cancel trade:', error);
+       toast({ 
+         title: 'Error', 
+         description: error.message || 'Failed to cancel trade', 
+         variant: 'destructive' 
+       });
      } finally {
-         setVerifyingOtp(false);
+       setCancelling(false);
      }
-  };
+   };
   
-  const updateLocalStatus = (newStatus: string) => {
+  const updateLocalStatus = (newStatus: string, additionalData?: Partial<StoredTradeContext>) => {
       const raw = localStorage.getItem(`p2p_trade_${tradeId}`);
       if (raw) {
         const parsed = JSON.parse(raw) as StoredTradeContext;
-        const next = { ...parsed, status: newStatus };
+        const next = { ...parsed, status: newStatus, ...additionalData };
         localStorage.setItem(`p2p_trade_${tradeId}`, JSON.stringify(next));
         setCtx(next);
       }
@@ -265,6 +318,63 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
   const amountCrypto = typeof ctx.initiate?.amountCrypto === 'number' ? ctx.initiate.amountCrypto : undefined;
   const price = typeof ctx.initiate?.listingRate === 'number' ? ctx.initiate.listingRate : (typeof ctx.initiate?.marketRate === 'number' ? ctx.initiate.marketRate : ctx.ad?.price);
   const status = ctx.status || 'pending_payment';
+
+  // Show Cancel Screen
+  if (status === 'cancelled') {
+    return (
+      <TradeCancelScreen
+        tradeId={ctx.tradeId}
+        orderId={ctx.initiate?.reference}
+        cryptoCurrency={cryptoCode}
+        fiatCurrency={fiatCode}
+        cryptoAmount={amountCrypto || 0}
+        fiatAmount={amountFiat || 0}
+        cancelledAt={ctx.cancelledAt || new Date().toISOString()}
+        cancelledBy={ctx.cancelledBy}
+        cancelReason={ctx.cancelReason}
+        wasPaymentMade={localPaid}
+      />
+    );
+  }
+
+  // Show Dispute Screen (waiting for merchant confirmation with dispute option)
+  if (status === 'disputed' || (status === 'paid' && ctx.initiate?.side !== 'SELL')) {
+    return (
+      <TradeDisputeScreen
+        tradeId={ctx.tradeId}
+        reference={ctx.initiate?.reference || ctx.tradeId}
+        paidAt={new Date(ctx.createdAt)} // Use trade creation as paid time
+        cryptoCurrency={cryptoCode}
+        fiatCurrency={fiatCode}
+        cryptoAmount={amountCrypto || 0}
+        fiatAmount={amountFiat || 0}
+        disputeThresholdMinutes={15}
+        onDisputeSubmitted={() => {
+          updateLocalStatus('disputed', { disputedAt: new Date().toISOString() });
+        }}
+      />
+    );
+  }
+
+  // Show Completion Screen
+  if (status === 'completed') {
+    return (
+      <TradeCompletionScreen
+        tradeId={ctx.tradeId}
+        reference={ctx.initiate?.reference || ctx.tradeId}
+        side={ctx.initiate?.side === 'SELL' ? 'SELL' : 'BUY'}
+        cryptoCurrency={cryptoCode}
+        fiatCurrency={fiatCode}
+        cryptoAmount={amountCrypto || 0}
+        fiatAmount={amountFiat || 0}
+        price={price || 0}
+        completedAt={ctx.completedAt || new Date().toISOString()}
+        merchantId={ctx.ad?.id || 'merchant'}
+        merchantName={ctx.sellerName || 'Merchant'}
+      />
+    );
+  }
+
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-6">
@@ -402,24 +512,37 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
                            You've successfully marked this as paid. The seller is verifying your payment. Once confirmed, they will release the crypto to your wallet.
                        </p>
                    </div>
-                ) : (
-                    <Button 
-                        size="lg" 
-                        className={`w-full text-lg font-bold h-14 ${status === 'paid' ? 'bg-muted text-muted-foreground hover:bg-muted' : ''}`} 
-                        onClick={ctx.initiate?.side === 'SELL' ? handleInitiateRelease : handleMarkPaid}
-                        disabled={isExpired || (status !== 'pending_payment' && ctx.initiate?.side !== 'SELL') || updating}
-                    >
-                        {updating ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                        {updating 
-                          ? 'Processing...' 
-                          : (ctx.initiate?.side === 'SELL' ? 'Payment Received' : 'I have paid')}
-                    </Button>
-                )}
-                
-                {isExpired && (
+                ) : isExpired ? (
                     <Button variant="destructive" className="w-full" disabled>
                         Order Expired
                     </Button>
+                ) : (
+                    <div className="space-y-3">
+                        {/* Primary Action Button */}
+                        <Button 
+                            size="lg" 
+                            className="w-full text-lg font-bold h-14 bg-green-600 hover:bg-green-700" 
+                            onClick={ctx.initiate?.side === 'SELL' ? handleInitiateRelease : handleMarkPaid}
+                            disabled={status !== 'pending_payment' && ctx.initiate?.side !== 'SELL' || updating}
+                        >
+                            {updating ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <CheckCircle className="h-5 w-5 mr-2" />}
+                            {updating 
+                              ? 'Processing...' 
+                              : (ctx.initiate?.side === 'SELL' ? 'Payment Received' : 'Payment Completed')}
+                        </Button>
+                        
+                        {/* Cancel Button */}
+                        <Button 
+                            size="lg"
+                            variant="destructive"
+                            className="w-full text-lg font-bold h-14" 
+                            onClick={() => setShowCancelDialog(true)}
+                            disabled={updating}
+                        >
+                            <XCircle className="h-5 w-5 mr-2" />
+                            Cancel Order
+                        </Button>
+                    </div>
                 )}
             </div>
         </div>
@@ -481,6 +604,17 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
            </Card>
         </div>
       )}
+
+      {/* Cancel Confirmation Dialog */}
+      <CancelConfirmationDialog
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
+        onConfirm={handleCancelTrade}
+        tradeId={ctx.tradeId}
+        cryptoAmount={amountCrypto || 0}
+        cryptoCurrency={cryptoCode}
+        isProcessing={cancelling}
+      />
     </div>
   );
 }
