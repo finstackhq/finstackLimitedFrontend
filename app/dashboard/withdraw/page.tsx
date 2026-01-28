@@ -256,7 +256,7 @@ export default function WithdrawPage() {
         endpoint = "/api/fstack/withdraw/fiat-complete";
         const account = destination as BankAccount;
         body = {
-          walletCurrency: "NGN",
+          walletCurrency: "CNGN",
           fiatCurrency: "NGN",
           amount: parseFloat(amount),
           otpCode,
