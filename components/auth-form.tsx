@@ -199,6 +199,13 @@ export function AuthForm() {
             } catch (e) {
               console.warn("[auth-form] failed to persist auth info:", e)
             }
+            // Show success toast
+            toast({
+              title: "Welcome back!",
+              description: "You have successfully logged in.",
+            })
+            // Refresh router state before navigation to ensure session is recognized
+            router.refresh()
             router.push("/dashboard")
           } else {
             setFormError(data?.message || data?.error || "Login failed")

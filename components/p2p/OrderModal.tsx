@@ -324,7 +324,8 @@ export function OrderModal({ ad, trader, open, onClose, onOrderCreated }: OrderM
                       : 'bg-white hover:bg-gray-50 border-gray-200'
                   }`}
                 >
-                  <span className="font-semibold">{method}</span>
+                  {/* Only show bank/method name, strip account details */}
+                  <span className="font-semibold">{method.split(' - ')[0]}</span>
                 </button>
               ))}
             </div>

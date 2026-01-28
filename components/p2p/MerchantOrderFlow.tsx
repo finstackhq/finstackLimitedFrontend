@@ -314,13 +314,26 @@ export function MerchantOrderFlow({ order, onComplete, onDispute }: MerchantOrde
                )}
             </div>
 
-            <Button 
-                onClick={handleMerchantMarkPaid}
-                disabled={markingPaid || !bankDetails}
-                className="w-full bg-green-600 hover:bg-green-700 text-white"
-            >
-                {markingPaid ? 'Processing...' : 'I have made payment'}
-            </Button>
+            <div className="space-y-3">
+               <Button 
+                   onClick={handleMerchantMarkPaid}
+                   disabled={markingPaid || !bankDetails}
+                   className="w-full bg-green-600 hover:bg-green-700 text-white"
+               >
+                   {markingPaid ? 'Processing...' : 'I have made payment'}
+               </Button>
+               
+               {/* Cancel Button for Merchant in Buy Flow */}
+               <Button 
+                   variant="destructive"
+                   className="w-full"
+                   onClick={handleDispute}
+                   disabled={markingPaid}
+               >
+                   <XCircle className="w-4 h-4 mr-2" />
+                   Cancel Order
+               </Button>
+            </div>
          </Card>
       )}
 
