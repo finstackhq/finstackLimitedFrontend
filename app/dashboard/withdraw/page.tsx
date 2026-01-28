@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Stepper } from "@/components/dashboard/stepper"
-import { OTPInput } from "@/components/dashboard/otp-input"
-import { AddAccountDialog } from "@/components/dashboard/add-account-dialog"
-import { AddWalletDialog } from "@/components/dashboard/add-wallet-dialog"
-import { ArrowLeft, Sparkles, Plus, Loader2 } from "lucide-react"
-import { convertCurrency } from "@/lib/mock-api"
-import { useToast } from "@/hooks/use-toast"
+import { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Stepper } from "@/components/dashboard/stepper";
+import { OTPInput } from "@/components/dashboard/otp-input";
+import { AddAccountDialog } from "@/components/dashboard/add-account-dialog";
+import { AddWalletDialog } from "@/components/dashboard/add-wallet-dialog";
+import { ArrowLeft, Sparkles, Plus, Loader2 } from "lucide-react";
+import { convertCurrency } from "@/lib/mock-api";
+import { useToast } from "@/hooks/use-toast";
 
 const steps = [
   { number: 1, title: "Select Wallet" },
@@ -19,48 +19,62 @@ const steps = [
   { number: 3, title: "Enter Amount" },
   { number: 4, title: "Verify OTP" },
   { number: 5, title: "Complete" },
-]
+];
 
 interface BankAccount {
-  id: string
-  accountNumber: string
-  accountName: string
-  bankName: string
-  bankCode: string
+  id: string;
+  accountNumber: string;
+  accountName: string;
+  bankName: string;
+  bankCode: string;
 }
 
 const savedWallets = [
-  { id: 1, name: "Binance Wallet", address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb", network: "TRC20" },
-  { id: 2, name: "Trust Wallet", address: "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063", network: "ERC20" },
-]
+  {
+    id: 1,
+    name: "Binance Wallet",
+    address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    network: "TRC20",
+  },
+  {
+    id: 2,
+    name: "Trust Wallet",
+    address: "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063",
+    network: "ERC20",
+  },
+];
 
 export default function WithdrawPage() {
-  const { toast } = useToast()
-  const [currentStep, setCurrentStep] = useState(1)
-  const [selectedWallet, setSelectedWallet] = useState<"NGN" | "USDT" | null>(null)
-  const [amount, setAmount] = useState("")
-  const [selectedDestination, setSelectedDestination] = useState<number | string | null>(null)
-  const [otp, setOtp] = useState(["", "", "", "", "", ""])
-  const [loading, setLoading] = useState(false)
-  const [withdrawalData, setWithdrawalData] = useState<any>(null)
-  
+  const { toast } = useToast();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [selectedWallet, setSelectedWallet] = useState<"NGN" | "USDT" | null>(
+    null,
+  );
+  const [amount, setAmount] = useState("");
+  const [selectedDestination, setSelectedDestination] = useState<
+    number | string | null
+  >(null);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [loading, setLoading] = useState(false);
+  const [withdrawalData, setWithdrawalData] = useState<any>(null);
+
   // Bank accounts state
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
-  const [loadingAccounts, setLoadingAccounts] = useState(false)
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
 
   // Fetch bank accounts on mount
   useEffect(() => {
     const fetchBankAccounts = async () => {
-      setLoadingAccounts(true)
+      setLoadingAccounts(true);
       try {
-        const res = await fetch('/api/fstack/profile?type=bank-accounts')
-        const data = await res.json()
-        
-        console.log('[withdraw] Bank accounts response:', data)
-        
+        const res = await fetch("/api/fstack/profile?type=bank-accounts");
+        const data = await res.json();
+
+        console.log("[withdraw] Bank accounts response:", data);
+
         // Handle different response formats from backend
-        let accounts: BankAccount[] = []
-        
+        let accounts: BankAccount[] = [];
+
         if (res.ok) {
           if (data.success && Array.isArray(data.data)) {
             // Format: { success: true, data: [...] }
@@ -69,8 +83,8 @@ export default function WithdrawPage() {
               accountNumber: acc.accountNumber,
               accountName: acc.accountName,
               bankName: acc.bankName,
-              bankCode: acc.bankCode || acc.institutionCode || '000'
-            }))
+              bankCode: acc.bankCode || acc.institutionCode || "000",
+            }));
           } else if (Array.isArray(data)) {
             // Format: [...]
             accounts = data.map((acc: any) => ({
@@ -78,8 +92,8 @@ export default function WithdrawPage() {
               accountNumber: acc.accountNumber,
               accountName: acc.accountName,
               bankName: acc.bankName,
-              bankCode: acc.bankCode || acc.institutionCode || '000'
-            }))
+              bankCode: acc.bankCode || acc.institutionCode || "000",
+            }));
           } else if (data?.bankAccounts && Array.isArray(data.bankAccounts)) {
             // Format: { bankAccounts: [...] }
             accounts = data.bankAccounts.map((acc: any) => ({
@@ -87,40 +101,47 @@ export default function WithdrawPage() {
               accountNumber: acc.accountNumber,
               accountName: acc.accountName,
               bankName: acc.bankName,
-              bankCode: acc.bankCode || acc.institutionCode || '000'
-            }))
+              bankCode: acc.bankCode || acc.institutionCode || "000",
+            }));
           }
-          
-          setBankAccounts(accounts)
-          console.log('[withdraw] Loaded bank accounts:', accounts.length)
+
+          setBankAccounts(accounts);
+          console.log("[withdraw] Loaded bank accounts:", accounts.length);
         }
       } catch (err) {
-        console.error('Failed to fetch bank accounts:', err)
+        console.error("Failed to fetch bank accounts:", err);
       } finally {
-        setLoadingAccounts(false)
+        setLoadingAccounts(false);
       }
-    }
-    
-    fetchBankAccounts()
-  }, [])
+    };
 
-  const handleAccountAdded = async (account: { bankName: string; accountNumber: string; accountName: string; bankCode: string }) => {
+    fetchBankAccounts();
+  }, []);
+
+  const handleAccountAdded = async (account: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    bankCode: string;
+  }) => {
     try {
       // Save to backend
-      const res = await fetch('/api/fstack/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/fstack/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bankName: account.bankName,
           accountNumber: account.accountNumber,
-          accountName: account.accountName
-        })
-      })
+          accountName: account.accountName,
+        }),
+      });
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || data.message || 'Failed to add bank account')
+        throw new Error(
+          data.error || data.message || "Failed to add bank account",
+        );
       }
 
       // Add the new account to the local bank accounts list
@@ -130,103 +151,110 @@ export default function WithdrawPage() {
         accountName: account.accountName,
         bankName: account.bankName,
         bankCode: account.bankCode || "000",
-      }
-      setBankAccounts(prev => [...prev, newAccount])
+      };
+      setBankAccounts((prev) => [...prev, newAccount]);
 
       toast({
-        title: 'Bank Account Added',
-        description: 'Your bank account has been saved and is ready to use'
-      })
+        title: "Bank Account Added",
+        description: "Your bank account has been saved and is ready to use",
+      });
     } catch (error: any) {
-      console.error('Failed to add bank account:', error)
+      console.error("Failed to add bank account:", error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to add bank account',
-        variant: 'destructive'
-      })
+        title: "Error",
+        description: error.message || "Failed to add bank account",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
-  const handleWalletAdded = (wallet: { name: string; address: string; network: string }) => {
+  const handleWalletAdded = (wallet: {
+    name: string;
+    address: string;
+    network: string;
+  }) => {
     // Add the new wallet to the saved wallets list
     const newWallet = {
       id: savedWallets.length + 1,
       name: wallet.name,
       address: wallet.address,
       network: wallet.network,
-    }
-    savedWallets.push(newWallet)
-  }
+    };
+    savedWallets.push(newWallet);
+  };
 
   const handleInitiateWithdrawal = async () => {
-    if (!selectedWallet || !amount) return
+    if (!selectedWallet || !amount) return;
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await fetch('/api/fstack/withdraw/initiate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/fstack/withdraw/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          walletCurrency: selectedWallet === "NGN" ? "NGN" : "USDC",
-          amount: parseFloat(amount)
-        })
-      })
+          walletCurrency: selectedWallet === "NGN" ? "CNGN" : "USDC",
+          amount: parseFloat(amount),
+        }),
+      });
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || data.message || 'Failed to initiate withdrawal')
+        throw new Error(
+          data.error || data.message || "Failed to initiate withdrawal",
+        );
       }
 
       // Store withdrawal data for later use
-      setWithdrawalData(data)
-      
-      toast({
-        title: 'OTP Sent',
-        description: 'A 6-digit code has been sent to your email'
-      })
+      setWithdrawalData(data);
 
-      setCurrentStep(4)
-    } catch (error: any) {
-      console.error('Initiate withdrawal error:', error)
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to initiate withdrawal',
-        variant: 'destructive'
-      })
+        title: "OTP Sent",
+        description: "A 6-digit code has been sent to your email",
+      });
+
+      setCurrentStep(4);
+    } catch (error: any) {
+      console.error("Initiate withdrawal error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to initiate withdrawal",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleCompleteWithdrawal = async () => {
-    const otpCode = otp.join('')
+    const otpCode = otp.join("");
     if (otpCode.length !== 6) {
       toast({
-        title: 'Invalid OTP',
-        description: 'Please enter all 6 digits',
-        variant: 'destructive'
-      })
-      return
+        title: "Invalid OTP",
+        description: "Please enter all 6 digits",
+        variant: "destructive",
+      });
+      return;
     }
 
-    if (!selectedWallet || !selectedDestination) return
+    if (!selectedWallet || !selectedDestination) return;
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const destination = selectedWallet === "NGN" 
-        ? bankAccounts.find(a => a.id === selectedDestination)
-        : savedWallets.find(w => w.id === selectedDestination)
+      const destination =
+        selectedWallet === "NGN"
+          ? bankAccounts.find((a) => a.id === selectedDestination)
+          : savedWallets.find((w) => w.id === selectedDestination);
 
-      if (!destination) throw new Error('Destination not found')
+      if (!destination) throw new Error("Destination not found");
 
-      let endpoint = ''
-      let body: any = {}
+      let endpoint = "";
+      let body: any = {};
 
       if (selectedWallet === "NGN") {
         // Fiat withdrawal
-        endpoint = '/api/fstack/withdraw/fiat-complete'
-        const account = destination as BankAccount
+        endpoint = "/api/fstack/withdraw/fiat-complete";
+        const account = destination as BankAccount;
         body = {
           walletCurrency: "NGN",
           fiatCurrency: "NGN",
@@ -234,73 +262,79 @@ export default function WithdrawPage() {
           otpCode,
           destinationAccountNumber: account.accountNumber,
           institutionCode: account.bankCode,
-          accountName: account.accountName
-        }
+          accountName: account.accountName,
+        };
       } else {
         // Crypto withdrawal
-        endpoint = '/api/fstack/withdraw/crypto-complete'
-        const wallet = destination as typeof savedWallets[0]
+        endpoint = "/api/fstack/withdraw/crypto-complete";
+        const wallet = destination as (typeof savedWallets)[0];
         body = {
           walletCurrency: "USDC",
           amount: parseFloat(amount),
           otpCode,
-          externalCryptoAddress: wallet.address
-        }
+          externalCryptoAddress: wallet.address,
+        };
       }
 
       const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || data.message || 'Failed to complete withdrawal')
+        throw new Error(
+          data.error || data.message || "Failed to complete withdrawal",
+        );
       }
 
       toast({
-        title: 'Withdrawal Successful',
-        description: 'Your withdrawal has been processed successfully'
-      })
+        title: "Withdrawal Successful",
+        description: "Your withdrawal has been processed successfully",
+      });
 
-      setCurrentStep(5)
+      setCurrentStep(5);
     } catch (error: any) {
-      console.error('Complete withdrawal error:', error)
+      console.error("Complete withdrawal error:", error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to complete withdrawal',
-        variant: 'destructive'
-      })
+        title: "Error",
+        description: error.message || "Failed to complete withdrawal",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleOtpChange = (index: number, value: string) => {
-    if (value.length > 1) value = value[0]
-    if (!/^[0-9]*$/.test(value)) return
-    
-    const newOtp = [...otp]
-    newOtp[index] = value
-    setOtp(newOtp)
-    
+    if (value.length > 1) value = value[0];
+    if (!/^[0-9]*$/.test(value)) return;
+
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
     // Auto-focus next input
     if (value && index < 5) {
-      const nextInput = document.querySelector(`input[data-index="${index + 1}"]`) as HTMLInputElement
-      nextInput?.focus()
+      const nextInput = document.querySelector(
+        `input[data-index="${index + 1}"]`,
+      ) as HTMLInputElement;
+      nextInput?.focus();
     }
-  }
+  };
 
-  const fee = selectedWallet === "NGN" ? 50 : 1
-  const totalAmount = amount ? Number.parseFloat(amount) + fee : 0
+  const fee = selectedWallet === "NGN" ? 50 : 1;
+  const totalAmount = amount ? Number.parseFloat(amount) + fee : 0;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold text-foreground">Withdraw Funds</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground">
+            Withdraw Funds
+          </h1>
           <p className="text-gray-600">Transfer money from your wallet</p>
         </div>
       </div>
@@ -312,46 +346,66 @@ export default function WithdrawPage() {
         {currentStep === 1 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-semibold text-foreground mb-2">Select Wallet</h2>
-              <p className="text-gray-600">Choose which wallet you want to withdraw from</p>
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                Select Wallet
+              </h2>
+              <p className="text-gray-600">
+                Choose which wallet you want to withdraw from
+              </p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
               <button
                 onClick={() => {
-                  setSelectedWallet("NGN")
-                  setCurrentStep(2)
+                  setSelectedWallet("NGN");
+                  setCurrentStep(2);
                 }}
                 className="p-6 border-2 border-gray-200 rounded-lg hover:border-[#2F67FA] hover:bg-[#2F67FA]/5 transition-all duration-200 text-left group"
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 rounded-full bg-[#2F67FA]/10 flex items-center justify-center group-hover:bg-[#2F67FA] transition-colors">
-                    <span className="text-xl font-bold text-[#2F67FA] group-hover:text-white">₦</span>
+                    <span className="text-xl font-bold text-[#2F67FA] group-hover:text-white">
+                      ₦
+                    </span>
                   </div>
                 </div>
-                <h3 className="text-lg font-semibold text-foreground mb-1">NGN Wallet</h3>
-                <p className="text-sm text-gray-600 mb-2">Withdraw Nigerian Naira</p>
-                <p className="text-lg font-semibold text-foreground">₦250,000.00</p>
+                <h3 className="text-lg font-semibold text-foreground mb-1">
+                  NGN Wallet
+                </h3>
+                <p className="text-sm text-gray-600 mb-2">
+                  Withdraw Nigerian Naira
+                </p>
+                <p className="text-lg font-semibold text-foreground">
+                  ₦250,000.00
+                </p>
               </button>
 
               <button
                 onClick={() => {
-                  setSelectedWallet("USDT")
-                  setCurrentStep(2)
+                  setSelectedWallet("USDT");
+                  setCurrentStep(2);
                 }}
                 className="p-6 border-2 border-gray-200 rounded-lg hover:border-[#2F67FA] hover:bg-[#2F67FA]/5 transition-all duration-200 text-left group"
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 rounded-full bg-[#2F67FA]/10 flex items-center justify-center group-hover:bg-[#2F67FA] transition-colors">
-                    <span className="text-xl font-bold text-[#2F67FA] group-hover:text-white">$</span>
+                    <span className="text-xl font-bold text-[#2F67FA] group-hover:text-white">
+                      $
+                    </span>
                   </div>
                 </div>
-                <h3 className="text-lg font-semibold text-foreground mb-1">USDT Wallet</h3>
-                <p className="text-sm text-gray-600 mb-2">Withdraw Tether (USDT)</p>
-                <p className="text-lg font-semibold text-foreground">$1,500.00</p>
+                <h3 className="text-lg font-semibold text-foreground mb-1">
+                  USDT Wallet
+                </h3>
+                <p className="text-sm text-gray-600 mb-2">
+                  Withdraw Tether (USDT)
+                </p>
+                <p className="text-lg font-semibold text-foreground">
+                  $1,500.00
+                </p>
               </button>
             </div>
-            
+
             {/* Back button for step 1 */}
             <Button
               onClick={() => window.history.back()}
@@ -368,9 +422,13 @@ export default function WithdrawPage() {
         {currentStep === 2 && selectedWallet && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-semibold text-foreground mb-2">Select Destination</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                Select Destination
+              </h2>
               <p className="text-gray-600">
-                {selectedWallet === "NGN" ? "Choose a bank account" : "Choose a wallet address"}
+                {selectedWallet === "NGN"
+                  ? "Choose a bank account"
+                  : "Choose a wallet address"}
               </p>
             </div>
 
@@ -379,24 +437,30 @@ export default function WithdrawPage() {
                 loadingAccounts ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-[#2F67FA]" />
-                    <span className="ml-2 text-gray-600">Loading bank accounts...</span>
+                    <span className="ml-2 text-gray-600">
+                      Loading bank accounts...
+                    </span>
                   </div>
                 ) : bankAccounts.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <p className="mb-2">No bank accounts added yet.</p>
-                    <p className="text-sm">Add a bank account to withdraw funds.</p>
+                    <p className="text-sm">
+                      Add a bank account to withdraw funds.
+                    </p>
                   </div>
                 ) : (
                   bankAccounts.map((account) => (
                     <button
                       key={account.id}
                       onClick={() => {
-                        setSelectedDestination(account.id)
-                        setCurrentStep(3)
+                        setSelectedDestination(account.id);
+                        setCurrentStep(3);
                       }}
                       className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-[#2F67FA] hover:bg-[#2F67FA]/5 transition-all duration-200 text-left"
                     >
-                      <p className="font-semibold text-foreground mb-1">{account.accountName}</p>
+                      <p className="font-semibold text-foreground mb-1">
+                        {account.accountName}
+                      </p>
                       <p className="text-sm text-gray-600 font-mono">
                         {account.accountNumber} • {account.bankName}
                       </p>
@@ -408,13 +472,17 @@ export default function WithdrawPage() {
                   <button
                     key={wallet.id}
                     onClick={() => {
-                      setSelectedDestination(wallet.id)
-                      setCurrentStep(3)
+                      setSelectedDestination(wallet.id);
+                      setCurrentStep(3);
                     }}
                     className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-[#2F67FA] hover:bg-[#2F67FA]/5 transition-all duration-200 text-left"
                   >
-                    <p className="font-semibold text-foreground mb-1">{wallet.name}</p>
-                    <p className="text-sm text-gray-600 font-mono">{wallet.address}</p>
+                    <p className="font-semibold text-foreground mb-1">
+                      {wallet.name}
+                    </p>
+                    <p className="text-sm text-gray-600 font-mono">
+                      {wallet.address}
+                    </p>
                   </button>
                 ))
               )}
@@ -435,7 +503,7 @@ export default function WithdrawPage() {
                 </AddWalletDialog>
               )}
             </div>
-            
+
             {/* Add back button for step 2 */}
             <Button
               onClick={() => setCurrentStep(1)}
@@ -452,7 +520,9 @@ export default function WithdrawPage() {
         {currentStep === 3 && selectedWallet && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-semibold text-foreground mb-2">Enter Amount</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                Enter Amount
+              </h2>
               <p className="text-gray-600">How much do you want to withdraw?</p>
             </div>
 
@@ -487,7 +557,9 @@ export default function WithdrawPage() {
                       </span>
                     </div>
                     <div className="pt-2 border-t border-gray-200 flex justify-between">
-                      <span className="font-semibold text-foreground">Total</span>
+                      <span className="font-semibold text-foreground">
+                        Total
+                      </span>
                       <span className="font-semibold text-foreground">
                         {selectedWallet === "NGN" ? "₦" : "$"}
                         {totalAmount.toFixed(2)}
@@ -496,7 +568,9 @@ export default function WithdrawPage() {
                   </div>
 
                   <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-600 mb-1">You will receive</p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      You will receive
+                    </p>
                     <p className="text-lg font-semibold text-foreground">
                       {selectedWallet === "NGN"
                         ? `$${convertCurrency(Number.parseFloat(amount), "NGN", "USD").toFixed(2)}`
@@ -527,7 +601,7 @@ export default function WithdrawPage() {
                     Processing...
                   </>
                 ) : (
-                  'Continue'
+                  "Continue"
                 )}
               </Button>
             </div>
@@ -538,8 +612,12 @@ export default function WithdrawPage() {
         {currentStep === 4 && (
           <div className="space-y-6">
             <div className="text-center">
-              <h2 className="text-xl font-semibold text-foreground mb-2">Verify OTP</h2>
-              <p className="text-gray-600">Enter the 6-digit code sent to your email</p>
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                Verify OTP
+              </h2>
+              <p className="text-gray-600">
+                Enter the 6-digit code sent to your email
+              </p>
             </div>
 
             <div className="flex justify-center">
@@ -561,7 +639,9 @@ export default function WithdrawPage() {
             </div>
 
             <div className="text-center">
-              <button className="text-sm text-[#2F67FA] hover:text-[#2F67FA]/80 font-medium">Resend Code</button>
+              <button className="text-sm text-[#2F67FA] hover:text-[#2F67FA]/80 font-medium">
+                Resend Code
+              </button>
             </div>
 
             <div className="flex gap-3">
@@ -575,7 +655,7 @@ export default function WithdrawPage() {
               </Button>
               <Button
                 onClick={handleCompleteWithdrawal}
-                disabled={loading || otp.join('').length !== 6}
+                disabled={loading || otp.join("").length !== 6}
                 className="flex-1 bg-[#2F67FA] hover:bg-[#2F67FA]/90 text-white"
               >
                 {loading ? (
@@ -584,7 +664,7 @@ export default function WithdrawPage() {
                     Verifying...
                   </>
                 ) : (
-                  'Verify & Complete'
+                  "Verify & Complete"
                 )}
               </Button>
             </div>
@@ -599,7 +679,9 @@ export default function WithdrawPage() {
             </div>
 
             <div>
-              <h2 className="text-2xl font-semibold text-foreground mb-2">Withdrawal Successful!</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">
+                Withdrawal Successful!
+              </h2>
               <p className="text-gray-600">
                 Your withdrawal of {selectedWallet === "NGN" ? "₦" : "$"}
                 {amount} is being processed.
@@ -607,8 +689,12 @@ export default function WithdrawPage() {
             </div>
 
             <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600 mb-1">Transaction Reference</p>
-              <p className="text-sm font-mono font-medium text-foreground">TXN-{Date.now()}</p>
+              <p className="text-sm text-gray-600 mb-1">
+                Transaction Reference
+              </p>
+              <p className="text-sm font-mono font-medium text-foreground">
+                TXN-{Date.now()}
+              </p>
             </div>
 
             <div className="flex gap-3">
@@ -620,7 +706,10 @@ export default function WithdrawPage() {
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </Button>
-              <Button asChild className="flex-1 bg-[#2F67FA] hover:bg-[#2F67FA]/90 text-white">
+              <Button
+                asChild
+                className="flex-1 bg-[#2F67FA] hover:bg-[#2F67FA]/90 text-white"
+              >
                 <a href="/dashboard">Go to Dashboard</a>
               </Button>
             </div>
@@ -628,5 +717,5 @@ export default function WithdrawPage() {
         )}
       </Card>
     </div>
-  )
+  );
 }
