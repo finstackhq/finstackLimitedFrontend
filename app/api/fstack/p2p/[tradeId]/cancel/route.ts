@@ -1,30 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-export async function POST(request: NextRequest) {
+export async function POST(
+    request: NextRequest,
+    { params }: { params: Promise<{ tradeId: string }> }
+) {
     try {
+        const { tradeId } = await params;
+
         const baseUrl = process.env.FINSTACK_BACKEND_API_URL;
-        console.log('[fstack/p2p/cancel] FINSTACK_BACKEND_API_URL:', baseUrl);
+        console.log(`[fstack/p2p/${tradeId}/cancel] FINSTACK_BACKEND_API_URL:`, baseUrl);
 
         if (!baseUrl) {
-            console.error('[fstack/p2p/cancel] FINSTACK_BACKEND_API_URL not set');
+            console.error(`[fstack/p2p/${tradeId}/cancel] FINSTACK_BACKEND_API_URL not set`);
             return NextResponse.json({ success: false, error: 'Backend URL not configured' }, { status: 500 });
         }
 
-        // Get token from cookies (matching other routes pattern)
+        // Get token from cookies
         const cookieStore = await cookies();
         const token = cookieStore.get('access_token')?.value;
-
-        console.log('[fstack/p2p/cancel] Token found:', !!token);
 
         if (!token) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
-
-        const body = await request.json();
-        const { tradeId } = body;
-
-        console.log('[fstack/p2p/cancel] Trade ID:', tradeId);
 
         if (!tradeId) {
             return NextResponse.json({ success: false, error: 'Trade ID is required' }, { status: 400 });
@@ -33,7 +31,7 @@ export async function POST(request: NextRequest) {
         // Backend endpoint: https://finstacklimitedbackend.onrender.com/api/trade/{id}/cancel
         const apiUrl = `${baseUrl}trade/${tradeId}/cancel`;
 
-        console.log(`[fstack/p2p/cancel] Full URL: ${apiUrl}`);
+        console.log(`[fstack/p2p/${tradeId}/cancel] Full URL: ${apiUrl}`);
 
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -44,7 +42,7 @@ export async function POST(request: NextRequest) {
             cache: 'no-store'
         });
 
-        console.log('[fstack/p2p/cancel] Response status:', response.status);
+        console.log(`[fstack/p2p/${tradeId}/cancel] Response status:`, response.status);
 
         // Handle non-JSON responses
         const contentType = response.headers.get('content-type');
@@ -52,10 +50,10 @@ export async function POST(request: NextRequest) {
 
         if (contentType && contentType.includes('application/json')) {
             data = await response.json();
-            console.log('[fstack/p2p/cancel] Response data:', data);
+            console.log(`[fstack/p2p/${tradeId}/cancel] Response data:`, data);
         } else {
             const text = await response.text();
-            console.error('[fstack/p2p/cancel] Non-JSON response:', text.substring(0, 500));
+            console.error(`[fstack/p2p/${tradeId}/cancel] Non-JSON response:`, text.substring(0, 500));
             return NextResponse.json({
                 success: false,
                 error: text || 'Backend returned non-JSON response'
@@ -63,7 +61,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (!response.ok) {
-            console.error('[fstack/p2p/cancel] Backend cancellation failed:', data);
+            console.error(`[fstack/p2p/${tradeId}/cancel] Backend cancellation failed:`, data);
             return NextResponse.json({
                 success: false,
                 error: data.message || 'Failed to cancel trade'

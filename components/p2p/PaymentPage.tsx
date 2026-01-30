@@ -237,10 +237,12 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
        const reference = ctx?.initiate?.reference;
        if (!reference) throw new Error('Trade reference not found');
 
-       const res = await fetch('/api/fstack/p2p/cancel', {
+       const res = await fetch(`/api/fstack/p2p/${reference}/cancel`, {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ tradeId: reference })
+         // Body no longer needs tradeId as it's in the URL, but keeping empty object or just removing body if not needed.
+         // Backend might not strictly need body if it uses URL param, but keeping consistent.
+         body: JSON.stringify({}) 
        });
 
        const data = await res.json();
