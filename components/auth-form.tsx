@@ -1,10 +1,8 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import React, { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,7 +21,24 @@ interface PasswordStrength {
 export function AuthForm() {
   const { toast } = useToast()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mode, setMode] = useState<FormMode>("login")
+
+  // Check for logout param
+  React.useEffect(() => {
+    if (searchParams.get("logged_out") === "true") {
+      // Show toast
+      setTimeout(() => {
+        toast({
+          title: "Logged out",
+          description: "You have successfully logged out.",
+        })
+      }, 100)
+      
+      // Clean up URL without refresh
+      router.replace("/login")
+    }
+  }, [searchParams, toast, router])
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 

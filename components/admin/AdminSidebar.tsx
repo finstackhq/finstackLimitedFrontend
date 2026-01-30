@@ -41,7 +41,7 @@ export function AdminSidebar() {
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
-      window.location.href = '/admin/login';
+      window.location.href = '/admin/login?logged_out=true';
     }
   };
 

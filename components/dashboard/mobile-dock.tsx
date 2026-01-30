@@ -136,12 +136,8 @@ export function MobileDock() {
                       localStorage.removeItem('kycStatus')
                       localStorage.removeItem('role-change-logs')
                     } catch (e) {}
-                    // Show logout success toast
-                    toast({
-                      title: "Logged out",
-                      description: "You have successfully logged out.",
-                    })
-                    router.push("/login")
+                    // Redirect with flag for toast
+                    router.push("/login?logged_out=true")
                   }
                 }}
                 >

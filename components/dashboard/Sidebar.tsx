@@ -92,13 +92,8 @@ export function Sidebar() {
               } catch (e) {
                 console.warn("[sidebar] failed to clear localStorage:", e)
               }
-              // Show logout success toast
-              toast({
-                title: "Logged out",
-                description: "You have successfully logged out.",
-              })
-              // Redirect to login
-              router.push("/login")
+              // Redirect to login with flag for toast
+              router.push("/login?logged_out=true")
             }
           }}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full transition-all duration-200 text-red-600 hover:bg-red-50 group"
