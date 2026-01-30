@@ -112,12 +112,14 @@ export default function WithdrawPage() {
         let accounts: BankAccount[] = [];
 
         if (res.ok) {
+          const normalize = (str: string) =>
+            (str || "").toLowerCase().replace(/\s+/g, "").trim();
           const mapAccount = (acc: any) => {
-            // Always map bankName to correct code if missing or '000'
             let code = acc.bankCode || acc.institutionCode || "000";
             if (!code || code === "000") {
-              const bankInfo = SUPPORTED_BANKS.find(
-                (b) => b.name === acc.bankName,
+              const accNameNorm = normalize(acc.bankName);
+              const bankInfo = SUPPORTED_BANKS.find((b) =>
+                accNameNorm.includes(normalize(b.name)),
               );
               code = bankInfo ? bankInfo.code : "";
             }
@@ -178,7 +180,12 @@ export default function WithdrawPage() {
 
       // Add the new account to the local bank accounts list
       // Find the institution code for the selected bank name
-      const bankInfo = SUPPORTED_BANKS.find((b) => b.name === account.bankName);
+      const normalize = (str: string) =>
+        (str || "").toLowerCase().replace(/\s+/g, "").trim();
+      const accNameNorm = normalize(account.bankName);
+      const bankInfo = SUPPORTED_BANKS.find((b) =>
+        accNameNorm.includes(normalize(b.name)),
+      );
       const newAccount: BankAccount = {
         id: data.data?._id || `temp-${Date.now()}`,
         accountNumber: account.accountNumber,
