@@ -326,55 +326,62 @@ export function MerchantOrderFlow({
       </Card>
 
       {/* Merchant Buying Flow: Show Bank Details & I Have Paid */}
-      {isMerchantBuying && currentStatus === "pending_payment" && (
-        <Card className="p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Shield className="w-6 h-6 text-blue-600" />
-            <h3 className="text-lg font-semibold">Make Payment</h3>
-          </div>
+      {isMerchantBuying && currentStatus === 'pending_payment' && (
+         <Card className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+                <Shield className="w-6 h-6 text-blue-600" />
+                <h3 className="text-lg font-semibold">Make Payment</h3>
+            </div>
+            
+            <div className="p-4 bg-gray-50 rounded-lg border mb-4">
+               <h4 className="font-medium mb-3">Seller Bank Details</h4>
+               {loadingDetails ? (
+                   <div className="text-sm text-gray-500">Loading details...</div>
+               ) : bankDetails ? (
+                   <div className="space-y-2">
+                       <div className="flex justify-between">
+                           <span className="text-sm text-gray-600">Bank Name</span>
+                           <span className="font-medium">{bankDetails.bankName}</span>
+                       </div>
+                       <div className="flex justify-between">
+                           <span className="text-sm text-gray-600">Account Number</span>
+                           <span className="font-medium font-mono">{bankDetails.accountNumber}</span>
+                       </div>
+                       <div className="flex justify-between">
+                           <span className="text-sm text-gray-600">Account Name</span>
+                           <span className="font-medium">{bankDetails.accountName}</span>
+                       </div>
+                   </div>
+               ) : (
+                   <div className="text-sm text-red-500">Failed to load bank details or none provided.</div>
+               )}
+            </div>
 
-          <div className="p-4 bg-gray-50 rounded-lg border mb-4">
-            <h4 className="font-medium mb-3">Seller Bank Details</h4>
-            {loadingDetails ? (
-              <div className="text-sm text-gray-500">Loading details...</div>
-            ) : bankDetails ? (
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Bank Name</span>
-                  <span className="font-medium">{bankDetails.bankName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Account Number</span>
-                  <span className="font-medium font-mono">
-                    {bankDetails.accountNumber}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Account Name</span>
-                  <span className="font-medium">{bankDetails.accountName}</span>
-                </div>
-              </div>
-            ) : (
-              <div className="text-sm text-red-500">
-                Failed to load bank details or none provided.
-              </div>
-            )}
-          </div>
-
-          <Button
-            onClick={handleMerchantMarkPaid}
-            disabled={markingPaid || !bankDetails}
-            className="w-full bg-green-600 hover:bg-green-700 text-white"
-          >
-            {markingPaid ? "Processing..." : "I have made payment"}
-          </Button>
-        </Card>
+            <div className="space-y-3">
+               <Button 
+                   onClick={handleMerchantMarkPaid}
+                   disabled={markingPaid || !bankDetails}
+                   className="w-full bg-green-600 hover:bg-green-700 text-white"
+               >
+                   {markingPaid ? 'Processing...' : 'I have made payment'}
+               </Button>
+               
+               {/* Cancel Button for Merchant in Buy Flow */}
+               <Button 
+                   variant="destructive"
+                   className="w-full"
+                   onClick={handleDispute}
+                   disabled={markingPaid}
+               >
+                   <XCircle className="w-4 h-4 mr-2" />
+                   Cancel Order
+               </Button>
+            </div>
+         </Card>
       )}
 
       {/* Merchant Selling Flow: Payment Verification (Existing Code) */}
-      {!isMerchantBuying &&
-        (currentStatus === "payment_confirmed_by_buyer" ||
-          currentStatus === "paid") && (
+      {!isMerchantBuying && (currentStatus === 'payment_confirmed_by_buyer' || currentStatus === 'paid') && (
           <Card className="p-6">
             <div className="flex items-center gap-3 mb-4">
               <Shield className="w-6 h-6 text-blue-600" />

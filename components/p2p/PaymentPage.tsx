@@ -237,15 +237,19 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
        const reference = ctx?.initiate?.reference;
        if (!reference) throw new Error('Trade reference not found');
 
-       // TODO: Replace with actual API call when backend is ready
-       const res = await fetch('/api/fstack/p2p/cancel-trade', {
+       const res = await fetch(`/api/fstack/p2p/${reference}/cancel`, {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ reference, reason })
+         // Body no longer needs tradeId as it's in the URL, but keeping empty object or just removing body if not needed.
+         // Backend might not strictly need body if it uses URL param, but keeping consistent.
+         body: JSON.stringify({}) 
        });
 
-       // Simulate success for now
-       await new Promise(resolve => setTimeout(resolve, 500));
+       const data = await res.json();
+       
+       if (!res.ok || !data.success) {
+         throw new Error(data.error || data.message || 'Failed to cancel trade');
+       }
 
        const now = new Date().toISOString();
        updateLocalStatus('cancelled', {
@@ -531,17 +535,19 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
                               : (ctx.initiate?.side === 'SELL' ? 'Payment Received' : 'Payment Completed')}
                         </Button>
                         
-                        {/* Cancel Button */}
-                        <Button 
-                            size="lg"
-                            variant="destructive"
-                            className="w-full text-lg font-bold h-14" 
-                            onClick={() => setShowCancelDialog(true)}
-                            disabled={updating}
-                        >
-                            <XCircle className="h-5 w-5 mr-2" />
-                            Cancel Order
-                        </Button>
+                        {/* Cancel Button - Only show for User Buy flow, not User Sell */}
+                        {ctx.initiate?.side !== 'SELL' && (
+                          <Button 
+                              size="lg"
+                              variant="destructive"
+                              className="w-full text-lg font-bold h-14" 
+                              onClick={() => setShowCancelDialog(true)}
+                              disabled={updating}
+                          >
+                              <XCircle className="h-5 w-5 mr-2" />
+                              Cancel Order
+                          </Button>
+                        )}
                     </div>
                 )}
             </div>

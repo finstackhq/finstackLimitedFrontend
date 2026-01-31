@@ -13,14 +13,7 @@ import { saveMerchantAd } from '@/lib/p2p-storage';
 import { P2PAd, PaymentMethod } from '@/lib/p2p-mock-data';
 
 // Supported pairs constant
-const SUPPORTED_PAIRS = [
-  'USDC/RMB','CNGN/RMB',
-  'USDC/GHS','CNGN/GHS',
-  'USDC/XAF','CNGN/XAF',
-  'USDC/XOF','CNGN/XOF',
-  'USDC/USD','CNGN/USD',
-  'USDC/NGN','CNGN/NGN'
-];
+// Supported pairs constant removed to allow all combinations
 const CRYPTOS = ['USDC','CNGN'];
 const FIATS = ['RMB','GHS','XAF','XOF','USD', 'NGN'];
 const TIME_LIMITS = [15,30,60]; // minutes
@@ -132,12 +125,16 @@ export function MerchantAdWizard() {
   const computedBaseRate = useMemo(() => {
     const [crypto, fiat] = ad.pair.split('/') as [string, string];
     if (!rates || Object.keys(rates).length === 0) return 0;
+    // Map RMB to CNY for API lookup
+    const fiatKey = fiat === 'RMB' ? 'CNY' : fiat;
+
     if (crypto === 'USDC') {
-      if (fiat === 'USD') return 1; // 1 USDC = 1 USD
-      return rates[fiat] || 0; // USD -> fiat
+      if (fiatKey === 'USD') return 1; // 1 USDC = 1 USD
+      return rates[fiatKey] || 0; // USD -> fiat
     }
+    
     // CNGN assumed pegged to NGN; 1 CNGN = 1 NGN
-    const usdToFiat = fiat === 'USD' ? 1 : rates[fiat];
+    const usdToFiat = fiatKey === 'USD' ? 1 : rates[fiatKey];
     const usdToNGN = rates['NGN'];
     if (!usdToFiat || !usdToNGN) return 0;
     // 1 NGN in fiat = (usdToFiat / usdToNGN)
@@ -344,7 +341,7 @@ export function MerchantAdWizard() {
                         return (
                           <button key={c} onClick={() => {
                             const newPair = `${c}/${fiat}`;
-                            if (SUPPORTED_PAIRS.includes(newPair)) update('pair', newPair);
+                            update('pair', newPair);
                           }} className={cn('p-4 rounded-lg border text-left transition relative overflow-hidden', active ? 'border-blue-600 ring-2 ring-blue-200 bg-linear-to-br from-blue-50 to-white' : 'hover:bg-gray-50')}> 
                             <span className="text-lg font-semibold">{c}</span>
                             <span className="block text-[11px] text-gray-500 mt-1">Stable Asset</span>
@@ -361,9 +358,8 @@ export function MerchantAdWizard() {
                         const crypto = ad.pair.split('/')[0];
                         const active = ad.pair.endsWith('/' + f);
                         const newPair = `${crypto}/${f}`;
-                        const disabled = !SUPPORTED_PAIRS.includes(newPair);
                         return (
-                          <button key={f} disabled={disabled} onClick={() => update('pair', newPair)} className={cn('p-3 rounded-lg border text-center text-sm font-medium transition relative', active ? 'border-green-600 ring-2 ring-green-200 bg-linear-to-br from-green-50 to-white' : disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-50')}> 
+                          <button key={f} onClick={() => update('pair', newPair)} className={cn('p-3 rounded-lg border text-center text-sm font-medium transition relative', active ? 'border-green-600 ring-2 ring-green-200 bg-linear-to-br from-green-50 to-white' : 'hover:bg-gray-50')}> 
                             {f}
                             {active && <span className="absolute top-1 right-1 text-green-600 text-[10px] font-bold">✓</span>}
                           </button>

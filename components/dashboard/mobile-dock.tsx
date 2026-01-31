@@ -17,6 +17,7 @@ import {
   LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/hooks/use-toast"
 
 const dockItems = [
   { name: "Home", href: "/dashboard", icon: Home },
@@ -37,6 +38,7 @@ export function MobileDock() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+  const { toast } = useToast()
 
   return (
     <>
@@ -119,8 +121,24 @@ export function MobileDock() {
                 onClick={async () => {
                   try {
                     await fetch("/api/fstack/logout", { method: "POST" })
-                  } catch (e) {}
-                  router.push("/login")
+                  } catch (e) {
+                    console.warn("[mobile-dock] logout failed:", e)
+                  } finally {
+                    // Clear localStorage
+                    try {
+                      localStorage.removeItem('access_token')
+                      localStorage.removeItem('accessToken')
+                      localStorage.removeItem('merchant-status')
+                      localStorage.removeItem('isKycVerified')
+                      localStorage.removeItem('user')
+                      localStorage.removeItem('userFirstName')
+                      localStorage.removeItem('userLastName')
+                      localStorage.removeItem('kycStatus')
+                      localStorage.removeItem('role-change-logs')
+                    } catch (e) {}
+                    // Redirect with flag for toast
+                    router.push("/login?logged_out=true")
+                  }
                 }}
                 >
                   <LogOut className="w-5 h-5 text-red-600" />

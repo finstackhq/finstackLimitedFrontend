@@ -5,6 +5,7 @@ import "./globals.css"
 import { Suspense } from "react"
 import { PageTransition } from "@/components/page-transition"
 import { LoadingScreen } from "@/components/loading-screen"
+import { Toaster } from "@/components/ui/toaster"
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -35,6 +36,7 @@ export default function RootLayout({
         <Suspense fallback={<LoadingScreen />}>
           <PageTransition>{children}</PageTransition>
         </Suspense>
+        <Toaster />
       </body>
     </html>
   )

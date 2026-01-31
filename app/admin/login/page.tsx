@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -15,6 +16,25 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+
+  const { toast } = useToast();
+  const searchParams = useSearchParams();
+
+  // Check for logout param
+  useEffect(() => {
+    if (searchParams.get("logged_out") === "true") {
+      // Show toast
+      setTimeout(() => {
+        toast({
+          title: "Logged out",
+          description: "You have successfully logged out.",
+        })
+      }, 100)
+      
+      // Clean up URL without refresh
+      router.replace("/admin/login")
+    }
+  }, [searchParams, toast, router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +51,10 @@ export default function AdminLogin() {
       const data = await response.json();
 
       if (response.ok) {
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully logged in.",
+        })
         router.push('/admin');
       } else {
         setError(data.error || 'Invalid credentials');

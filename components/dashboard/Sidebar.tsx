@@ -14,6 +14,7 @@ import {
   LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/hooks/use-toast"
 
 const navItems = [
   { name: "Home", href: "/dashboard", icon: Home },
@@ -30,6 +31,7 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { toast } = useToast()
 
   return (
     <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-[240px] bg-white border-r border-gray-100 z-40">
@@ -79,15 +81,19 @@ export function Sidebar() {
               // Always clear localStorage tokens after attempting logout
               try {
                 localStorage.removeItem('access_token')
+                localStorage.removeItem('accessToken')
                 localStorage.removeItem('merchant-status')
                 localStorage.removeItem('isKycVerified')
                 localStorage.removeItem('user')
+                localStorage.removeItem('userFirstName')
+                localStorage.removeItem('userLastName')
+                localStorage.removeItem('kycStatus')
                 localStorage.removeItem('role-change-logs')
               } catch (e) {
                 console.warn("[sidebar] failed to clear localStorage:", e)
               }
-              // Redirect to login
-              router.push("/login")
+              // Redirect to login with flag for toast
+              router.push("/login?logged_out=true")
             }
           }}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full transition-all duration-200 text-red-600 hover:bg-red-50 group"

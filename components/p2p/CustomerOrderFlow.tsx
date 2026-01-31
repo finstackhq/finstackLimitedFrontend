@@ -17,7 +17,8 @@ import {
   Check,
   MessageSquare,
   CreditCard,
-  QrCode
+  QrCode,
+  Download
 } from 'lucide-react';
 
 interface P2POrder {
@@ -232,8 +233,8 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel }: CustomerOrder
                       </div>
                     )}
                     {order.alipayQrImage && (
-                      <div>
-                        <p className="text-xs text-gray-600 mb-2">Scan QR Code to Pay</p>
+                      <div className="space-y-3">
+                        <p className="text-xs text-gray-600">Scan QR Code to Pay</p>
                         <div className="bg-white p-4 rounded-lg border-2 inline-block">
                           <img 
                             src={order.alipayQrImage} 
@@ -241,6 +242,23 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel }: CustomerOrder
                             className="w-48 h-48 object-contain"
                           />
                         </div>
+                        {/* Download QR Code Button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = order.alipayQrImage!;
+                            link.download = `qr-code-${order.id}.png`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
+                          className="w-full"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Save QR Code
+                        </Button>
                       </div>
                     )}
                   </div>
