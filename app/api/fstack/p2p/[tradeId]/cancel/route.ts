@@ -34,7 +34,7 @@ export async function POST(
         console.log(`[fstack/p2p/${tradeId}/cancel] Full URL: ${apiUrl}`);
 
         const response = await fetch(apiUrl, {
-            method: 'POST',
+            method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`

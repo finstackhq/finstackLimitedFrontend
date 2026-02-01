@@ -238,15 +238,36 @@ export function MerchantOrderFlow({
     }
   };
 
-  const handleDispute = () => {
+  const handleDispute = async () => {
+  try {
+    const res = await fetch(`/api/fstack/p2p/${order.reference}/dispute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Merchant reported issue' })
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      toast({
+        title: "Dispute Submitted",
+        description: "Your dispute has been submitted. Admin will review this order.",
+      });
+      onDispute();
+    } else {
+      toast({
+        title: "Error",
+        description: data.error || "Failed to submit dispute",
+        variant: "destructive",
+      });
+    }
+  } catch (error: any) {
     toast({
-      title: "Dispute Initiated",
-      description:
-        "Admin will review this order. Both parties will be notified.",
+      title: "Error",
+      description: error.message || "Failed to submit dispute",
       variant: "destructive",
     });
-    onDispute();
-  };
+  }
+};
 
   return (
     <div className="space-y-6">

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Clock, 
@@ -49,10 +50,11 @@ interface CustomerOrderFlowProps {
   order: P2POrder;
   onMarkPaid: (proof?: string) => void;
   onCancel: () => void;
+  onDispute?: () => void; // For raising a dispute
   onRelease?: () => void; // For selling flow
 }
 
-export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease }: CustomerOrderFlowProps) {
+export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDispute }: CustomerOrderFlowProps) {
   const { toast } = useToast();
   const [paymentProof, setPaymentProof] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
@@ -66,12 +68,14 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease }: Cu
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otpError, setOtpError] = useState("");
 
-  const isUserSelling = order.side === 'SELL';
+  const isUserSelling = order.side?.toUpperCase() === 'SELL';
   
   // Also support dynamic payment proof view for Seller
   const [viewProof, setViewProof] = useState(false);
 
-  const timeRemaining = Math.max(0, Math.floor((new Date(order.expiresAt).getTime() - Date.now()) / 1000 / 60));
+  // Parse expiresAt correctly
+  const expiresAtDate = new Date(order.expiresAt);
+  const timeRemaining = Math.max(0, Math.floor((expiresAtDate.getTime() - Date.now()) / 1000 / 60));
   const isExpiringSoon = timeRemaining <= 5;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,10 +122,12 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease }: Cu
   const handleSendOtp = async () => {
     setSendingOtp(true);
     try {
-      const res = await fetch("/api/fstack/orders/initiate-release", {
+      const reference = order.reference || order.id;
+      // UPDATED ENDPOINT to match PaymentPage
+      const res = await fetch(`/api/fstack/trade/${reference}/initiate-release`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reference: order.reference || order.id }),
+        body: JSON.stringify({ reference }),
       });
 
       const data = await res.json();
@@ -159,10 +165,12 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease }: Cu
 
     setVerifyingOtp(true);
     try {
-      const res = await fetch("/api/fstack/orders/confirm-release", {
+      const reference = order.reference || order.id;
+      // UPDATED ENDPOINT to match PaymentPage
+      const res = await fetch(`/api/fstack/trade/${reference}/confirm-release`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reference: order.reference || order.id, otpCode: otpCode }),
+        body: JSON.stringify({ otpCode: otpCode }), // Send otpCode as expected by new endpoint
       });
 
       const data = await res.json();
@@ -250,7 +258,7 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease }: Cu
       </Card>
 
       {/* Payment Instructions (User Buying) */}
-      {!isUserSelling && order.status === 'pending_payment' && (
+      {!isUserSelling && ['pending_payment', 'PENDING_PAYMENT'].includes(order.status) && (
         <>
           <Card className="p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -378,112 +386,80 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease }: Cu
             </div>
           </Card>
 
-          {/* Upload Payment Proof */}
+          {/* Action Buttons */}
           <Card className="p-6">
-            <h3 className="font-semibold mb-4">Upload Payment Proof</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Payment Screenshot/Receipt *
-                </label>
-                <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                  {paymentProof ? (
-                    <div className="space-y-3">
-                      <img 
-                        src={paymentProof} 
-                        alt="Payment proof" 
-                        className="max-w-full h-48 object-contain mx-auto rounded"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPaymentProof(null)}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  ) : (
-                    <label className="cursor-pointer">
-                      <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                      <p className="text-sm text-gray-600 mb-1">Click to upload payment proof</p>
-                      <p className="text-xs text-gray-500">PNG, JPG up to 10MB</p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleFileUpload}
-                        disabled={uploading}
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Notes (Optional)
-                </label>
-                <Textarea
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  placeholder="Add any additional notes..."
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleMarkAsPaid}
-                  disabled={!paymentProof}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  I Have Paid
-                </Button>
-                <Button
-                  onClick={onCancel}
-                  variant="outline"
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Cancel Order
-                </Button>
-              </div>
+            <h3 className="font-semibold mb-4">Confirm Payment</h3>
+            <div className="flex gap-3">
+              <Button
+                onClick={handleMarkAsPaid}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                I Have Paid
+              </Button>
+              <Button
+                onClick={onCancel}
+                variant="destructive"
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Cancel Order
+              </Button>
+              <Button variant="outline" onClick={onDispute} className="text-orange-600 border-orange-200 hover:bg-orange-50">
+                 Report Issue
+              </Button>
             </div>
           </Card>
         </>
       )}
 
-      {/* User Selling: Waiting for Payment */}
-      {isUserSelling && order.status === 'pending_payment' && (
+      {/* User Selling: Waiting for Merchant Payment */}
+      {isUserSelling && ['pending_payment', 'PENDING_PAYMENT'].includes(order.status) && (
         <Card className="p-6">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto">
               <Clock className="w-8 h-8 text-blue-600 animate-pulse" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold mb-2">
-                Waiting for Buyer Payment
-              </h3>
+              <h3 className="text-lg font-semibold mb-2">Waiting for Merchant Payment</h3>
               <p className="text-gray-600 text-sm">
-                The buyer (merchant) has been notified to make the payment to your account.
-                You will be notified once they mark it as paid.
+                The merchant has been notified to make payment to your account.
+                You'll see the "I Have Received Payment" button once they mark it as paid.
               </p>
             </div>
-            <Button onClick={onCancel} variant="outline" size="sm" className="text-red-500 hover:bg-red-50">
-               <XCircle className="w-4 h-4 mr-2" /> Cancel Order
-            </Button>
+            <div className="flex gap-3 justify-center">
+              <Button onClick={onCancel} variant="destructive" size="sm">
+                <XCircle className="w-4 h-4 mr-2" /> Cancel Order
+              </Button>
+              <Button variant="outline" onClick={onDispute} size="sm" className="text-orange-600 border-orange-200 hover:bg-orange-50">
+                Report Issue
+              </Button>
+            </div>
           </div>
         </Card>
       )}
 
-      {/* User Selling: Verify & Release */}
-      {isUserSelling && (order.status === 'awaiting_release' || order.status === 'PAYMENT_CONFIRMED_BY_BUYER') && (
+      {/* User Selling: Verify & Release (Only when Merchant has marked paid) */}
+      {isUserSelling && ['MERCHANT_PAID', 'merchant_paid', 'awaiting_release', 'AWAITING_RELEASE', 'PAYMENT_CONFIRMED_BY_BUYER', 'paid'].includes(order.status) && (
         <Card className="p-6">
              <div className="flex items-center gap-3 mb-4">
               <Shield className="w-6 h-6 text-blue-600" />
               <h3 className="text-lg font-semibold">Verify Payment & Release</h3>
             </div>
             <div className="space-y-4">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-green-800 mb-1">
+                      Merchant Has Paid!
+                    </p>
+                    <p className="text-xs text-green-700">
+                      The merchant has marked the order as paid. Please verify you received {order.fiatAmount} {order.fiatCurrency} before releasing.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
               <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -499,15 +475,18 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease }: Cu
                   </div>
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   onClick={handleSendOtp}
                   disabled={sendingOtp}
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                 >
-                  {sendingOtp ? "Sending OTP..." : "Payment Received - Release Crypto"}
+                  {sendingOtp ? "Sending OTP..." : "I Have Received Payment"}
                 </Button>
-                <Button variant="outline" onClick={() => {/* Dispute logic? */}}>
+                <Button onClick={onCancel} variant="destructive">
+                  <XCircle className="w-4 h-4 mr-2" /> Cancel
+                </Button>
+                <Button variant="outline" onClick={onDispute} className="text-orange-600 border-orange-200 hover:bg-orange-50">
                    Report Issue
                 </Button>
               </div>
@@ -538,6 +517,9 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease }: Cu
                 />
               </div>
             )}
+             <Button variant="ghost" onClick={onDispute} className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 mt-2">
+                 Report Issue / Dispute
+              </Button>
           </div>
         </Card>
       )}
