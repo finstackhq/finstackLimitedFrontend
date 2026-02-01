@@ -18,7 +18,8 @@ import {
   MessageSquare,
   CreditCard,
   QrCode,
-  Download
+  Download,
+  Shield 
 } from 'lucide-react';
 
 interface P2POrder {
@@ -40,22 +41,37 @@ interface P2POrder {
   bankAccountNumber?: string;
   bankAccountName?: string;
   bankName?: string;
+  side?: 'BUY' | 'SELL';
+  reference?: string; 
 }
 
 interface CustomerOrderFlowProps {
   order: P2POrder;
   onMarkPaid: (proof?: string) => void;
   onCancel: () => void;
+  onRelease?: () => void; // For selling flow
 }
 
-export function CustomerOrderFlow({ order, onMarkPaid, onCancel }: CustomerOrderFlowProps) {
+export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease }: CustomerOrderFlowProps) {
   const { toast } = useToast();
   const [paymentProof, setPaymentProof] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState('');
 
-  const timeRemaining = Math.max(0, Math.floor((order.expiresAt.getTime() - Date.now()) / 1000 / 60));
+  // OTP State for Selling Flow
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [otpError, setOtpError] = useState("");
+
+  const isUserSelling = order.side === 'SELL';
+  
+  // Also support dynamic payment proof view for Seller
+  const [viewProof, setViewProof] = useState(false);
+
+  const timeRemaining = Math.max(0, Math.floor((new Date(order.expiresAt).getTime() - Date.now()) / 1000 / 60));
   const isExpiringSoon = timeRemaining <= 5;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,6 +114,93 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel }: CustomerOrder
     });
   };
 
+  // --- Selling Logic (Release Crypto) ---
+  const handleSendOtp = async () => {
+    setSendingOtp(true);
+    try {
+      const res = await fetch("/api/fstack/orders/initiate-release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference: order.reference || order.id }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast({
+          title: "OTP Sent",
+          description: "A 6-digit code has been sent to your email.",
+        });
+        setShowOtpModal(true);
+      } else {
+        throw new Error(data.error || data.message || "Failed to send OTP");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to initiate release",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyAndRelease = async () => {
+    const otpCode = otp.join("");
+    if (otpCode.length !== 6) {
+      toast({
+        title: "Invalid OTP",
+        description: "Please enter all 6 digits",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setVerifyingOtp(true);
+    try {
+      const res = await fetch("/api/fstack/orders/confirm-release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference: order.reference || order.id, otpCode: otpCode }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast({
+          title: "Crypto Released",
+          description: `${order.cryptoAmount} ${order.cryptoCurrency} has been released.`,
+        });
+        setShowOtpModal(false);
+        setOtpError("");
+        if (onRelease) onRelease();
+      } else {
+         const errorMsg = data.error || data.message || "Invalid OTP code";
+         setOtpError(errorMsg);
+         throw new Error(errorMsg);
+      }
+    } catch (error: any) {
+       // toast handled by UI state or ignored
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (value.length > 1) value = value[0];
+    if (!/^[0-9]*$/.test(value)) return;
+
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    if (value && index < 5) {
+      const nextInput = document.getElementById(`otp-${index + 1}`);
+      nextInput?.focus();
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Order Header */}
@@ -119,11 +222,11 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel }: CustomerOrder
 
         <div className="grid md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
           <div>
-            <p className="text-xs text-gray-600 mb-1">You Pay</p>
+            <p className="text-xs text-gray-600 mb-1">{isUserSelling ? 'You Receive' : 'You Pay'}</p>
             <p className="text-lg font-bold">{order.fiatAmount.toLocaleString()} {order.fiatCurrency}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-600 mb-1">You Receive</p>
+            <p className="text-xs text-gray-600 mb-1">{isUserSelling ? 'You Release' : 'You Receive'}</p>
             <p className="text-lg font-bold">{order.cryptoAmount} {order.cryptoCurrency}</p>
           </div>
           <div>
@@ -146,8 +249,8 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel }: CustomerOrder
         </div>
       </Card>
 
-      {/* Payment Instructions */}
-      {order.status === 'pending_payment' && (
+      {/* Payment Instructions (User Buying) */}
+      {!isUserSelling && order.status === 'pending_payment' && (
         <>
           <Card className="p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -350,8 +453,70 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel }: CustomerOrder
         </>
       )}
 
-      {/* Waiting for Release */}
-      {(order.status === 'awaiting_release' || order.status === 'PAYMENT_CONFIRMED_BY_BUYER') && (
+      {/* User Selling: Waiting for Payment */}
+      {isUserSelling && order.status === 'pending_payment' && (
+        <Card className="p-6">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto">
+              <Clock className="w-8 h-8 text-blue-600 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">
+                Waiting for Buyer Payment
+              </h3>
+              <p className="text-gray-600 text-sm">
+                The buyer (merchant) has been notified to make the payment to your account.
+                You will be notified once they mark it as paid.
+              </p>
+            </div>
+            <Button onClick={onCancel} variant="outline" size="sm" className="text-red-500 hover:bg-red-50">
+               <XCircle className="w-4 h-4 mr-2" /> Cancel Order
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* User Selling: Verify & Release */}
+      {isUserSelling && (order.status === 'awaiting_release' || order.status === 'PAYMENT_CONFIRMED_BY_BUYER') && (
+        <Card className="p-6">
+             <div className="flex items-center gap-3 mb-4">
+              <Shield className="w-6 h-6 text-blue-600" />
+              <h3 className="text-lg font-semibold">Verify Payment & Release</h3>
+            </div>
+            <div className="space-y-4">
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800 mb-1">
+                      Verify Payment Carefully
+                    </p>
+                    <ul className="text-xs text-yellow-700 space-y-1">
+                      <li>• Check your bank account for exact amount: {order.fiatAmount} {order.fiatCurrency}</li>
+                      <li>• Verify sender name (Merchant)</li>
+                      <li>• DO NOT release if you haven't received the money</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleSendOtp}
+                  disabled={sendingOtp}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {sendingOtp ? "Sending OTP..." : "Payment Received - Release Crypto"}
+                </Button>
+                <Button variant="outline" onClick={() => {/* Dispute logic? */}}>
+                   Report Issue
+                </Button>
+              </div>
+            </div>
+        </Card>
+      )}
+
+      {/* Waiting for Release (User Buying) */}
+      {!isUserSelling && (order.status === 'awaiting_release' || order.status === 'PAYMENT_CONFIRMED_BY_BUYER') && (
         <Card className="p-6">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto">
@@ -387,6 +552,66 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel }: CustomerOrder
           Chat functionality coming soon. Use the notes section for now.
         </div>
       </Card>
+
+    {/* OTP Modal */}
+    {showOtpModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md p-6 space-y-4">
+            <div className="text-center">
+              <h3 className="text-xl font-semibold mb-2">Enter OTP Code</h3>
+              <p className="text-sm text-gray-600">
+                We've sent a 6-digit code to your email
+              </p>
+            </div>
+
+            <div className="flex gap-2 justify-center">
+              {otp.map((digit, index) => (
+                <Input
+                  key={index}
+                  id={`otp-${index}`}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => {
+                    setOtpError("");
+                    handleOtpChange(index, e.target.value);
+                  }}
+                  className={`w-12 h-12 text-center text-lg font-semibold ${otpError ? "border-red-500" : ""}`}
+                />
+              ))}
+            </div>
+
+            {otpError && (
+              <p className="text-red-500 text-sm text-center font-medium">
+                {otpError}
+              </p>
+            )}
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowOtpModal(false);
+                  setOtp(["", "", "", "", "", ""]);
+                  setOtpError("");
+                }}
+                className="flex-1"
+                disabled={verifyingOtp}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleVerifyAndRelease}
+                disabled={verifyingOtp}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              >
+                {verifyingOtp ? "Verifying..." : "Confirm & Release"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
