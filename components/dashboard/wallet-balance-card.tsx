@@ -56,7 +56,7 @@ export function WalletBalanceCard({ wallets }: WalletBalanceCardProps) {
   }
 
   return (
-    <Card className="relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
+    <Card className="relative overflow-hidden border-0 shadow-xl bg-blue-600 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
       <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
       <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl" />
       <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/20 rounded-full blur-3xl" />

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 
 // Dynamically import components to prevent SSR issues
+const UserOrders = dynamic(() => import("@/components/dashboard/user-orders").then(mod => ({ default: mod.UserOrders })), { ssr: false })
 const WelcomeGreeting = dynamic(() => import("@/components/dashboard/welcome-greeting").then(mod => ({ default: mod.WelcomeGreeting })), { ssr: false })
 const WalletBalanceCard = dynamic(() => import("@/components/dashboard/wallet-balance-card").then(mod => ({ default: mod.WalletBalanceCard })), { ssr: false })
 const CurrencyConverter = dynamic(() => import("@/components/dashboard/currency-converter").then(mod => ({ default: mod.CurrencyConverter })), { ssr: false })
@@ -94,6 +95,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 md:space-y-8">
       <KYCPopup />
+
       {/* Welcome Section */}
       <div className="animate-in fade-in slide-in-from-top-4 duration-500">
         <WelcomeGreeting />
@@ -102,6 +104,11 @@ export default function DashboardPage() {
       {/* Wallet Balance Card */}
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
         <WalletBalanceCard wallets={wallets} />
+      </div>
+
+      {/* User Orders Section */}
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
+        <UserOrders />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
