@@ -1,4 +1,40 @@
 "use client";
+// Static mapping of supported banks and their institution codes
+const SUPPORTED_BANKS = [
+  { name: "Access Bank", code: "ABNGNGLA" },
+  { name: "Diamond Bank", code: "DBLNNGLA" },
+  { name: "Fidelity Bank", code: "FIDTNGLA" },
+  { name: "FCMB", code: "FCMBNGLA" },
+  { name: "First Bank Of Nigeria", code: "FBNINGLA" },
+  { name: "Guaranty Trust Bank", code: "GTBINGLA" },
+  { name: "Polaris Bank", code: "PRDTNGLA" },
+  { name: "Union Bank", code: "UBNINGLA" },
+  { name: "United Bank for Africa", code: "UNAFNGLA" },
+  { name: "Citibank", code: "CITINGLA" },
+  { name: "Ecobank Bank", code: "ECOCNGLA" },
+  { name: "Heritage", code: "HBCLNGLA" },
+  { name: "Keystone Bank", code: "PLNINGLA" },
+  { name: "Stanbic IBTC Bank", code: "SBICNGLA" },
+  { name: "Standard Chartered Bank", code: "SCBLNGLA" },
+  { name: "Sterling Bank", code: "NAMENGLA" },
+  { name: "Unity Bank", code: "ICITNGLA" },
+  { name: "Suntrust Bank", code: "SUTGNGLA" },
+  { name: "Providus Bank", code: "PROVNGLA" },
+  { name: "FBNQuest Merchant Bank", code: "KDHLNGLA" },
+  { name: "Greenwich Merchant Bank", code: "GMBLNGLA" },
+  { name: "FSDH Merchant Bank", code: "FSDHNGLA" },
+  { name: "Rand Merchant Bank", code: "FIRNNGLA" },
+  { name: "Jaiz Bank", code: "JAIZNGLA" },
+  { name: "Zenith Bank", code: "ZEIBNGLA" },
+  { name: "Wema Bank", code: "WEMANGLA" },
+  { name: "Kuda Microfinance Bank", code: "KUDANGPC" },
+  { name: "OPay", code: "OPAYNGPC" },
+  { name: "PalmPay", code: "PALMNGPC" },
+  { name: "Paystack-Titan MFB", code: "PAYTNGPC" },
+  { name: "Moniepoint MFB", code: "MONINGPC" },
+  { name: "Safe Haven MFB", code: "SAHVNGPC" },
+  { name: "BellBank MFB", code: "BELLNGPC" },
+];
 
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
@@ -76,33 +112,31 @@ export default function WithdrawPage() {
         let accounts: BankAccount[] = [];
 
         if (res.ok) {
+          const normalize = (str: string) =>
+            (str || "").toLowerCase().replace(/\s+/g, "").trim();
+          const mapAccount = (acc: any) => {
+            let code = acc.bankCode || acc.institutionCode || "000";
+            if (!code || code === "000") {
+              const accNameNorm = normalize(acc.bankName);
+              const bankInfo = SUPPORTED_BANKS.find((b) =>
+                accNameNorm.includes(normalize(b.name)),
+              );
+              code = bankInfo ? bankInfo.code : "";
+            }
+            return {
+              id: acc._id || acc.id || `acc-${Date.now()}-${Math.random()}`,
+              accountNumber: acc.accountNumber,
+              accountName: acc.accountName,
+              bankName: acc.bankName,
+              bankCode: code,
+            };
+          };
           if (data.success && Array.isArray(data.data)) {
-            // Format: { success: true, data: [...] }
-            accounts = data.data.map((acc: any) => ({
-              id: acc._id || acc.id || `acc-${Date.now()}-${Math.random()}`,
-              accountNumber: acc.accountNumber,
-              accountName: acc.accountName,
-              bankName: acc.bankName,
-              bankCode: acc.bankCode || acc.institutionCode || "000",
-            }));
+            accounts = data.data.map(mapAccount);
           } else if (Array.isArray(data)) {
-            // Format: [...]
-            accounts = data.map((acc: any) => ({
-              id: acc._id || acc.id || `acc-${Date.now()}-${Math.random()}`,
-              accountNumber: acc.accountNumber,
-              accountName: acc.accountName,
-              bankName: acc.bankName,
-              bankCode: acc.bankCode || acc.institutionCode || "000",
-            }));
+            accounts = data.map(mapAccount);
           } else if (data?.bankAccounts && Array.isArray(data.bankAccounts)) {
-            // Format: { bankAccounts: [...] }
-            accounts = data.bankAccounts.map((acc: any) => ({
-              id: acc._id || acc.id || `acc-${Date.now()}-${Math.random()}`,
-              accountNumber: acc.accountNumber,
-              accountName: acc.accountName,
-              bankName: acc.bankName,
-              bankCode: acc.bankCode || acc.institutionCode || "000",
-            }));
+            accounts = data.bankAccounts.map(mapAccount);
           }
 
           setBankAccounts(accounts);
@@ -145,12 +179,19 @@ export default function WithdrawPage() {
       }
 
       // Add the new account to the local bank accounts list
+      // Find the institution code for the selected bank name
+      const normalize = (str: string) =>
+        (str || "").toLowerCase().replace(/\s+/g, "").trim();
+      const accNameNorm = normalize(account.bankName);
+      const bankInfo = SUPPORTED_BANKS.find((b) =>
+        accNameNorm.includes(normalize(b.name)),
+      );
       const newAccount: BankAccount = {
         id: data.data?._id || `temp-${Date.now()}`,
         accountNumber: account.accountNumber,
         accountName: account.accountName,
         bankName: account.bankName,
-        bankCode: account.bankCode || "000",
+        bankCode: bankInfo ? bankInfo.code : account.bankCode || "000",
       };
       setBankAccounts((prev) => [...prev, newAccount]);
 
