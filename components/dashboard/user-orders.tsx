@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { ArrowDownLeft, ArrowUpRight, Clock, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -21,18 +22,10 @@ interface Order {
 }
 
 export function UserOrders() {
+    const router = useRouter()
     const [orders, setOrders] = useState<Order[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
-    const [visibleCount, setVisibleCount] = useState(5)
-
-    const handleViewMore = () => {
-        setVisibleCount(prev => prev + 5)
-    }
-
-    const handleShowLess = () => {
-        setVisibleCount(5)
-    }
 
     const fetchOrders = async () => {
         setLoading(true)
@@ -137,7 +130,7 @@ export function UserOrders() {
         // User asked to "build me a new section... make it he first section", so it should probably be visible.
     }
 
-    const visibleOrders = orders.slice(0, visibleCount)
+
 
     return (
         <Card className="border-0 shadow-lg bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md overflow-hidden ring-1 ring-black/5 dark:ring-white/10">
@@ -162,10 +155,11 @@ export function UserOrders() {
             </CardHeader>
             <CardContent className="p-0">
                 <div className="divide-y divide-gray-100 dark:divide-gray-800/50">
-                    {visibleOrders.map((order) => (
+                    {orders.slice(0, 5).map((order) => (
                         <div 
                             key={order._id} 
-                            className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-gray-50/80 dark:hover:bg-gray-800/30 transition-all duration-200 gap-4"
+                            onClick={() => router.push(`/dashboard/orders/${order.reference}`)}
+                            className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-gray-50/80 dark:hover:bg-gray-800/30 transition-all duration-200 gap-4 cursor-pointer"
                         >
                             {/* Left Side: Icon & Basic Info */}
                             <div className="flex items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
@@ -220,30 +214,16 @@ export function UserOrders() {
                     ))}
                 </div>
                 
-                {(visibleCount < orders.length || visibleCount > 5) && (
-                    <div className="p-3 bg-gray-50/50 dark:bg-gray-900/30 text-center border-t border-gray-100 dark:border-gray-800/50 flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
-                        {visibleCount < orders.length && (
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={handleViewMore}
-                                className="text-xs text-muted-foreground hover:text-foreground font-medium h-auto py-2.5 sm:py-2 w-full sm:w-auto bg-white/50 sm:bg-transparent border sm:border-0 border-gray-200 dark:border-gray-800 rounded-lg sm:rounded-md shadow-sm sm:shadow-none"
-                            >
-                                View More Orders
-                            </Button>
-                        )}
-                        {visibleCount > 5 && (
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={handleShowLess}
-                                className="text-xs text-muted-foreground hover:text-foreground font-medium h-auto py-2.5 sm:py-2 w-full sm:w-auto bg-white/50 sm:bg-transparent border sm:border-0 border-gray-200 dark:border-gray-800 rounded-lg sm:rounded-md shadow-sm sm:shadow-none"
-                            >
-                                Show Less
-                            </Button>
-                        )}
-                    </div>
-                )}
+                <div className="p-3 bg-gray-50/50 dark:bg-gray-900/30 text-center border-t border-gray-100 dark:border-gray-800/50">
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => router.push('/dashboard/orders')}
+                        className="text-xs text-muted-foreground hover:text-foreground font-medium h-auto py-2.5 sm:py-2 w-full sm:w-auto bg-white/50 sm:bg-transparent border sm:border-0 border-gray-200 dark:border-gray-800 rounded-lg sm:rounded-md shadow-sm sm:shadow-none"
+                    >
+                        View All Orders
+                    </Button>
+                </div>
             </CardContent>
         </Card>
     )
