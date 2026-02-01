@@ -82,13 +82,29 @@ export default function MerchantOrdersPage() {
     setSelectedOrder(null);
   };
 
-  const handleDispute = () => {
-    if (!selectedOrder) return;
-    setOrders(prev => prev.map(o => 
-      o.id === selectedOrder.id ? { ...o, status: 'disputed' as OrderStatus } : o
-    ));
-    setSelectedOrder(null);
-  };
+  const handleDispute = async () => {
+  if (!selectedOrder) return;
+  try {
+    const res = await fetch(`/api/fstack/p2p/${selectedOrder.reference}/dispute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Merchant reported issue' })
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      setOrders(prev => prev.map(o => 
+        o.id === selectedOrder.id ? { ...o, status: 'disputed' as OrderStatus } : o
+      ));
+      setSelectedOrder(null);
+      // Optionally show toast
+    } else {
+      console.error('Dispute failed:', data.error);
+    }
+  } catch (error) {
+    console.error('Dispute error:', error);
+  }
+};
 
   if (selectedOrder) {
     return (

@@ -548,6 +548,49 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
                               Cancel Order
                           </Button>
                         )}
+                        
+                        {/* Report Issue Button - Available for all flows */}
+                        <Button 
+                            size="lg"
+                            variant="outline"
+                            className="w-full text-lg font-bold h-14 text-orange-600 border-orange-300 hover:bg-orange-50" 
+                            onClick={async () => {
+                                try {
+                                    const reference = ctx.initiate?.reference || ctx.tradeId;
+                                    const res = await fetch(`/api/fstack/p2p/${reference}/dispute`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ reason: 'User reported issue' })
+                                    });
+                                    const data = await res.json();
+                                    
+                                    if (data.success) {
+                                        toast({
+                                            title: "Dispute Submitted",
+                                            description: "Your dispute has been submitted. Our support team will review it shortly."
+                                        });
+                                        // Redirect to P2P page
+                                        router.push('/dashboard/p2p');
+                                    } else {
+                                        toast({
+                                            title: "Error",
+                                            description: data.error || "Failed to submit dispute",
+                                            variant: "destructive"
+                                        });
+                                    }
+                                } catch (error: any) {
+                                    toast({
+                                        title: "Error",
+                                        description: error.message || "Failed to submit dispute",
+                                        variant: "destructive"
+                                    });
+                                }
+                            }}
+                            disabled={updating}
+                        >
+                            <AlertTriangle className="h-5 w-5 mr-2" />
+                            Report Issue
+                        </Button>
                     </div>
                 )}
             </div>
