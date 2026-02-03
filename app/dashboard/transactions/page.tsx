@@ -208,7 +208,7 @@ export default function TransactionsPage() {
                       </td>
                       <td className="py-4 px-2">
                         <span className="font-semibold text-foreground">
-                          ${transaction.amount.toLocaleString()}
+                          {transaction.wallet === 'CNGN' ? '₦' : '$'}{transaction.amount.toLocaleString()}
                         </span>
                       </td>
                       <td className="py-4 px-2">
@@ -255,7 +255,7 @@ export default function TransactionsPage() {
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Amount</p>
                       <p className="font-semibold text-foreground text-sm">
-                        ${transaction.amount.toLocaleString()}
+                        {transaction.wallet === 'CNGN' ? '₦' : '$'}{transaction.amount.toLocaleString()}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">{transaction.wallet}</p>
                     </div>
