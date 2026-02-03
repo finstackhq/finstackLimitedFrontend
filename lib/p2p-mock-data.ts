@@ -1,7 +1,7 @@
 // Mock data for P2P Merchant Marketplace system
 
 export type OrderStatus = 'pending_payment' | 'awaiting_release' | 'PAYMENT_CONFIRMED_BY_BUYER' | 'completed' | 'cancelled' | 'disputed';
-export type PaymentMethod = 'Bank Transfer' | 'MTN Mobile Money' | 'Alipay' | 'Custom Account' | 'CNGN Wallet';
+export type PaymentMethod = 'Bank Transfer' | 'MTN Mobile Money' | 'Alipay' | 'Custom Account' | 'CNGN Wallet' | 'Fin Stack';
 export type AdType = 'buy' | 'sell';
 export type RatingType = 'positive' | 'neutral' | 'negative';
 export type CountryCode = 'NG' | 'CN' | 'GH' | 'GLOBAL';
