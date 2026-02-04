@@ -64,32 +64,34 @@ export function OrderModal({
 
   useEffect(() => {
     if (ad.type === "buy") {
+      // BUY FLOW: Fix conversion so that CNGN = GHS * price
       if (lastEdited === "fiat") {
         if (fiatAmount && !isNaN(parseFloat(fiatAmount))) {
-          const crypto = parseFloat(fiatAmount) / ad.price;
+          const crypto = parseFloat(fiatAmount) * ad.price;
           setCryptoAmount(crypto ? crypto.toFixed(6) : "");
         } else {
           setCryptoAmount("");
         }
       } else {
         if (cryptoAmount && !isNaN(parseFloat(cryptoAmount))) {
-          const fiat = parseFloat(cryptoAmount) * ad.price;
+          const fiat = parseFloat(cryptoAmount) / ad.price;
           setFiatAmount(fiat ? fiat.toFixed(2) : "");
         } else {
           setFiatAmount("");
         }
       }
     } else {
+      // SELL FLOW: Fix conversion so that GHS = CNGN / price
       if (lastEdited === "crypto") {
         if (cryptoAmount && !isNaN(parseFloat(cryptoAmount))) {
-          const fiat = parseFloat(cryptoAmount) * ad.price;
+          const fiat = parseFloat(cryptoAmount) / ad.price;
           setFiatAmount(fiat ? fiat.toFixed(2) : "");
         } else {
           setFiatAmount("");
         }
       } else {
         if (fiatAmount && !isNaN(parseFloat(fiatAmount))) {
-          const crypto = parseFloat(fiatAmount) / ad.price;
+          const crypto = parseFloat(fiatAmount) * ad.price;
           setCryptoAmount(crypto ? crypto.toFixed(6) : "");
         } else {
           setCryptoAmount("");
