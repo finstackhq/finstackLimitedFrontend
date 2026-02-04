@@ -1,4 +1,3 @@
-"use client";
 
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { DisputeModal } from "./DisputeModal";
 import {
   Clock,
   CheckCircle,
@@ -65,6 +65,10 @@ export function MerchantOrderFlow({
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otpError, setOtpError] = useState("");
+  
+  // Dispute Modal State
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   // New state for Merchant Buy flow
   const [bankDetails, setBankDetails] = useState<any>(null);
@@ -236,38 +240,76 @@ export function MerchantOrderFlow({
     } finally {
       setMarkingPaid(false);
     }
+
   };
 
-  const handleDispute = async () => {
-  try {
-    const res = await fetch(`/api/fstack/p2p/${order.reference}/dispute`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason: 'Merchant reported issue' })
-    });
-    const data = await res.json();
-    
-    if (data.success) {
-      toast({
-        title: "Dispute Submitted",
-        description: "Your dispute has been submitted. Admin will review this order.",
-      });
-      onDispute();
-    } else {
-      toast({
-        title: "Error",
-        description: data.error || "Failed to submit dispute",
-        variant: "destructive",
-      });
+  const handleCancel = async () => {
+      setCancelling(true);
+      try {
+          const res = await fetch(`/api/fstack/p2p/${order.reference}/cancel`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({})
+          });
+          const data = await res.json();
+          
+          if (data.success) {
+              toast({ title: "Success", description: "Order cancelled" });
+              // Trigger a refresh or callback?
+              // Ideally onComplete or a new onCancel callback, but for now just toast.
+              // We might want to refresh the page state.
+              window.location.reload(); 
+          } else {
+              let errorMsg = data.error || data.message || "Failed to cancel order";
+              toast({ title: "Cannot Cancel", description: errorMsg, variant: "destructive" });
+          }
+      } catch (e) {
+           toast({ title: "Error", description: "Failed to cancel order", variant: "destructive" });
+      } finally {
+          setCancelling(false);
+      }
+  };
+
+  const submitDispute = async (reason: string, evidence: File | null) => {
+    try {
+        const formData = new FormData();
+        formData.append('reason', reason);
+        if (evidence) {
+            formData.append('evidence', evidence);
+        }
+
+        const tradeId = order.reference || order.id;
+        const res = await fetch(`/api/fstack/p2p/${tradeId}/dispute`, {
+            method: 'POST',
+            body: formData, // No Content-Type header when using FormData, browser sets it with boundary
+        });
+        
+        const data = await res.json();
+
+        if (data.success) {
+            toast({
+                title: "Dispute Submitted",
+                description: "Your dispute has been submitted. Admin will review this order.",
+            });
+            onDispute();
+        } else {
+            throw new Error(data.error || "Failed to submit dispute");
+        }
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || "Failed to submit dispute",
+            variant: "destructive",
+        });
+        throw error; // Re-throw to let modal know it failed
     }
-  } catch (error: any) {
-    toast({
-      title: "Error",
-      description: error.message || "Failed to submit dispute",
-      variant: "destructive",
-    });
-  }
-};
+  };
+
+  const handleDisputeClick = () => {
+      setShowDisputeModal(true);
+  };
+
+
 
   return (
     <div className="space-y-6">
@@ -391,11 +433,11 @@ export function MerchantOrderFlow({
                <Button 
                    variant="destructive"
                    className="w-full"
-                   onClick={handleDispute}
-                   disabled={markingPaid}
+                   onClick={handleCancel}
+                   disabled={markingPaid || cancelling}
                >
                    <XCircle className="w-4 h-4 mr-2" />
-                   Cancel Order
+                   {cancelling ? "Cancelling..." : "Cancel Order"}
                </Button>
             </div>
          </Card>
@@ -465,7 +507,7 @@ export function MerchantOrderFlow({
                   {sendingOtp ? "Sending OTP..." : "Payment Received"}
                 </Button>
                 <Button
-                  onClick={handleDispute}
+                  onClick={handleDisputeClick}
                   variant="destructive"
                   disabled={sendingOtp}
                 >
@@ -493,7 +535,7 @@ export function MerchantOrderFlow({
                 alerted once they mark it as paid.
               </p>
             </div>
-            <Button onClick={handleDispute} variant="outline" size="sm">
+            <Button onClick={handleDisputeClick} variant="outline" size="sm">
               Report Issue
             </Button>
           </div>
@@ -578,6 +620,14 @@ export function MerchantOrderFlow({
           </Card>
         </div>
       )}
+
+
+      {/* Dispute Modal */}
+      <DisputeModal 
+        open={showDisputeModal} 
+        onClose={() => setShowDisputeModal(false)} 
+        onSubmit={submitDispute} 
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { TradeCancelScreen } from './TradeCancelScreen';
 import { TradeDisputeScreen } from './TradeDisputeScreen';
 import { TradeCompletionScreen } from './TradeCompletionScreen';
 import { CancelConfirmationDialog } from './CancelConfirmationDialog';
+import { DisputeModal } from './DisputeModal';
 
 type StoredTradeContext = {
   tradeId: string;
@@ -69,6 +70,7 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
   const [localPaid, setLocalPaid] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -549,43 +551,12 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
                           </Button>
                         )}
                         
-                        {/* Report Issue Button - Available for all flows */}
+                        {/* Report Issue Button - Opens Modal */}
                         <Button 
                             size="lg"
                             variant="outline"
                             className="w-full text-lg font-bold h-14 text-orange-600 border-orange-300 hover:bg-orange-50" 
-                            onClick={async () => {
-                                try {
-                                    const reference = ctx.initiate?.reference || ctx.tradeId;
-                                    const res = await fetch(`/api/fstack/p2p/${reference}/dispute`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ reason: 'User reported issue' })
-                                    });
-                                    const data = await res.json();
-                                    
-                                    if (data.success) {
-                                        toast({
-                                            title: "Dispute Submitted",
-                                            description: "Your dispute has been submitted. Our support team will review it shortly."
-                                        });
-                                        // Redirect to P2P page
-                                        router.push('/dashboard/p2p');
-                                    } else {
-                                        toast({
-                                            title: "Error",
-                                            description: data.error || "Failed to submit dispute",
-                                            variant: "destructive"
-                                        });
-                                    }
-                                } catch (error: any) {
-                                    toast({
-                                        title: "Error",
-                                        description: error.message || "Failed to submit dispute",
-                                        variant: "destructive"
-                                    });
-                                }
-                            }}
+                            onClick={() => setShowDisputeModal(true)}
                             disabled={updating}
                         >
                             <AlertTriangle className="h-5 w-5 mr-2" />
@@ -663,6 +634,50 @@ export function PaymentPage({ tradeId }: PaymentPageProps) {
         cryptoAmount={amountCrypto || 0}
         cryptoCurrency={cryptoCode}
         isProcessing={cancelling}
+      />
+
+      {/* Dispute Modal */}
+      <DisputeModal 
+        open={showDisputeModal} 
+        onClose={() => setShowDisputeModal(false)}
+        onSubmit={async (reason, evidence) => {
+            try {
+                const reference = ctx?.initiate?.reference || ctx?.tradeId;
+                if (!reference) throw new Error("Trade reference is missing");
+
+                const formData = new FormData();
+                formData.append('reason', reason);
+                if (evidence) {
+                    formData.append('evidence', evidence);
+                }
+
+                // Call Dispute API
+                const res = await fetch(`/api/fstack/p2p/${reference}/dispute`, {
+                    method: 'POST',
+                    body: formData, // No Content-Type header manually
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    toast({
+                        title: "Dispute Submitted",
+                        description: "Your dispute has been submitted. Our support team will review it shortly."
+                    });
+                    // Redirect to P2P page or refresh
+                    router.push('/dashboard/p2p');
+                } else {
+                    throw new Error(data.error || "Failed to submit dispute");
+                }
+            } catch (err: any) {
+                 toast({
+                    title: "Error",
+                    description: err.message || "Failed to submit dispute",
+                    variant: "destructive"
+                });
+                throw err; // Propagate error so modal stops loading spinner if implemented
+            }
+        }} 
       />
     </div>
   );
