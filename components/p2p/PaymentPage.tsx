@@ -576,7 +576,8 @@ export default function PaymentPage() {
                         {ctx.instructions}
                       </div>
                       </div>
-                    </div> // Closing the border rounded-lg div
+                    ) : null}
+                  </div>
                   ) : (
                         <Alert>
                             <AlertTriangle className="h-4 w-4" />
@@ -657,6 +658,7 @@ export default function PaymentPage() {
         </div>)}
 
         {/* Right Column: Chat/Support (Placeholder) */}
+        </div>
         </div>
         <div className="space-y-6">
           <Card className="h-full flex flex-col">
