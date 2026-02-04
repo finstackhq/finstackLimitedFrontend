@@ -1,5 +1,5 @@
-import { PaymentPage } from '@/components/p2p/PaymentPage';
+import PaymentPage from "@/components/p2p/PaymentPage";
 
-export default function TradePage({ params }: { params: { id: string } }) {
-  return <PaymentPage tradeId={params.id} />;
+export default function TradePage() {
+  return <PaymentPage />;
 }

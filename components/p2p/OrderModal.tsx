@@ -30,6 +30,14 @@ interface OrderModalProps {
   onOrderCreated: (order: P2POrder) => void;
 }
 
+function getFiatSymbol(fiat: string) {
+  if (fiat === "NGN") return "₦";
+  if (fiat === "RMB" || fiat === "CNY") return "¥";
+  if (fiat === "GHS") return "₵";
+  if (fiat === "USD") return "$";
+  return fiat;
+}
+
 export function OrderModal({
   ad,
   trader,
@@ -47,28 +55,60 @@ export function OrderModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Auto-calculate opposite amount
-  useEffect(() => {
-    if (fiatAmount && !isNaN(parseFloat(fiatAmount))) {
-      const crypto = parseFloat(fiatAmount) / ad.price;
-      setCryptoAmount(crypto.toFixed(6));
-    }
-  }, [fiatAmount, ad.price]);
+  // Only allow CNGN and USDC as crypto
+  const supportedCryptos = ["CNGN", "USDC"];
+  const isSupportedCrypto = supportedCryptos.includes(ad.cryptoCurrency);
 
+  // Track which field was last edited
+  const [lastEdited, setLastEdited] = useState<"fiat" | "crypto">("fiat");
+
+  useEffect(() => {
+    if (ad.type === "buy") {
+      if (lastEdited === "fiat") {
+        if (fiatAmount && !isNaN(parseFloat(fiatAmount))) {
+          const crypto = parseFloat(fiatAmount) / ad.price;
+          setCryptoAmount(crypto ? crypto.toFixed(6) : "");
+        } else {
+          setCryptoAmount("");
+        }
+      } else {
+        if (cryptoAmount && !isNaN(parseFloat(cryptoAmount))) {
+          const fiat = parseFloat(cryptoAmount) * ad.price;
+          setFiatAmount(fiat ? fiat.toFixed(2) : "");
+        } else {
+          setFiatAmount("");
+        }
+      }
+    } else {
+      if (lastEdited === "crypto") {
+        if (cryptoAmount && !isNaN(parseFloat(cryptoAmount))) {
+          const fiat = parseFloat(cryptoAmount) * ad.price;
+          setFiatAmount(fiat ? fiat.toFixed(2) : "");
+        } else {
+          setFiatAmount("");
+        }
+      } else {
+        if (fiatAmount && !isNaN(parseFloat(fiatAmount))) {
+          const crypto = parseFloat(fiatAmount) / ad.price;
+          setCryptoAmount(crypto ? crypto.toFixed(6) : "");
+        } else {
+          setCryptoAmount("");
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cryptoAmount, fiatAmount, ad.price, ad.type, lastEdited]);
+
+  // User enters crypto (buy or sell)
   const handleCryptoChange = (value: string) => {
     setCryptoAmount(value);
-    if (value && !isNaN(parseFloat(value))) {
-      const fiat = parseFloat(value) * ad.price;
-      setFiatAmount(fiat.toFixed(2));
-    }
+    setLastEdited("crypto");
   };
 
+  // User enters fiat (buy or sell)
   const handleFiatChange = (value: string) => {
     setFiatAmount(value);
-    if (value && !isNaN(parseFloat(value))) {
-      const crypto = parseFloat(value) / ad.price;
-      setCryptoAmount(crypto.toFixed(6));
-    }
+    setLastEdited("fiat");
   };
 
   const handleConfirm = async () => {
@@ -228,88 +268,160 @@ export function OrderModal({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {ad.type === "buy" ? "Sell" : "Buy"} {ad.cryptoCurrency} with{" "}
-            {ad.fiatCurrency}
+            {ad.type === "buy"
+              ? `Buy ${ad.cryptoCurrency} with ${ad.fiatCurrency}`
+              : `Sell ${ad.cryptoCurrency} for ${ad.fiatCurrency}`}
           </DialogTitle>
         </DialogHeader>
-
         <div className="space-y-4">
           {/* Price Info */}
           <div className="p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-600">Price</span>
-              <span className="text-lg font-bold">
-                {ad.price} {ad.fiatCurrency}
+              <span className="font-bold text-lg">
+                {/* Responsive font size: base=sm, md+=lg */}
+                <span className="font-bold text-sm md:text-lg">
+                  {ad.cryptoCurrency === "CNGN"
+                    ? "₦"
+                    : ad.cryptoCurrency === "USDC"
+                      ? "$"
+                      : ""}
+                  {ad.price}/{ad.fiatCurrency}
+                </span>
               </span>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Available</span>
-              <span className="font-medium">
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>Available</span>
+              <span>
                 {ad.available} {ad.cryptoCurrency}
               </span>
             </div>
-            <div className="flex items-center justify-between text-sm mt-1">
-              <span className="text-gray-600">Limits</span>
-              <span className="font-medium">
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>Limits</span>
+              <span>
                 {ad.minLimit} - {ad.maxLimit} {ad.fiatCurrency}
               </span>
             </div>
-            <div className="flex items-center gap-1 text-xs text-gray-500 mt-2">
-              <Clock className="w-3 h-3" />
-              <span>Payment window: {ad.paymentWindow} minutes</span>
+            <div className="flex items-center text-xs text-gray-400 mt-1">
+              <Clock className="w-3 h-3 mr-1" />
+              Payment window: 30 minutes
             </div>
           </div>
 
-          {/* Error Display */}
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md flex gap-2">
-              <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
-              <p className="text-sm text-red-600 font-medium">{error}</p>
+          {/* Amount Inputs */}
+          {isSupportedCrypto ? (
+            ad.type === "buy" ? (
+              // --- BUY FLOW: Receiving Crypto, Sending Fiat ---
+              <>
+                <div>
+                  <Label htmlFor="crypto-amount">
+                    You Receive ({ad.cryptoCurrency})
+                  </Label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 flex items-center justify-center">
+                      {ad.cryptoCurrency === "CNGN"
+                        ? "₦"
+                        : ad.cryptoCurrency === "USDC"
+                          ? "$"
+                          : ad.cryptoCurrency}
+                    </span>
+                    <Input
+                      id="crypto-amount"
+                      type="number"
+                      value={cryptoAmount}
+                      onChange={(e) => handleCryptoChange(e.target.value)}
+                      placeholder="0.00"
+                      className="pl-10"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                    <ArrowLeftRight className="w-4 h-4 text-blue-600" />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="fiat-amount">
+                    You Send ({ad.fiatCurrency})
+                  </Label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 flex items-center justify-center">
+                      {getFiatSymbol(ad.fiatCurrency)}
+                    </span>
+                    <Input
+                      id="fiat-amount"
+                      type="number"
+                      value={fiatAmount}
+                      onChange={(e) => handleFiatChange(e.target.value)}
+                      placeholder="0.00"
+                      className="pl-10"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              // --- SELL FLOW: Sending Crypto, Receiving Fiat ---
+              <>
+                <div>
+                  <Label htmlFor="crypto-amount">
+                    You Send ({ad.cryptoCurrency})
+                  </Label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 flex items-center justify-center">
+                      {ad.cryptoCurrency === "CNGN"
+                        ? "₦"
+                        : ad.cryptoCurrency === "USDC"
+                          ? "$"
+                          : ad.cryptoCurrency}
+                    </span>
+                    <Input
+                      id="crypto-amount"
+                      type="number"
+                      value={cryptoAmount}
+                      onChange={(e) => handleCryptoChange(e.target.value)}
+                      placeholder="0.00"
+                      className="pl-10"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                    <ArrowLeftRight className="w-4 h-4 text-blue-600" />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="fiat-amount">
+                    You Receive ({ad.fiatCurrency})
+                  </Label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 flex items-center justify-center">
+                      {getFiatSymbol(ad.fiatCurrency)}
+                    </span>
+                    <Input
+                      id="fiat-amount"
+                      type="number"
+                      value={fiatAmount}
+                      onChange={(e) => handleFiatChange(e.target.value)}
+                      placeholder="0.00"
+                      className="pl-10"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+              </>
+            )
+          ) : (
+            <div className="text-red-500 font-semibold text-center p-4">
+              Unsupported crypto. Only CNGN and USDC are supported.
             </div>
           )}
-
-          {/* Amount Input - Fiat */}
-          <div>
-            <Label htmlFor="fiat-amount">
-              You {ad.type === "buy" ? "Receive" : "Send"} ({ad.fiatCurrency})
-            </Label>
-            <div className="relative mt-1">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                id="fiat-amount"
-                type="number"
-                value={fiatAmount}
-                onChange={(e) => handleFiatChange(e.target.value)}
-                placeholder={`${ad.minLimit} - ${ad.maxLimit}`}
-                className="pl-10"
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
-          {/* Swap Icon */}
-          <div className="flex justify-center">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <ArrowLeftRight className="w-4 h-4 text-blue-600" />
-            </div>
-          </div>
-
-          {/* Amount Input - Crypto */}
-          <div>
-            <Label htmlFor="crypto-amount">
-              {ad.type === "buy" ? "Use Send" : "You Receive"} (
-              {ad.cryptoCurrency})
-            </Label>
-            <Input
-              id="crypto-amount"
-              type="number"
-              value={cryptoAmount}
-              onChange={(e) => handleCryptoChange(e.target.value)}
-              placeholder="0.00"
-              className="mt-1"
-              disabled={isLoading}
-            />
-          </div>
 
           {/* Payment Method */}
           <div>
@@ -352,48 +464,38 @@ export function OrderModal({
             </div>
           </div>
 
-          {/* Platform Fee */}
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md flex gap-2">
-            <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-            <div className="text-xs text-blue-900">
-              <p className="font-medium">
-                A 0.5% platform fee applies to this transaction.
-              </p>
-            </div>
+          {/* Platform Fee Notice */}
+          <div className="flex items-center text-xs text-blue-700 bg-blue-50 rounded-md p-2 mt-2">
+            <Info className="w-4 h-4 mr-2" />A 0.5% platform fee applies to this
+            transaction.
           </div>
 
-          {/* Instructions */}
-          {ad.instructions && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md flex gap-2">
-              <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5 shrink-0" />
-              <div className="text-xs text-gray-700">
-                <p className="font-medium mb-1">Seller's Instructions:</p>
-                <p>{ad.instructions}</p>
-              </div>
-            </div>
-          )}
+          {/* Seller's Instructions */}
+          <div className="flex items-center text-xs bg-yellow-50 rounded-md p-2 mt-2 border border-yellow-200">
+            <AlertCircle className="w-4 h-4 mr-2 text-yellow-600" />
+            <span>
+              Seller's Instructions:{" "}
+              <span className="font-medium">{ad.instructions || "-"}</span>
+            </span>
+          </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
+          {/* Action Buttons */}
+          <div className="flex justify-between gap-2 mt-4">
             <Button
               variant="outline"
               onClick={onClose}
-              className="flex-1"
               disabled={isLoading}
+              className="flex-1"
             >
               Cancel
             </Button>
             <Button
-              type="button"
               onClick={handleConfirm}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
               disabled={isLoading}
+              className="flex-1 bg-blue-600 text-white"
             >
               {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating Order...
-                </>
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 "Confirm Order"
               )}

@@ -53,7 +53,7 @@ export default function MerchantOrdersPage() {
             platformFee: trade.platformFeeCrypto || 0,
             cryptoCurrency: trade.currencyTarget || 'CNGN',
             fiatCurrency: trade.currencySource || 'XAF',
-            paymentMethod: trade.provider || 'BLOCKRADAR',
+            paymentMethod: trade.provider || 'Fin Stack',
             side: trade.side || 'BUY',
             marketRate: trade.marketRate || trade.listingRate || 0,
             status: (trade.status || 'pending_payment') as OrderStatus,

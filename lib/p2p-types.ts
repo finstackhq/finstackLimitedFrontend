@@ -8,7 +8,7 @@ export type OrderStatus =
   | 'completed'                      // Trade successfully completed
   | 'cancelled'                      // Trade cancelled by user/merchant
   | 'disputed';                      // Trade under dispute
-export type PaymentMethod = 'Bank Transfer' | 'MTN Mobile Money' | 'Alipay' | 'Custom Account' | 'CNGN Wallet' | (string & {});
+export type PaymentMethod = 'Bank Transfer' | 'MTN Mobile Money' | 'Alipay' | 'Custom Account' | 'CNGN Wallet' | 'Fin Stack' | (string & {});
 export type AdType = 'buy' | 'sell';
 export type RatingType = 'positive' | 'neutral' | 'negative';
 export type CountryCode = 'NG' | 'CN' | 'GH' | 'GLOBAL';
