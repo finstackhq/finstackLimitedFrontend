@@ -214,24 +214,8 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                 onMarkPaid={handleMarkPaid} 
                 onCancel={handleCancel}
                 onRelease={fetchOrder} // Refresh after release
-                onDispute={async () => {
-                    try {
-                        const res = await fetch(`/api/fstack/p2p/${order.reference}/dispute`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ reason: 'User reported issue' })
-                        });
-                        const data = await res.json();
-                        
-                        if (data.success) {
-                            toast({ title: "Dispute Submitted", description: "Your dispute has been submitted. Our support team will review it shortly." });
-                            fetchOrder(); // Refresh to update status
-                        } else {
-                            toast({ title: "Error", description: data.error || "Failed to submit dispute", variant: "destructive" });
-                        }
-                    } catch (error: any) {
-                        toast({ title: "Error", description: error.message || "Failed to submit dispute", variant: "destructive" });
-                    }
+                onDispute={() => {
+                    fetchOrder(); // Just refresh the order state
                 }}
             />
         </div>

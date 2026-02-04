@@ -16,12 +16,13 @@ import {
   Upload,
   Copy,
   Check,
-  MessageSquare,
   CreditCard,
   QrCode,
   Download,
-  Shield 
+  Shield,
+  MessageSquare,
 } from 'lucide-react';
+import { DisputeModal } from './DisputeModal';
 
 interface P2POrder {
   id: string;
@@ -71,7 +72,9 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDi
   const isUserSelling = order.side?.toUpperCase() === 'SELL';
   
   // Also support dynamic payment proof view for Seller
+  // Also support dynamic payment proof view for Seller
   const [viewProof, setViewProof] = useState(false);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
 
   // Parse expiresAt correctly
   const expiresAtDate = new Date(order.expiresAt);
@@ -92,16 +95,11 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDi
   };
 
   const handleMarkAsPaid = () => {
-    if (!paymentProof) {
-      toast({
-        title: 'Payment Proof Required',
-        description: 'Please upload a screenshot or photo of your payment.',
-        variant: 'destructive'
-      });
-      return;
-    }
+    // OPTIONAL PROOF:
+    // User requested that proof is NOT mandatory for generic "I Have Paid"
+    // if (!paymentProof) { ... } -> Removed check
 
-    onMarkPaid(paymentProof);
+    onMarkPaid(paymentProof || undefined);
     toast({
       title: 'Payment Marked as Sent',
       description: 'Waiting for seller to verify and release crypto.'
@@ -116,6 +114,48 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDi
       title: 'Copied',
       description: `${label} copied to clipboard`
     });
+  };
+
+  const handleDisputeClick = () => {
+    console.log("Opening dispute modal");
+    setShowDisputeModal(true);
+    // Temporary toast to verify click works (remove later if annoying)
+    // toast({ title: "Opening Dispute Form..." }); 
+  };
+
+  const submitDispute = async (reason: string, evidence: File | null) => {
+    try {
+        const formData = new FormData();
+        formData.append('reason', reason);
+        if (evidence) {
+            formData.append('evidence', evidence);
+        }
+
+        const tradeId = order.reference || order.id;
+        const res = await fetch(`/api/fstack/p2p/${tradeId}/dispute`, {
+            method: 'POST',
+            body: formData, 
+        });
+        
+        const data = await res.json();
+
+        if (data.success) {
+            toast({
+                title: "Dispute Submitted",
+                description: "Your dispute has been submitted. Support will review your case.",
+            });
+            if (onDispute) onDispute();
+        } else {
+            throw new Error(data.error || "Failed to submit dispute");
+        }
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || "Failed to submit dispute",
+            variant: "destructive",
+        });
+        throw error; 
+    }
   };
 
   // --- Selling Logic (Release Crypto) ---
@@ -404,7 +444,7 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDi
                 <XCircle className="w-4 h-4 mr-2" />
                 Cancel Order
               </Button>
-              <Button variant="outline" onClick={onDispute} className="text-orange-600 border-orange-200 hover:bg-orange-50">
+              <Button variant="outline" onClick={handleDisputeClick} className="text-orange-600 border-orange-200 hover:bg-orange-50">
                  Report Issue
               </Button>
             </div>
@@ -430,7 +470,7 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDi
               <Button onClick={onCancel} variant="destructive" size="sm">
                 <XCircle className="w-4 h-4 mr-2" /> Cancel Order
               </Button>
-              <Button variant="outline" onClick={onDispute} size="sm" className="text-orange-600 border-orange-200 hover:bg-orange-50">
+              <Button variant="outline" onClick={handleDisputeClick} size="sm" className="text-orange-600 border-orange-200 hover:bg-orange-50">
                 Report Issue
               </Button>
             </div>
@@ -486,7 +526,7 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDi
                 <Button onClick={onCancel} variant="destructive">
                   <XCircle className="w-4 h-4 mr-2" /> Cancel
                 </Button>
-                <Button variant="outline" onClick={onDispute} className="text-orange-600 border-orange-200 hover:bg-orange-50">
+                <Button variant="outline" onClick={handleDisputeClick} className="text-orange-600 border-orange-200 hover:bg-orange-50">
                    Report Issue
                 </Button>
               </div>
@@ -517,7 +557,7 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDi
                 />
               </div>
             )}
-             <Button variant="ghost" onClick={onDispute} className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 mt-2">
+             <Button variant="ghost" onClick={handleDisputeClick} className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 mt-2">
                  Report Issue / Dispute
               </Button>
           </div>
@@ -594,6 +634,16 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDi
           </Card>
         </div>
       )}
+
+      {/* Dispute Modal */}
+      <DisputeModal 
+        open={showDisputeModal} 
+        onClose={() => {
+            console.log("Closing dispute modal");
+            setShowDisputeModal(false);
+        }} 
+        onSubmit={submitDispute} 
+      />
     </div>
   );
 }
