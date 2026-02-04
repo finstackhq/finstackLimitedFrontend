@@ -104,9 +104,9 @@ export default function P2PMarketplacePage() {
             available: item.availableAmount || 0,
             minLimit: item.minLimit || 0,
             maxLimit: item.maxLimit || 0,
-            paymentMethods: Array.isArray(item.paymentMethods)
-              ? item.paymentMethods
-              : ["Fin Stack"],
+            paymentMethods: Array.isArray(item.paymentMethods) ? item.paymentMethods : ['Bank Transfer'],
+            // Map payment method details
+            paymentMethodDetails: item.paymentMethodDetails || [],
             paymentWindow: item.timeLimit || 15,
             instructions: item.instructions || "",
             autoReply: item.autoReply || "",
@@ -198,6 +198,46 @@ export default function P2PMarketplacePage() {
   const [showMerchantModal, setShowMerchantModal] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
 
+  // Helper to clean payment method strings
+  // Removes separators like " - " and content in parentheses
+  const cleanMethodName = (name: string) => {
+    // 1. Split by hyphen (taking FIRST part)
+    // Supports "Bank - Number", "Bank-Number", "Bank – Number"
+    let clean = name.split(/[\-\–]/)[0].trim()
+    
+    // 2. Remove content in parentheses e.g. "PalmPay (My Name)"
+    clean = clean.replace(/\s*\(.*\)/, '').trim()
+
+    // 3. Fallback: if it became empty, return original
+    return clean || name
+  }
+
+  // Helper to extract specific payment method names (e.g. "PalmPay") or fall back to type
+  const getAdPaymentMethods = (ad: P2PAd): string[] => {
+    let methods: string[] = []
+
+    // Priority 1: Use bankName from details if available
+    if (ad.paymentMethodDetails && ad.paymentMethodDetails.length > 0) {
+      methods = ad.paymentMethodDetails
+        .map(d => d.bankName || d.type)
+        .filter(Boolean) as string[]
+    }
+
+    // Priority 2: Use paymentMethods array if details extraction failed
+    if (methods.length === 0) {
+      methods = ad.paymentMethods
+    }
+    
+    // Apply cleaning to ALL results
+    // Filter out purely numeric strings if they look like account numbers (10+ digits)
+    return methods
+        .map(cleanMethodName)
+        // Set removes duplicates within the single ad
+        .filter((val, index, self) => self.indexOf(val) === index)
+        // Optional: filter out strings that are JUST numbers (likely accidental account numbers)
+        .filter(m => !/^\d{10,}$/.test(m)) 
+  }
+
   // Filter and sort ads
   const filterAds = (ads: P2PAd[], type: "buy" | "sell") => {
     return ads
@@ -207,18 +247,16 @@ export default function P2PMarketplacePage() {
         const correctType = type === "buy" ? "sell" : "buy";
         return ad.type === correctType;
       })
-      .filter((ad) => ad.isActive !== false) // Only show active ads
-      .filter((ad) => ad.cryptoCurrency === selectedCrypto)
-      .filter(
-        (ad) => selectedFiat === "all" || ad.fiatCurrency === selectedFiat,
-      )
-      .filter(
-        (ad) =>
-          filterPayment === "all" ||
-          ad.paymentMethods.includes(filterPayment as PaymentMethod),
-      )
-      .filter((ad) => filterCountry === "all" || ad.country === filterCountry)
-      .filter((ad) => {
+      .filter(ad => ad.isActive !== false) // Only show active ads
+      .filter(ad => ad.cryptoCurrency === selectedCrypto)
+      .filter(ad => selectedFiat === 'all' || ad.fiatCurrency === selectedFiat)
+      .filter(ad => {
+        if (filterPayment === 'all') return true
+        const methods = getAdPaymentMethods(ad)
+        return methods.includes(filterPayment)
+      })
+      .filter(ad => filterCountry === 'all' || ad.country === filterCountry)
+      .filter(ad => {
         if (verifiedOnly) {
           const merchant = getMerchant(ad.merchantId);
           return merchant?.verifiedBadge === true;
@@ -334,15 +372,14 @@ export default function P2PMarketplacePage() {
   };
 
   // Get unique pairs and countries for filters
-  const cryptoCurrencies = ["USDT", "USDC", "CNGN"]; // Finstack supported currencies
-  const fiatCurrencies = ["NGN", "RMB", "GHS"];
-  const uniqueCountries = Array.from(new Set(allAds.map((ad) => ad.country)));
-  const paymentMethods: PaymentMethod[] = [
-    "Fin Stack",
-    "MTN Mobile Money",
-    "Alipay",
-    "Custom Account",
-  ];
+  const cryptoCurrencies = ['USDT', 'USDC', 'NGN', 'CNGN'] // Finstack supported currencies
+  const fiatCurrencies = ['NGN', 'RMB', 'GHS']
+  const uniqueCountries = Array.from(new Set(allAds.map(ad => ad.country)))
+  
+  // Dynamic Payment Methods from Ads
+  const uniquePaymentMethods = Array.from(
+    new Set(allAds.flatMap(ad => getAdPaymentMethods(ad)))
+  ).filter(Boolean).sort();
 
   // const renderAdRow = (ad: P2PAd, actionLabel: string, actionColor: string) => {
   //   const merchant = getMerchant(ad.merchantId);
@@ -419,12 +456,8 @@ export default function P2PMarketplacePage() {
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Payment</p>
           <div className="flex flex-wrap gap-1">
-            {ad.paymentMethods.map((method) => (
-              <span
-                key={method}
-                className="text-[10px] md:text-sm px-2 py-1 bg-gray-100 text-gray-700 rounded-md border border-gray-200 break-words leading-relaxed md:whitespace-nowrap md:overflow-hidden md:text-ellipsis md:max-w-[140px]"
-                title={method}
-              >
+            {getAdPaymentMethods(ad).map((method, idx) => (
+              <span key={`${method}-${idx}`} className="text-[10px] md:text-sm px-2 py-1 bg-gray-100 text-gray-700 rounded-md border border-gray-200 break-words leading-relaxed md:whitespace-nowrap md:overflow-hidden md:text-ellipsis md:max-w-[140px]" title={method}>
                 {method}
               </span>
             ))}
@@ -573,10 +606,8 @@ export default function P2PMarketplacePage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All payment methods</SelectItem>
-            {paymentMethods.map((method) => (
-              <SelectItem key={method} value={method}>
-                {method}
-              </SelectItem>
+            {uniquePaymentMethods.map(method => (
+              <SelectItem key={method} value={method}>{method}</SelectItem>
             ))}
           </SelectContent>
         </Select>

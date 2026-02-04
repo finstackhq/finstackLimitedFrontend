@@ -429,21 +429,40 @@ export function OrderModal({
           <div>
             <Label>Select Payment Method</Label>
             <div className="grid grid-cols-1 gap-2 mt-2 max-h-[160px] overflow-y-auto pr-1">
-              {ad.paymentMethods.map((method) => (
-                <button
-                  key={method}
-                  type="button"
-                  onClick={() => setSelectedPayment(method)}
-                  disabled={isLoading}
-                  className={`flex flex-col items-start p-3 rounded-lg border text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                    selectedPayment === method
-                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                      : "bg-white hover:bg-gray-50 border-gray-200"
-                  }`}
-                >
-                  {method.split(" - ")[0]}
-                </button>
-              ))}
+              {ad.paymentMethodDetails && ad.paymentMethodDetails.length > 0 ? (
+                 ad.paymentMethodDetails.map((detail, index) => (
+                    <button
+                      key={`${detail.type}-${index}`}
+                      type="button"
+                      onClick={() => setSelectedPayment(detail.type)} // Keep using type for selection logic for now, or change state to full object
+                      disabled={isLoading}
+                      className={`flex flex-col items-start p-3 rounded-lg border text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                        selectedPayment === detail.type
+                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                          : "bg-white hover:bg-gray-50 border-gray-200"
+                      }`}
+                    >
+                      <span className="font-semibold">{detail.bankName || detail.type}</span>
+                      {detail.accountName && <span className="text-xs opacity-90">{detail.accountName}</span>}
+                    </button>
+                 ))
+              ) : (
+                  ad.paymentMethods.map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setSelectedPayment(method)}
+                      disabled={isLoading}
+                      className={`flex flex-col items-start p-3 rounded-lg border text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                        selectedPayment === method
+                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                          : "bg-white hover:bg-gray-50 border-gray-200"
+                      }`}
+                    >
+                      <span className="font-semibold">{method.split(' - ')[0]}</span>
+                    </button>
+                  ))
+              )}
             </div>
           </div>
 
