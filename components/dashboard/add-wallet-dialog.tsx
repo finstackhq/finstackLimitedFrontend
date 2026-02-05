@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -12,20 +12,25 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Wallet, CheckCircle, AlertCircle } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+} from "@/components/ui/select";
+import { Wallet, CheckCircle, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface AddWalletDialogProps {
-  children: React.ReactNode
-  onWalletAdded?: (wallet: { name: string; address: string; network: string }) => void
+  children: React.ReactNode;
+  onWalletAdded?: (wallet: {
+    name: string;
+    address: string;
+    network: string;
+    asset: string;
+  }) => void;
 }
 
 const walletAssets = [
@@ -86,15 +91,13 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
       setSelectedNetwork("")
       setOpen(false)
     }
-  }
+  };
 
   const canSubmit = walletName && walletAsset && walletAddress && selectedNetwork && isValidAddress(walletAddress)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -105,7 +108,7 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
             Add a new wallet address for withdrawals
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="wallet-name">Wallet Name</Label>
@@ -141,15 +144,25 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
               </SelectTrigger>
               <SelectContent>
                 {networks.map((network) => (
-                  <SelectItem key={network.value} value={network.value}>
+                  <SelectItem
+                    key={network.value}
+                    value={network.value}
+                    disabled={network.disabled}
+                  >
                     <div>
                       <div className="font-medium">{network.label}</div>
-                      <div className="text-xs text-gray-500">{network.description}</div>
+                      <div className="text-xs text-gray-500">
+                        {network.description}
+                      </div>
                     </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-blue-700 mt-1">
+              Only Base withdrawals are currently supported. Other networks
+              coming soon.
+            </p>
           </div>
           
            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
@@ -169,11 +182,11 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 className={`pr-10 ${
-                  walletAddress && !isValidAddress(walletAddress) 
-                    ? "border-red-300 focus:border-red-500" 
+                  walletAddress && !isValidAddress(walletAddress)
+                    ? "border-red-300 focus:border-red-500"
                     : walletAddress && isValidAddress(walletAddress)
-                    ? "border-green-300 focus:border-green-500"
-                    : ""
+                      ? "border-green-300 focus:border-green-500"
+                      : ""
                 }`}
               />
               {walletAddress && (
@@ -188,12 +201,7 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
             </div>
             {walletAddress && !isValidAddress(walletAddress) && (
               <p className="text-xs text-red-600">
-                {selectedNetwork === "TRC20" 
-                  ? "TRC20 addresses should start with 'T' and be 34 characters long"
-                  : selectedNetwork === "ERC20" || selectedNetwork === "BEP20"
-                  ? "Address should start with '0x' and be 42 characters long"
-                  : "Please enter a valid wallet address"
-                }
+                Please enter a valid wallet address
               </p>
             )}
           </div>
@@ -201,8 +209,9 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
           {selectedNetwork && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-xs text-blue-900">
-                <strong>Important:</strong> Make sure this address supports USDT on the {selectedNetwork} network. 
-                Sending to an incorrect address may result in permanent loss of funds.
+                <strong>Important:</strong> Make sure this address supports the
+                selected asset on the {selectedNetwork} network. Sending to an
+                incorrect address may result in permanent loss of funds.
               </p>
             </div>
           )}
@@ -212,7 +221,7 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleAddWallet}
             disabled={!canSubmit}
             className="bg-blue-600 hover:bg-blue-700"
@@ -222,5 +231,5 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

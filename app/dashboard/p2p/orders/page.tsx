@@ -87,6 +87,8 @@ export default function OrderHistoryPage() {
 
   const statusConfig: Record<OrderStatus, { label: string; color: string; icon: any }> = {
     pending_payment: { label: 'Pending Payment', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
+    awaiting_merchant_confirmation: { label: 'Awaiting Merchant', color: 'bg-gray-100 text-gray-700', icon: Clock },
+    paid: { label: 'Paid', color: 'bg-blue-100 text-blue-700', icon: CheckCircle2 },
     awaiting_release: { label: 'Awaiting Release', color: 'bg-blue-100 text-blue-700', icon: Clock },
     PAYMENT_CONFIRMED_BY_BUYER: { label: 'Payment Confirmed', color: 'bg-blue-100 text-blue-700', icon: Clock },
     completed: { label: 'Completed', color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
