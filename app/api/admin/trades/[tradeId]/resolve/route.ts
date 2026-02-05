@@ -10,7 +10,7 @@ export async function PATCH(
         const { tradeId } = await params;
         const body = await request.json();
         const cookieStore = await cookies();
-        const token = cookieStore.get('accessToken')?.value;
+        const token = cookieStore.get('access_token')?.value;
 
         if (!token) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });

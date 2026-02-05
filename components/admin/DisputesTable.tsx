@@ -223,7 +223,7 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Parties</th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Priority</th>
+
               <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
             </tr>
           </thead>
@@ -260,9 +260,7 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
                 <td className="px-6 py-4">
                   {getStatusBadge(dispute.status)}
                 </td>
-                <td className="px-6 py-4">
-                  {getPriorityBadge(dispute.priority)}
-                </td>
+
                 <td className="px-6 py-4 text-right">
                   <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedDispute(dispute); }}>
                     <Eye className="w-4 h-4 text-gray-500" />
