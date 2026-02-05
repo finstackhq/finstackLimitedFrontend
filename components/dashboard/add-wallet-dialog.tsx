@@ -33,105 +33,67 @@ interface AddWalletDialogProps {
   }) => void;
 }
 
-const assetTypes = [
-  { value: "USDC", label: "USDC" },
-  { value: "CNGN", label: "CNGN" },
-  { value: "USDT", label: "USDT" },
-];
+const walletAssets = [
+  { value: "USDT", label: "USDT (Tether)" },
+  { value: "USDC", label: "USDC (USD Coin)" },
+  { value: "CNGN", label: "CNGN (Crypto Naira)" },
+]
 
 const networks = [
-  { value: "Base", label: "Base", description: "Base (supported)" },
-  {
-    value: "BSC",
-    label: "BSC (Binance Smart Chain)",
-    description: "Coming soon",
-    disabled: true,
-  },
-  {
-    value: "Ethereum",
-    label: "Ethereum",
-    description: "Coming soon",
-    disabled: true,
-  },
-  { value: "Tron", label: "Tron", description: "Coming soon", disabled: true },
-];
+  { value: "TRC20", label: "Tron (TRC20)", description: "USDT/USDC on Tron network" },
+  { value: "ERC20", label: "Ethereum (ERC20)", description: "USDT/USDC on Ethereum network" },
+  { value: "BEP20", label: "BSC (BEP20)", description: "USDT/USDC on Binance Smart Chain" },
+  { value: "BASE", label: "Base", description: "Supported on Block Radar" },
+]
 
-export function AddWalletDialog({
-  children,
-  onWalletAdded,
-}: AddWalletDialogProps) {
-  const [open, setOpen] = useState(false);
-  const [walletName, setWalletName] = useState("");
-  const [walletAddress, setWalletAddress] = useState("");
-  const [selectedNetwork, setSelectedNetwork] = useState("");
-  const [selectedAsset, setSelectedAsset] = useState("");
-  const { toast } = useToast();
+export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProps) {
+  const [open, setOpen] = useState(false)
+  const [walletName, setWalletName] = useState("")
+  const [walletAsset, setWalletAsset] = useState("")
+  const [walletAddress, setWalletAddress] = useState("")
+  const [selectedNetwork, setSelectedNetwork] = useState("")
+  const { toast } = useToast()
 
   const isValidAddress = (address: string) => {
     // Basic validation for crypto addresses
-    if (!address) return false;
-    // For Base, BSC, Ethereum, Tron, just check length and alphanumeric
-    return address.length >= 26 && address.length <= 62;
-  };
+    if (!address) return false
+    
+    // TRC20 addresses start with T and are 34 characters
+    if (selectedNetwork === "TRC20") {
+      return address.startsWith("T") && address.length === 34
+    }
+    
+    // ERC20, BEP20, BASE addresses start with 0x and are 42 characters
+    if (["ERC20", "BEP20", "BASE"].includes(selectedNetwork)) {
+      return address.startsWith("0x") && address.length === 42
+    }
+    
+    return address.length >= 26 && address.length <= 62
+  }
 
-  const handleAddWallet = async () => {
-    if (
-      walletName &&
-      walletAddress &&
-      selectedNetwork &&
-      selectedAsset &&
-      isValidAddress(walletAddress)
-    ) {
-      try {
-        const res = await fetch("/api/fstack/withdrawal-wallets", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            // Add Authorization header if needed, e.g. 'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            name: walletName,
-            address: walletAddress,
-            network: selectedNetwork,
-            asset: selectedAsset,
-          }),
-        });
-        const data = await res.json();
-        if (res.ok && data.wallet) {
-          toast({
-            title: "Wallet Added",
-            description: `${walletName} wallet has been added successfully.`,
-          });
-          onWalletAdded?.(data.wallet);
-          // Reset form
-          setWalletName("");
-          setWalletAddress("");
-          setSelectedNetwork("");
-          setSelectedAsset("");
-          setOpen(false);
-        } else {
-          toast({
-            title: "Error",
-            description: data.error || "Failed to add wallet.",
-            variant: "destructive",
-          });
-        }
-      } catch (err) {
-        toast({
-          title: "Error",
-          description: "Network error. Please try again.",
-          variant: "destructive",
-        });
-      }
+  const handleAddWallet = () => {
+    if (walletName && walletAsset && walletAddress && selectedNetwork && isValidAddress(walletAddress)) {
+      onWalletAdded?.({
+        name: walletName,
+        address: walletAddress,
+        network: selectedNetwork,
+      })
+      
+      toast({
+        title: "Wallet Added",
+        description: `${walletName} wallet has been added successfully.`,
+      })
+      
+      // Reset form
+      setWalletName("")
+      setWalletAsset("")
+      setWalletAddress("")
+      setSelectedNetwork("")
+      setOpen(false)
     }
   };
 
-  const canSubmit =
-    walletName &&
-    walletAddress &&
-    selectedNetwork &&
-    selectedAsset &&
-    isValidAddress(walletAddress);
+  const canSubmit = walletName && walletAsset && walletAddress && selectedNetwork && isValidAddress(walletAddress)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -143,7 +105,7 @@ export function AddWalletDialog({
             Add Wallet Address
           </DialogTitle>
           <DialogDescription>
-            Add a new USDT wallet address for withdrawals
+            Add a new wallet address for withdrawals
           </DialogDescription>
         </DialogHeader>
 
@@ -160,12 +122,12 @@ export function AddWalletDialog({
 
           <div className="space-y-2">
             <Label htmlFor="asset-type">Asset Type</Label>
-            <Select value={selectedAsset} onValueChange={setSelectedAsset}>
+            <Select value={walletAsset} onValueChange={setWalletAsset}>
               <SelectTrigger>
-                <SelectValue placeholder="Select asset type" />
+                <SelectValue placeholder="Select asset (e.g. USDC)" />
               </SelectTrigger>
               <SelectContent>
-                {assetTypes.map((asset) => (
+                {walletAssets.map((asset) => (
                   <SelectItem key={asset.value} value={asset.value}>
                     {asset.label}
                   </SelectItem>
@@ -202,13 +164,21 @@ export function AddWalletDialog({
               coming soon.
             </p>
           </div>
+          
+           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
+              <strong>Note:</strong> Only Base withdrawal is supported on Block Radar now. But we will be supporting other chains very soon.
+           </div>
 
           <div className="space-y-2">
             <Label htmlFor="wallet-address">Wallet Address</Label>
             <div className="relative">
               <Input
                 id="wallet-address"
-                placeholder="Enter wallet address"
+                placeholder={
+                  selectedNetwork === "TRC20" 
+                    ? "T..." 
+                    : "0x..."
+                }
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 className={`pr-10 ${

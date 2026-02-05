@@ -600,7 +600,24 @@ export default function PaymentPage() {
                     </AlertDescription>
                 </Alert>
                 
-                {(status === 'paid' || localPaid) && ctx.initiate?.side !== 'SELL' ? (
+                {(status === 'completed') ? (
+                   <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center space-y-3 animate-in fade-in zoom-in duration-300">
+                       <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <CheckCircle className="w-8 h-8 text-green-600" />
+                       </div>
+                       <h3 className="text-xl font-bold text-green-700">Order Completed</h3>
+                       <p className="text-green-800 text-sm max-w-xs mx-auto">
+                           The trade has been successfully completed. The assets have been released.
+                       </p>
+                       <Button 
+                           variant="outline" 
+                           className="mt-4 border-green-200 text-green-700 hover:bg-green-100"
+                           onClick={() => window.location.href = '/dashboard/p2p'}
+                       >
+                           Back to P2P Dashboard
+                       </Button>
+                   </div>
+                ) : (status === 'paid' || localPaid) && ctx.initiate?.side !== 'SELL' ? (
                    <div className="bg-primary/5 border border-primary/20 rounded-xl p-8 text-center space-y-3 animate-in fade-in zoom-in duration-300">
                        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
                           <CheckCircle className="w-8 h-8 text-primary" />

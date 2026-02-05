@@ -372,7 +372,7 @@ export default function P2PMarketplacePage() {
   };
 
   // Get unique pairs and countries for filters
-  const cryptoCurrencies = ['USDT', 'USDC', 'NGN', 'CNGN'] // Finstack supported currencies
+  const cryptoCurrencies = ['CNGN', 'USDC', 'USDT'] // Finstack supported currencies
   const fiatCurrencies = ['NGN', 'RMB', 'GHS']
   const uniqueCountries = Array.from(new Set(allAds.map(ad => ad.country)))
   
@@ -402,19 +402,31 @@ export default function P2PMarketplacePage() {
       minimumFractionDigits: 3,
       maximumFractionDigits: 3,
     }).format(effectivePrice);
+    
     const symbol = getSymbolForPair(ad.cryptoCurrency, ad.fiatCurrency);
+    
+    // Special formatting for USDC: Show fiat symbol and / USD
+    let suffix = `/${ad.fiatCurrency}`;
+    let displaySymbol = symbol;
+
+    if (ad.cryptoCurrency === 'USDC') {
+        suffix = '/ USD';
+        // Ensure we use the fiat symbol for the price value
+        displaySymbol = getSymbolForPair(ad.cryptoCurrency, ad.fiatCurrency); 
+    }
+
     const priceDisplay = (
       <>
-        {symbol}
+        {displaySymbol}
         {formattedPrice}
-        <span className="font-light">/{ad.fiatCurrency}</span>
+        <span className="font-light">{suffix}</span>
       </>
     );
 
     return (
       <div
         key={ad.id}
-        className="grid md:grid-cols-7 gap-4 md:gap-6 p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition-colors hover:shadow-md cursor-pointer"
+        className="grid grid-cols-1 md:grid-cols-[1.2fr_1.8fr_1.2fr_1.8fr_1.5fr_0.8fr_1fr] gap-4 md:gap-6 p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition-colors hover:shadow-md cursor-pointer items-center"
         onClick={() => handleAdClick(ad)}
       >
         <div className="space-y-1">

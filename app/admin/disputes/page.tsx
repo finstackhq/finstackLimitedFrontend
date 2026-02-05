@@ -24,39 +24,70 @@ export default function DisputesPage() {
 
       if (data.success && Array.isArray(data.disputes)) {
         // Map backend data to frontend format
-        const mappedDisputes = data.disputes.map((dispute: any) => ({
-          id: dispute.reference || dispute._id,
-          tradeId: dispute.reference,
-          initiatedBy: {
+        const mappedDisputes = data.disputes.map((dispute: any) => {
+          const openedById = dispute.disputeDetails?.openedBy;
+          const buyerId = dispute.userId?._id;
+          const sellerId = dispute.merchantId?._id;
+
+          const buyer = {
             id: dispute.userId?._id || '',
             name: `${dispute.userId?.firstName || ''} ${dispute.userId?.lastName || ''}`.trim() || dispute.userId?.email || 'Unknown',
             avatar: '/Memoji-01.png'
-          },
-          respondent: {
+          };
+
+          const seller = {
             id: dispute.merchantId?._id || '',
             name: `${dispute.merchantId?.firstName || ''} ${dispute.merchantId?.lastName || ''}`.trim() || dispute.merchantId?.email || 'Unknown',
             avatar: '/Memoji-02.png'
-          },
-          amount: dispute.amountFiat || dispute.amountCrypto || 0,
-          currency: dispute.currencySource || dispute.currencyTarget || 'USD',
-          status: dispute.status === 'DISPUTE_PENDING' ? 'open' : 
-                  dispute.status === 'DISPUTE_RESOLVED' ? 'resolved' : 
-                  'under_review',
-          priority: 'medium' as const,
-          category: 'payment_issue' as const,
-          description: dispute.logs?.[dispute.logs.length - 1]?.message || 'Dispute opened',
-          createdAt: dispute.createdAt,
-          lastUpdate: dispute.updatedAt,
-          assignedTo: 'admin1',
-          evidence: [],
-          messages: dispute.logs?.map((log: any, index: number) => ({
-            id: `msg${index}`,
-            sender: log.actor || 'System',
-            message: log.message,
-            timestamp: log.time,
-            type: log.role === 'system' ? 'admin' : 'user'
-          })) || []
-        }));
+          };
+
+          let initiatedBy = buyer;
+          let respondent = seller;
+
+          if (openedById === sellerId) {
+            initiatedBy = seller;
+            respondent = buyer;
+          }
+
+          return {
+            id: dispute.reference || dispute._id,
+            tradeId: dispute.reference,
+            initiatedBy,
+            respondent,
+            amount: dispute.amountFiat || dispute.amountCrypto || 0,
+            currency: dispute.currencySource || dispute.currencyTarget || 'USD',
+            status: dispute.status === 'DISPUTE_PENDING' ? 'open' : 
+                    dispute.status === 'DISPUTE_RESOLVED' ? 'resolved' : 
+                    'under_review',
+            priority: 'medium' as const,
+            category: 'payment_issue' as const,
+            description: dispute.logs?.[dispute.logs.length - 1]?.message || 'Dispute opened',
+            createdAt: dispute.createdAt,
+            lastUpdate: dispute.updatedAt,
+            assignedTo: 'admin1',
+            evidence: dispute.disputeDetails?.evidence?.map((ev: any) => ({
+              type: ev.url?.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? 'image' : 'document',
+              url: ev.url,
+              uploadedBy: ev.uploadedBy
+            })) || [],
+            messages: dispute.logs?.map((log: any, index: number) => ({
+              id: `msg${index}`,
+              sender: log.actor || 'System',
+              message: log.message,
+              timestamp: log.time,
+              type: log.role === 'system' ? 'system' : (log.role === 'admin' ? 'admin' : 'user')
+            })) || [],
+            paymentDetails: dispute.paymentDetails,
+            tradeDetails: {
+              amountFiat: dispute.amountFiat,
+              amountCrypto: dispute.amountCrypto,
+              price: dispute.listingRate,
+              currencySource: dispute.currencySource,
+              currencyTarget: dispute.currencyTarget,
+              provider: dispute.provider,
+            }
+          };
+        });
 
         setDisputes(mappedDisputes);
         setFilteredDisputes(mappedDisputes);

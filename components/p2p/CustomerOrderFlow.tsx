@@ -56,6 +56,7 @@ interface CustomerOrderFlowProps {
 }
 
 export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDispute }: CustomerOrderFlowProps) {
+  const currentStatus = order.status.toLowerCase();
   const { toast } = useToast();
   const [paymentProof, setPaymentProof] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
@@ -259,12 +260,12 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDi
             <p className="text-sm text-gray-600">Seller: {order.sellerName}</p>
           </div>
           <Badge className={
-            order.status === 'completed' ? 'bg-green-100 text-green-800' :
-            order.status === 'disputed' ? 'bg-red-100 text-red-800' :
-            (order.status === 'awaiting_release' || order.status === 'PAYMENT_CONFIRMED_BY_BUYER') ? 'bg-blue-100 text-blue-800' :
+            currentStatus === 'completed' ? 'bg-green-100 text-green-800' :
+            currentStatus === 'disputed' ? 'bg-red-100 text-red-800' :
+            (currentStatus === 'awaiting_release' || currentStatus === 'payment_confirmed_by_buyer') ? 'bg-blue-100 text-blue-800' :
             'bg-yellow-100 text-yellow-800'
           }>
-            {order.status.replace(/_/g, ' ').toUpperCase()}
+            {currentStatus.replace(/_/g, ' ').toUpperCase()}
           </Badge>
         </div>
 
@@ -284,21 +285,34 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDi
         </div>
 
         {/* Timer */}
-        <div className={`mt-4 p-3 rounded-lg flex items-center gap-3 ${isExpiringSoon ? 'bg-red-50 border border-red-200' : 'bg-blue-50 border border-blue-200'}`}>
-          <Clock className={`w-5 h-5 ${isExpiringSoon ? 'text-red-600' : 'text-blue-600'}`} />
-          <div className="flex-1">
-            <p className={`text-sm font-medium ${isExpiringSoon ? 'text-red-800' : 'text-blue-800'}`}>
-              {order.status === 'pending_payment' ? 'Complete payment within' : 'Waiting for seller to release crypto'}
-            </p>
-            <p className={`text-xs ${isExpiringSoon ? 'text-red-600' : 'text-blue-600'}`}>
-              Time remaining: {timeRemaining} minutes
-            </p>
+        {/* Timer or Status Message */}
+        {/* Timer or Status Message */}
+        {currentStatus === 'completed' ? (
+          <div className="mt-4 p-3 rounded-lg flex items-center gap-3 bg-green-50 border border-green-200">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            <div>
+              <p className="text-sm font-medium text-green-800">
+                This order has been completed
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className={`mt-4 p-3 rounded-lg flex items-center gap-3 ${isExpiringSoon ? 'bg-red-50 border border-red-200' : 'bg-blue-50 border border-blue-200'}`}>
+            <Clock className={`w-5 h-5 ${isExpiringSoon ? 'text-red-600' : 'text-blue-600'}`} />
+            <div className="flex-1">
+              <p className={`text-sm font-medium ${isExpiringSoon ? 'text-red-800' : 'text-blue-800'}`}>
+                {currentStatus === 'pending_payment' ? 'Complete payment within' : 'Waiting for seller to release crypto'}
+              </p>
+              <p className={`text-xs ${isExpiringSoon ? 'text-red-600' : 'text-blue-600'}`}>
+                Time remaining: {timeRemaining} minutes
+              </p>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Payment Instructions (User Buying) */}
-      {!isUserSelling && ['pending_payment', 'PENDING_PAYMENT'].includes(order.status) && (
+      {!isUserSelling && currentStatus === 'pending_payment' && (
         <>
           <Card className="p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -453,7 +467,7 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDi
       )}
 
       {/* User Selling: Waiting for Merchant Payment */}
-      {isUserSelling && ['pending_payment', 'PENDING_PAYMENT'].includes(order.status) && (
+      {isUserSelling && currentStatus === 'pending_payment' && (
         <Card className="p-6">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto">
@@ -479,7 +493,7 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDi
       )}
 
       {/* User Selling: Verify & Release (Only when Merchant has marked paid) */}
-      {isUserSelling && ['MERCHANT_PAID', 'merchant_paid', 'awaiting_release', 'AWAITING_RELEASE', 'PAYMENT_CONFIRMED_BY_BUYER', 'paid'].includes(order.status) && (
+      {isUserSelling && ['merchant_paid', 'awaiting_release', 'payment_confirmed_by_buyer', 'paid'].includes(currentStatus) && (
         <Card className="p-6">
              <div className="flex items-center gap-3 mb-4">
               <Shield className="w-6 h-6 text-blue-600" />
@@ -535,7 +549,7 @@ export function CustomerOrderFlow({ order, onMarkPaid, onCancel, onRelease, onDi
       )}
 
       {/* Waiting for Release (User Buying) */}
-      {!isUserSelling && (order.status === 'awaiting_release' || order.status === 'PAYMENT_CONFIRMED_BY_BUYER') && (
+      {!isUserSelling && (currentStatus === 'awaiting_release' || currentStatus === 'payment_confirmed_by_buyer') && (
         <Card className="p-6">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto">

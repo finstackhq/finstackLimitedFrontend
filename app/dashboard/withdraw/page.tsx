@@ -910,9 +910,8 @@ export default function WithdrawPage() {
                     </p>
 
                     <p className="text-lg font-semibold text-foreground">
-                      {selectedWallet === "NGN"
-                        ? `$${convertCurrency(Number.parseFloat(amount), "NGN", "USD").toFixed(2)}`
-                        : `₦${convertCurrency(Number.parseFloat(amount), "USDT", "NGN").toFixed(2)}`}
+                      {selectedWallet === "NGN" ? "₦" : "$"}
+                      {Number.parseFloat(amount).toFixed(2)}
                     </p>
                   </div>
                 </div>
