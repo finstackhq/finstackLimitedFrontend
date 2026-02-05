@@ -28,15 +28,23 @@ interface AddWalletDialogProps {
   onWalletAdded?: (wallet: { name: string; address: string; network: string }) => void
 }
 
+const walletAssets = [
+  { value: "USDT", label: "USDT (Tether)" },
+  { value: "USDC", label: "USDC (USD Coin)" },
+  { value: "CNGN", label: "CNGN (Crypto Naira)" },
+]
+
 const networks = [
-  { value: "TRC20", label: "TRC20 (Tron)", description: "USDT on Tron network" },
-  { value: "ERC20", label: "ERC20 (Ethereum)", description: "USDT on Ethereum network" },
-  { value: "BEP20", label: "BEP20 (BSC)", description: "USDT on Binance Smart Chain" },
+  { value: "TRC20", label: "Tron (TRC20)", description: "USDT/USDC on Tron network" },
+  { value: "ERC20", label: "Ethereum (ERC20)", description: "USDT/USDC on Ethereum network" },
+  { value: "BEP20", label: "BSC (BEP20)", description: "USDT/USDC on Binance Smart Chain" },
+  { value: "BASE", label: "Base", description: "Supported on Block Radar" },
 ]
 
 export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProps) {
   const [open, setOpen] = useState(false)
   const [walletName, setWalletName] = useState("")
+  const [walletAsset, setWalletAsset] = useState("")
   const [walletAddress, setWalletAddress] = useState("")
   const [selectedNetwork, setSelectedNetwork] = useState("")
   const { toast } = useToast()
@@ -50,8 +58,8 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
       return address.startsWith("T") && address.length === 34
     }
     
-    // ERC20 and BEP20 addresses start with 0x and are 42 characters
-    if (selectedNetwork === "ERC20" || selectedNetwork === "BEP20") {
+    // ERC20, BEP20, BASE addresses start with 0x and are 42 characters
+    if (["ERC20", "BEP20", "BASE"].includes(selectedNetwork)) {
       return address.startsWith("0x") && address.length === 42
     }
     
@@ -59,7 +67,7 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
   }
 
   const handleAddWallet = () => {
-    if (walletName && walletAddress && selectedNetwork && isValidAddress(walletAddress)) {
+    if (walletName && walletAsset && walletAddress && selectedNetwork && isValidAddress(walletAddress)) {
       onWalletAdded?.({
         name: walletName,
         address: walletAddress,
@@ -73,13 +81,14 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
       
       // Reset form
       setWalletName("")
+      setWalletAsset("")
       setWalletAddress("")
       setSelectedNetwork("")
       setOpen(false)
     }
   }
 
-  const canSubmit = walletName && walletAddress && selectedNetwork && isValidAddress(walletAddress)
+  const canSubmit = walletName && walletAsset && walletAddress && selectedNetwork && isValidAddress(walletAddress)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -93,7 +102,7 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
             Add Wallet Address
           </DialogTitle>
           <DialogDescription>
-            Add a new USDT wallet address for withdrawals
+            Add a new wallet address for withdrawals
           </DialogDescription>
         </DialogHeader>
         
@@ -106,6 +115,22 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
               value={walletName}
               onChange={(e) => setWalletName(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="asset-type">Asset Type</Label>
+            <Select value={walletAsset} onValueChange={setWalletAsset}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select asset (e.g. USDC)" />
+              </SelectTrigger>
+              <SelectContent>
+                {walletAssets.map((asset) => (
+                  <SelectItem key={asset.value} value={asset.value}>
+                    {asset.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -126,6 +151,10 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
               </SelectContent>
             </Select>
           </div>
+          
+           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
+              <strong>Note:</strong> Only Base withdrawal is supported on Block Radar now. But we will be supporting other chains very soon.
+           </div>
 
           <div className="space-y-2">
             <Label htmlFor="wallet-address">Wallet Address</Label>
@@ -135,9 +164,7 @@ export function AddWalletDialog({ children, onWalletAdded }: AddWalletDialogProp
                 placeholder={
                   selectedNetwork === "TRC20" 
                     ? "T..." 
-                    : selectedNetwork === "ERC20" || selectedNetwork === "BEP20"
-                    ? "0x..."
-                    : "Enter wallet address"
+                    : "0x..."
                 }
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}

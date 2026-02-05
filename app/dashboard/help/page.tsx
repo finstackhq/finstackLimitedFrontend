@@ -78,7 +78,6 @@ const faqs = [
 ]
 
 export default function HelpPage() {
-  const [searchQuery, setSearchQuery] = useState("")
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
 
   const toggleItem = (id: string) => {
@@ -91,17 +90,6 @@ export default function HelpPage() {
     setExpandedItems(newExpanded)
   }
 
-  const filteredFaqs = faqs
-    .map((category) => ({
-      ...category,
-      questions: category.questions.filter(
-        (item) =>
-          item.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.a.toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
-    }))
-    .filter((category) => category.questions.length > 0)
-
   return (
     <div className="min-h-screen bg-white p-4 md:p-6 lg:p-8">
       <div className="mx-auto max-w-4xl">
@@ -111,89 +99,87 @@ export default function HelpPage() {
           <p className="text-gray-600">Find answers to common questions or contact our support team</p>
         </div>
 
-        {/* Search */}
-        <div className="mb-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Search for help..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-12 border-gray-200 focus:border-blue-600 focus:ring-blue-600"
-            />
-          </div>
-        </div>
+
 
         {/* Contact Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
-          <Card className="p-6 border-gray-200 hover:border-green-600 transition-colors cursor-pointer">
-            <MessageCircle className="h-8 w-8 text-green-600 mb-3" />
-            <h3 className="font-medium text-gray-900 mb-1">WhatsApp Support</h3>
-            <p className="text-sm text-gray-600 mb-3">+234 816 445 8437</p>
-            <a href="https://wa.me/2348164458437" target="_blank" rel="noopener noreferrer">
-              <Button variant="link" className="p-0 h-auto text-green-600 font-medium">
-                Chat on WhatsApp <ExternalLink className="ml-1 h-3 w-3" />
-              </Button>
-            </a>
+          <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-8">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <MessageCircle className="w-32 h-32 rotate-12" />
+            </div>
+            
+            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="text-center md:text-left space-y-4 max-w-2xl">
+                <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <MessageCircle className="h-6 w-6 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold">Need Help? Chat with us</h3>
+                </div>
+                
+                <p className="text-blue-100 text-lg leading-relaxed">
+                  Our live chat feature is coming soon! In the meantime, our dedicated support team is ready to assist you via WhatsApp or Email.
+                </p>
+                
+                <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
+                  <a 
+                    href="https://wa.me/2348164458437" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-6 py-3 bg-white text-blue-700 rounded-full font-semibold hover:bg-blue-50 transition-colors shadow-sm w-full sm:w-auto justify-center"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.008-.57-.008-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.302-5.113c0-5.42 4.409-9.85 9.85-9.85 5.42 0 9.85 4.43 9.85 9.85 0 5.42-4.43 9.85-9.85 9.85M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10S6.486 2 12 2z"/></svg>
+                    WhatsApp Support
+                  </a>
+                  <a 
+                    href="mailto:hello@usefinstack.co"
+                    className="flex items-center gap-3 px-6 py-3 bg-blue-800/50 backdrop-blur-sm text-white border border-blue-400/30 rounded-full font-semibold hover:bg-blue-800/70 transition-colors w-full sm:w-auto justify-center"
+                  >
+                    <Mail className="w-5 h-5" />
+                    hello@usefinstack.co
+                  </a>
+                </div>
+              </div>
+            </div>
           </Card>
-
-          <Card className="p-6 border-gray-200 hover:border-blue-600 transition-colors cursor-pointer">
-            <Mail className="h-8 w-8 text-blue-600 mb-3" />
-            <h3 className="font-medium text-gray-900 mb-1">Email Support</h3>
-            <p className="text-sm text-gray-600 mb-3">hello@usefinstack.co</p>
-            <a href="mailto:hello@usefinstack.co">
-              <Button variant="link" className="p-0 h-auto text-blue-600 font-medium">
-                Send Email <ExternalLink className="ml-1 h-3 w-3" />
-              </Button>
-            </a>
-          </Card>
-        </div>
 
         {/* FAQs */}
         <div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-6">Frequently Asked Questions</h2>
 
-          {filteredFaqs.length === 0 ? (
-            <Card className="p-8 text-center border-gray-200">
-              <p className="text-gray-600">No results found for "{searchQuery}"</p>
-            </Card>
-          ) : (
-            <div className="space-y-6">
-              {filteredFaqs.map((category) => (
-                <div key={category.category}>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">{category.category}</h3>
-                  <div className="space-y-2">
-                    {category.questions.map((item, idx) => {
-                      const itemId = `${category.category}-${idx}`
-                      const isExpanded = expandedItems.has(itemId)
+          <div className="space-y-6">
+            {faqs.map((category) => (
+              <div key={category.category}>
+                <h3 className="text-lg font-medium text-gray-900 mb-3">{category.category}</h3>
+                <div className="space-y-2">
+                  {category.questions.map((item, idx) => {
+                    const itemId = `${category.category}-${idx}`
+                    const isExpanded = expandedItems.has(itemId)
 
-                      return (
-                        <Card key={itemId} className="border-gray-200 overflow-hidden transition-all">
-                          <button
-                            onClick={() => toggleItem(itemId)}
-                            className="w-full p-3 md:p-3.5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
-                          >
-                            <span className="font-medium text-gray-900 text-sm md:text-base">{item.q}</span>
-                            {isExpanded ? (
-                              <ChevronUp className="h-4 w-4 md:h-5 md:w-5 text-gray-400 flex-shrink-0" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4 md:h-5 md:w-5 text-gray-400 flex-shrink-0" />
-                            )}
-                          </button>
-                          {isExpanded && (
-                            <div className="px-3 md:px-3.5 pb-3 md:pb-3.5 text-gray-600 text-sm md:text-base border-t border-gray-100 pt-3 md:pt-3.5">
-                              {item.a}
-                            </div>
+                    return (
+                      <Card key={itemId} className="border-gray-200 overflow-hidden transition-all">
+                        <button
+                          onClick={() => toggleItem(itemId)}
+                          className="w-full p-3 md:p-3.5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                        >
+                          <span className="font-medium text-gray-900 text-sm md:text-base">{item.q}</span>
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4 md:h-5 md:w-5 text-gray-400 flex-shrink-0" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 md:h-5 md:w-5 text-gray-400 flex-shrink-0" />
                           )}
-                        </Card>
-                      )
-                    })}
-                  </div>
+                        </button>
+                        {isExpanded && (
+                          <div className="px-3 md:px-3.5 pb-3 md:pb-3.5 text-gray-600 text-sm md:text-base border-t border-gray-100 pt-3 md:pt-3.5">
+                            {item.a}
+                          </div>
+                        )}
+                      </Card>
+                    )
+                  })}
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Still Need Help */}
