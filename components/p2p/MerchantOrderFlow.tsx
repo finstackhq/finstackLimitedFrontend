@@ -363,29 +363,41 @@ export function MerchantOrderFlow({
         </div>
 
         {/* Timer */}
-        <div
-          className={`mt-4 p-3 rounded-lg flex items-center gap-3 ${isExpiringSoon ? "bg-red-50 border border-red-200" : "bg-blue-50 border border-blue-200"}`}
-        >
-          <Clock
-            className={`w-5 h-5 ${isExpiringSoon ? "text-red-600" : "text-blue-600"}`}
-          />
-          <div className="flex-1">
-            <p
-              className={`text-sm font-medium ${isExpiringSoon ? "text-red-800" : "text-blue-800"}`}
-            >
-              {currentStatus === "pending_payment"
-                ? isMerchantBuying
-                  ? "Please pay the seller"
-                  : "Waiting for buyer payment"
-                : "Payment received - Verify and release"}
-            </p>
-            <p
-              className={`text-xs ${isExpiringSoon ? "text-red-600" : "text-blue-600"}`}
-            >
-              Time remaining: {timeRemaining} minutes
-            </p>
+        {/* Timer or Status Message */}
+        {currentStatus === 'completed' ? (
+          <div className="mt-4 p-3 rounded-lg flex items-center gap-3 bg-green-50 border border-green-200">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            <div>
+              <p className="text-sm font-medium text-green-800">
+                This order has been completed
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div
+            className={`mt-4 p-3 rounded-lg flex items-center gap-3 ${isExpiringSoon ? "bg-red-50 border border-red-200" : "bg-blue-50 border border-blue-200"}`}
+          >
+            <Clock
+              className={`w-5 h-5 ${isExpiringSoon ? "text-red-600" : "text-blue-600"}`}
+            />
+            <div className="flex-1">
+              <p
+                className={`text-sm font-medium ${isExpiringSoon ? "text-red-800" : "text-blue-800"}`}
+              >
+                {currentStatus === "pending_payment"
+                  ? isMerchantBuying
+                    ? "Please pay the seller"
+                    : "Waiting for buyer payment"
+                  : "Payment received - Verify and release"}
+              </p>
+              <p
+                className={`text-xs ${isExpiringSoon ? "text-red-600" : "text-blue-600"}`}
+              >
+                Time remaining: {timeRemaining} minutes
+              </p>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Merchant Buying Flow: Show Bank Details & I Have Paid */}
