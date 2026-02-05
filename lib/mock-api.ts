@@ -142,6 +142,8 @@ export const mockTransactions: Transaction[] = [
 export const mockRates: ExchangeRate[] = [
   { from: "NGN", to: "RMB", rate: 0.0093 },
   { from: "RMB", to: "NGN", rate: 107 },
+  { from: "NGN", to: "USD", rate: 0.00061 }, // Added for Wallet Balance conversion
+  { from: "USD", to: "NGN", rate: 1635 },    // Added for Wallet Balance conversion
   { from: "NGN", to: "USDT", rate: 0.00061 }, // Will be updated with live rates
   { from: "USDT", to: "NGN", rate: 1635 }, // Will be updated with live rates
   { from: "RMB", to: "USDT", rate: 0.14 },
