@@ -1,59 +1,44 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { convertCurrency } from "@/lib/mock-api"
-import type { Wallet } from "@/lib/mock-api"
-import { TrendingUp, Eye, EyeOff, WalletIcon } from "lucide-react"
+import { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { convertCurrency } from "@/lib/mock-api";
+import type { Wallet } from "@/lib/mock-api";
+import { TrendingUp, Eye, EyeOff, WalletIcon } from "lucide-react";
 
 interface WalletBalanceCardProps {
-  wallets: Wallet[]
+  wallets: Wallet[];
 }
 
 export function WalletBalanceCard({ wallets }: WalletBalanceCardProps) {
-  const [selectedCurrency, setSelectedCurrency] = useState<"NGN" | "USD">("NGN")
-  const [totalBalance, setTotalBalance] = useState(0)
-  const [showBalance, setShowBalance] = useState(true)
+  const [selectedCurrency, setSelectedCurrency] = useState<"NGN" | "USD">(
+    "NGN",
+  );
+  const [totalBalance, setTotalBalance] = useState(0);
+  const [showBalance, setShowBalance] = useState(true);
 
-  const ngnWallet = wallets.find((w) => w.type === "NGN")
-  const usdcWallet = wallets.find((w) => w.type === "USDC")
-  const cngnWallet = wallets.find((w) => w.type === "CNGN")
+  const ngnWallet = wallets.find((w) => w.type === "NGN");
+  const usdcWallet = wallets.find((w) => w.type === "USDC");
+  const cngnWallet = wallets.find((w) => w.type === "CNGN");
 
+  // --- SIMPLE BALANCE DISPLAY LOGIC ---
   useEffect(() => {
-    let total = 0
-    if (ngnWallet) {
-      if (selectedCurrency === "NGN") {
-        total += ngnWallet.balance
-      } else if (selectedCurrency === "USD") {
-        total += convertCurrency(ngnWallet.balance, "NGN", "USD")
-      }
+    if (selectedCurrency === "NGN") {
+      setTotalBalance(cngnWallet?.balance ?? 0);
+    } else if (selectedCurrency === "USD") {
+      setTotalBalance(usdcWallet?.balance ?? 0);
     }
-    if (usdcWallet) {
-      if (selectedCurrency === "NGN") {
-        total += convertCurrency(usdcWallet.balance, "USDC", "NGN")
-      } else if (selectedCurrency === "USD") {
-        total += usdcWallet.balance
-      }
-    }
-    if (cngnWallet) {
-      if (selectedCurrency === "NGN") {
-        total += cngnWallet.balance // Assuming 1 CNGN = 1 NGN
-      } else if (selectedCurrency === "USD") {
-        total += convertCurrency(cngnWallet.balance, "NGN", "USD")
-      }
-    }
-    setTotalBalance(total)
-  }, [selectedCurrency, ngnWallet, usdcWallet, cngnWallet])
+  }, [selectedCurrency, cngnWallet, usdcWallet]);
 
   const getCurrencySymbol = () => {
     switch (selectedCurrency) {
       case "NGN":
-        return "₦"
+        return "₦";
       case "USD":
-        return "$"
+        return "$";
     }
-  }
+  };
 
   return (
     <Card className="relative overflow-hidden border-0 shadow-xl bg-blue-600 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
@@ -68,8 +53,10 @@ export function WalletBalanceCard({ wallets }: WalletBalanceCardProps) {
               <WalletIcon className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-xs md:text-sm text-blue-100 font-medium">Total Balance</p>
-              <p className="text-[10px] md:text-xs text-blue-200/70">All Wallets Combined</p>
+              <p className="text-xs md:text-sm text-blue-100 font-medium">
+                Total Balance
+              </p>
+              {/* <p className="text-[10px] md:text-xs text-blue-200/70">All Wallets Combined</p> */}
             </div>
           </div>
 
@@ -77,7 +64,11 @@ export function WalletBalanceCard({ wallets }: WalletBalanceCardProps) {
             onClick={() => setShowBalance(!showBalance)}
             className="w-9 h-9 rounded-lg bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all flex items-center justify-center"
           >
-            {showBalance ? <Eye className="w-4 h-4 text-white" /> : <EyeOff className="w-4 h-4 text-white" />}
+            {showBalance ? (
+              <Eye className="w-4 h-4 text-white" />
+            ) : (
+              <EyeOff className="w-4 h-4 text-white" />
+            )}
           </button>
         </div>
 
@@ -128,10 +119,14 @@ export function WalletBalanceCard({ wallets }: WalletBalanceCardProps) {
               <div className="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center">
                 <span className="text-xs font-bold text-blue-300">$</span>
               </div>
-              <p className="text-[10px] md:text-xs text-blue-100 font-medium">USDC Wallet</p>
+              <p className="text-[10px] md:text-xs text-blue-100 font-medium">
+                USDC Wallet
+              </p>
             </div>
             <p className="text-base md:text-lg lg:text-xl font-bold text-white">
-              {showBalance ? `$${usdcWallet?.balance.toLocaleString() || "0"}` : "••••••"}
+              {showBalance
+                ? `$${usdcWallet?.balance.toLocaleString() || "0"}`
+                : "••••••"}
             </p>
           </div>
 
@@ -140,14 +135,18 @@ export function WalletBalanceCard({ wallets }: WalletBalanceCardProps) {
               <div className="w-6 h-6 rounded-lg bg-orange-500/20 flex items-center justify-center">
                 <span className="text-xs font-bold text-orange-300">C</span>
               </div>
-              <p className="text-[10px] md:text-xs text-blue-100 font-medium">CNGN Wallet</p>
+              <p className="text-[10px] md:text-xs text-blue-100 font-medium">
+                CNGN Wallet
+              </p>
             </div>
             <p className="text-base md:text-lg lg:text-xl font-bold text-white">
-              {showBalance ? `₦${cngnWallet?.balance.toLocaleString() || "0"}` : "••••••"}
+              {showBalance
+                ? `₦${cngnWallet?.balance.toLocaleString() || "0"}`
+                : "••••••"}
             </p>
           </div>
         </div>
       </div>
     </Card>
-  )
+  );
 }
