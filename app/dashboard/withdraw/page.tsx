@@ -140,9 +140,16 @@ export default function WithdrawPage() {
     const fetchWithdrawalWallets = async () => {
       setLoadingWallets(true);
       try {
-        const res = await fetch("/api/fstack/withdrawal-wallets");
+        const res = await fetch("https://finstacklimitedbackend.onrender.com/api/withdrawal-wallets", {
+          headers: {
+            "Content-Type": "application/json"
+          },
+          credentials: "include"
+        });
         const data = await res.json();
-        if (res.ok && data.success && Array.isArray(data.data)) {
+        if (res.ok && Array.isArray(data)) {
+          setWithdrawalWallets(data);
+        } else if (res.ok && data.success && Array.isArray(data.data)) {
           setWithdrawalWallets(data.data);
         } else {
           setWithdrawalWallets([]);
@@ -431,9 +438,16 @@ export default function WithdrawPage() {
   const handleWalletAdded = async () => {
     setLoadingWallets(true);
     try {
-      const res = await fetch("/api/fstack/withdrawal-wallets");
+      const res = await fetch("https://finstacklimitedbackend.onrender.com/api/withdrawal-wallets", {
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include"
+      });
       const data = await res.json();
-      if (res.ok && data.success && Array.isArray(data.data)) {
+      if (res.ok && Array.isArray(data)) {
+        setWithdrawalWallets(data);
+      } else if (res.ok && data.success && Array.isArray(data.data)) {
         setWithdrawalWallets(data.data);
       }
     } catch (err) {

@@ -83,11 +83,10 @@ export function AddWalletDialog({
       isValidAddress(walletAddress)
     ) {
       try {
-        const res = await fetch("/api/fstack/withdrawal-wallets", {
+        const res = await fetch("https://finstacklimitedbackend.onrender.com/api/withdrawal-wallets", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            // Add Authorization header if needed, e.g. 'Authorization': `Bearer ${token}`
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
             name: walletName,
@@ -95,14 +94,15 @@ export function AddWalletDialog({
             network: selectedNetwork,
             asset: selectedAsset,
           }),
+          credentials: "include"
         });
         const data = await res.json();
-        if (res.ok && data.wallet) {
+        if (res.ok && (data.wallet || data.success)) {
           toast({
             title: "Wallet Added",
             description: `${walletName} wallet has been added successfully.`,
           });
-          onWalletAdded?.(data.wallet);
+          onWalletAdded?.(data.wallet || data.data);
           // Reset form
           setWalletName("");
           setWalletAddress("");
@@ -116,10 +116,10 @@ export function AddWalletDialog({
             variant: "destructive",
           });
         }
-      } catch (err) {
+      } catch (error: any) {
         toast({
           title: "Error",
-          description: "Network error. Please try again.",
+          description: error.message || "Failed to add wallet.",
           variant: "destructive",
         });
       }
