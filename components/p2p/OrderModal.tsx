@@ -63,38 +63,76 @@ export function OrderModal({
   const [lastEdited, setLastEdited] = useState<"fiat" | "crypto">("fiat");
 
   useEffect(() => {
-    if (ad.type === "buy") {
-      // BUY FLOW: Fix conversion so that CNGN = GHS * price
-      if (lastEdited === "fiat") {
-        if (fiatAmount && !isNaN(parseFloat(fiatAmount))) {
-          const crypto = parseFloat(fiatAmount) * ad.price;
-          setCryptoAmount(crypto ? crypto.toFixed(6) : "");
+    // USDC paired with fiat: use correct formulas
+    if (ad.cryptoCurrency === "USDC" && ad.fiatCurrency !== "CNGN") {
+      if (ad.type === "buy") {
+        // BUY USDC with fiat: USDC = fiat / price
+        if (lastEdited === "fiat") {
+          if (fiatAmount && !isNaN(parseFloat(fiatAmount))) {
+            const crypto = parseFloat(fiatAmount) / ad.price;
+            setCryptoAmount(crypto ? crypto.toFixed(6) : "");
+          } else {
+            setCryptoAmount("");
+          }
         } else {
-          setCryptoAmount("");
+          if (cryptoAmount && !isNaN(parseFloat(cryptoAmount))) {
+            const fiat = parseFloat(cryptoAmount) * ad.price;
+            setFiatAmount(fiat ? fiat.toFixed(2) : "");
+          } else {
+            setFiatAmount("");
+          }
         }
       } else {
-        if (cryptoAmount && !isNaN(parseFloat(cryptoAmount))) {
-          const fiat = parseFloat(cryptoAmount) / ad.price;
-          setFiatAmount(fiat ? fiat.toFixed(2) : "");
+        // SELL USDC for fiat: fiat = USDC * price
+        if (lastEdited === "crypto") {
+          if (cryptoAmount && !isNaN(parseFloat(cryptoAmount))) {
+            const fiat = parseFloat(cryptoAmount) * ad.price;
+            setFiatAmount(fiat ? fiat.toFixed(2) : "");
+          } else {
+            setFiatAmount("");
+          }
         } else {
-          setFiatAmount("");
+          if (fiatAmount && !isNaN(parseFloat(fiatAmount))) {
+            const crypto = parseFloat(fiatAmount) / ad.price;
+            setCryptoAmount(crypto ? crypto.toFixed(6) : "");
+          } else {
+            setCryptoAmount("");
+          }
         }
       }
     } else {
-      // SELL FLOW: Fix conversion so that GHS = CNGN / price
-      if (lastEdited === "crypto") {
-        if (cryptoAmount && !isNaN(parseFloat(cryptoAmount))) {
-          const fiat = parseFloat(cryptoAmount) / ad.price;
-          setFiatAmount(fiat ? fiat.toFixed(2) : "");
+      // CNGN and all other pairs: keep original logic
+      if (ad.type === "buy") {
+        if (lastEdited === "fiat") {
+          if (fiatAmount && !isNaN(parseFloat(fiatAmount))) {
+            const crypto = parseFloat(fiatAmount) * ad.price;
+            setCryptoAmount(crypto ? crypto.toFixed(6) : "");
+          } else {
+            setCryptoAmount("");
+          }
         } else {
-          setFiatAmount("");
+          if (cryptoAmount && !isNaN(parseFloat(cryptoAmount))) {
+            const fiat = parseFloat(cryptoAmount) / ad.price;
+            setFiatAmount(fiat ? fiat.toFixed(2) : "");
+          } else {
+            setFiatAmount("");
+          }
         }
       } else {
-        if (fiatAmount && !isNaN(parseFloat(fiatAmount))) {
-          const crypto = parseFloat(fiatAmount) * ad.price;
-          setCryptoAmount(crypto ? crypto.toFixed(6) : "");
+        if (lastEdited === "crypto") {
+          if (cryptoAmount && !isNaN(parseFloat(cryptoAmount))) {
+            const fiat = parseFloat(cryptoAmount) / ad.price;
+            setFiatAmount(fiat ? fiat.toFixed(2) : "");
+          } else {
+            setFiatAmount("");
+          }
         } else {
-          setCryptoAmount("");
+          if (fiatAmount && !isNaN(parseFloat(fiatAmount))) {
+            const crypto = parseFloat(fiatAmount) * ad.price;
+            setCryptoAmount(crypto ? crypto.toFixed(6) : "");
+          } else {
+            setCryptoAmount("");
+          }
         }
       }
     }
@@ -429,8 +467,8 @@ export function OrderModal({
           <div>
             <Label>Select Payment Method</Label>
             <div className="grid grid-cols-1 gap-2 mt-2 max-h-[160px] overflow-y-auto pr-1">
-              {ad.paymentMethodDetails && ad.paymentMethodDetails.length > 0 ? (
-                 ad.paymentMethodDetails.map((detail, index) => (
+              {ad.paymentMethodDetails && ad.paymentMethodDetails.length > 0
+                ? ad.paymentMethodDetails.map((detail, index) => (
                     <button
                       key={`${detail.type}-${index}`}
                       type="button"
@@ -442,12 +480,17 @@ export function OrderModal({
                           : "bg-white hover:bg-gray-50 border-gray-200"
                       }`}
                     >
-                      <span className="font-semibold">{detail.bankName || detail.type}</span>
-                      {detail.accountName && <span className="text-xs opacity-90">{detail.accountName}</span>}
+                      <span className="font-semibold">
+                        {detail.bankName || detail.type}
+                      </span>
+                      {detail.accountName && (
+                        <span className="text-xs opacity-90">
+                          {detail.accountName}
+                        </span>
+                      )}
                     </button>
-                 ))
-              ) : (
-                  ad.paymentMethods.map((method) => (
+                  ))
+                : ad.paymentMethods.map((method) => (
                     <button
                       key={method}
                       type="button"
@@ -459,10 +502,11 @@ export function OrderModal({
                           : "bg-white hover:bg-gray-50 border-gray-200"
                       }`}
                     >
-                      <span className="font-semibold">{method.split(' - ')[0]}</span>
+                      <span className="font-semibold">
+                        {method.split(" - ")[0]}
+                      </span>
                     </button>
-                  ))
-              )}
+                  ))}
             </div>
           </div>
 

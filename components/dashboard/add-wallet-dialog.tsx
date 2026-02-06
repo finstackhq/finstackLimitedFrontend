@@ -40,20 +40,26 @@ const assetTypes = [
 ];
 
 const networks = [
-  { value: "Base", label: "Base", description: "Base (supported)" },
+  {
+    value: "Base Mainnet",
+    label: "Base Mainnet",
+    description: "USDC on Base Network",
+  },
   {
     value: "BSC",
     label: "BSC (Binance Smart Chain)",
-    description: "Coming soon",
-    disabled: true,
+    description: "USDC on Binance Smart Chain",
   },
   {
     value: "Ethereum",
     label: "Ethereum",
-    description: "Coming soon",
-    disabled: true,
+    description: "USDC on Ethereum Network",
   },
-  { value: "Tron", label: "Tron", description: "Coming soon", disabled: true },
+  {
+    value: "Tron",
+    label: "Tron",
+    description: "USDC on Tron Network",
+  },
 ];
 
 export function AddWalletDialog({
@@ -83,19 +89,31 @@ export function AddWalletDialog({
       isValidAddress(walletAddress)
     ) {
       try {
-        const res = await fetch("https://finstacklimitedbackend.onrender.com/api/withdrawal-wallets", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+          toast({
+            title: "Error",
+            description: "You must be logged in to add a wallet.",
+            variant: "destructive",
+          });
+          return;
+        }
+        const res = await fetch(
+          "https://finstacklimitedbackend.onrender.com/api/withdrawal-wallets",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              name: walletName,
+              address: walletAddress,
+              network: selectedNetwork,
+              asset: selectedAsset,
+            }),
           },
-          body: JSON.stringify({
-            name: walletName,
-            address: walletAddress,
-            network: selectedNetwork,
-            asset: selectedAsset,
-          }),
-          credentials: "include"
-        });
+        );
         const data = await res.json();
         if (res.ok && (data.wallet || data.success)) {
           toast({
@@ -182,11 +200,7 @@ export function AddWalletDialog({
               </SelectTrigger>
               <SelectContent>
                 {networks.map((network) => (
-                  <SelectItem
-                    key={network.value}
-                    value={network.value}
-                    disabled={network.disabled}
-                  >
+                  <SelectItem key={network.value} value={network.value}>
                     <div>
                       <div className="font-medium">{network.label}</div>
                       <div className="text-xs text-gray-500">
@@ -197,10 +211,10 @@ export function AddWalletDialog({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-blue-700 mt-1">
+            {/* <p className="text-xs text-blue-700 mt-1">
               Only Base withdrawals are currently supported. Other networks
               coming soon.
-            </p>
+            </p> */}
           </div>
 
           <div className="space-y-2">
@@ -240,8 +254,8 @@ export function AddWalletDialog({
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-xs text-blue-900">
                 <strong>Important:</strong> Make sure this address supports the
-                selected asset on the {selectedNetwork} network. Sending to an
-                incorrect address may result in permanent loss of funds.
+                selected asset on the NETWORK. Sending to an incorrect address
+                may result in permanent loss of funds.
               </p>
             </div>
           )}

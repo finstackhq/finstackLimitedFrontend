@@ -1,19 +1,33 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Clock, CheckCircle, AlertTriangle, Copy, ArrowRight, XCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useRouter, useParams } from 'next/navigation';
-import { TradeCancelScreen } from './TradeCancelScreen';
-import { TradeDisputeScreen } from './TradeDisputeScreen';
-import { TradeCompletionScreen } from './TradeCompletionScreen';
-import { CancelConfirmationDialog } from './CancelConfirmationDialog';
-import { DisputeModal } from './DisputeModal';
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Loader2,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Copy,
+  ArrowRight,
+  XCircle,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter, useParams } from "next/navigation";
+import { TradeCancelScreen } from "./TradeCancelScreen";
+import { TradeDisputeScreen } from "./TradeDisputeScreen";
+import { TradeCompletionScreen } from "./TradeCompletionScreen";
+import { CancelConfirmationDialog } from "./CancelConfirmationDialog";
+import { DisputeModal } from "./DisputeModal";
 
 type StoredTradeContext = {
   tradeId: string;
@@ -575,90 +589,110 @@ export default function PaymentPage() {
                       <div className="text-sm whitespace-pre-wrap">
                         {ctx.instructions}
                       </div>
-                      </div>
-                    ) : null}
-                  </div>
-                  ) : (
-                        <Alert>
-                            <AlertTriangle className="h-4 w-4" />
-                            <AlertTitle>No Payment Methods</AlertTitle>
-                            <AlertDescription>
-                                No payment methods found for this trade. Please contact support.
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                </CardContent>
-            </Card>
-
-            <div className="flex flex-col gap-4">
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
                 <Alert>
-                    <AlertTitle>Important</AlertTitle>
-                    <AlertDescription>
-                        {ctx.initiate?.side === 'SELL' 
-                          ? 'Only release crypto after you have confirmed receipt of payment in your bank account.' 
-                          : 'Only click "I have paid" after you have successfully transferred the money. Maliciously clicking this button may lead to account suspension.'}
-                    </AlertDescription>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>No Payment Methods</AlertTitle>
+                  <AlertDescription>
+                    No payment methods found for this trade. Please contact
+                    support.
+                  </AlertDescription>
                 </Alert>
-                
-                {(status === 'paid' || localPaid) && ctx.initiate?.side !== 'SELL' ? (
-                   <div className="bg-primary/5 border border-primary/20 rounded-xl p-8 text-center space-y-3 animate-in fade-in zoom-in duration-300">
-                       <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
-                          <CheckCircle className="w-8 h-8 text-primary" />
-                       </div>
-                       <h3 className="text-xl font-bold text-primary">Awaiting Merchant Release</h3>
-                       <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                           You've successfully marked this as paid. The seller is verifying your payment. Once confirmed, they will release the crypto to your wallet.
-                       </p>
-                   </div>
-                ) : isExpired ? (
-                    <Button variant="destructive" className="w-full" disabled>
-                        Order Expired
-                    </Button>
-                ) : (
-                    <div className="space-y-3">
-                        {/* Primary Action Button */}
-                        <Button 
-                            size="lg" 
-                            className="w-full text-lg font-bold h-14 bg-green-600 hover:bg-green-700" 
-                            onClick={ctx.initiate?.side === 'SELL' ? handleInitiateRelease : handleMarkPaid}
-                            disabled={status !== 'pending_payment' && ctx.initiate?.side !== 'SELL' || updating}
-                        >
-                            {updating ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <CheckCircle className="h-5 w-5 mr-2" />}
-                            {updating 
-                              ? 'Processing...' 
-                              : (ctx.initiate?.side === 'SELL' ? 'Payment Received' : 'Payment Completed')}
-                        </Button>
-                        
-                        {/* Cancel Button - Only show for User Buy flow, not User Sell */}
-                        {ctx.initiate?.side !== 'SELL' && (
-                          <Button 
-                              size="lg"
-                              variant="destructive"
-                              className="w-full text-lg font-bold h-14" 
-                              onClick={() => setShowCancelDialog(true)}
-                              disabled={updating}
-                          >
-                              <XCircle className="h-5 w-5 mr-2" />
-                              Cancel Order
-                          </Button>
-                        )}
-                        
-                        {/* Report Issue Button - Opens Modal */}
-                        <Button 
-                            size="lg"
-                            variant="outline"
-                            className="w-full text-lg font-bold h-14 text-orange-600 border-orange-300 hover:bg-orange-50" 
-                            onClick={() => setShowDisputeModal(true)}
-                            disabled={updating}
-                        >
-                            <AlertTriangle className="h-5 w-5 mr-2" />
-                            Report Issue
-                        </Button>
+              )}
+            </CardContent>
+          </Card>
 
-        </div>)}
+          <div className="flex flex-col gap-4">
+            <Alert>
+              <AlertTitle>Important</AlertTitle>
+              <AlertDescription>
+                {ctx.initiate?.side === "SELL"
+                  ? "Only release crypto after you have confirmed receipt of payment in your bank account."
+                  : 'Only click "I have paid" after you have successfully transferred the money. Maliciously clicking this button may lead to account suspension.'}
+              </AlertDescription>
+            </Alert>
 
-        {/* Right Column: Chat/Support (Placeholder) */}
-        </div>
+            {(status === "paid" || localPaid) &&
+            ctx.initiate?.side !== "SELL" ? (
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-8 text-center space-y-3 animate-in fade-in zoom-in duration-300">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold text-primary">
+                  Awaiting Merchant Release
+                </h3>
+                <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                  You've successfully marked this as paid. The seller is
+                  verifying your payment. Once confirmed, they will release the
+                  crypto to your wallet.
+                </p>
+              </div>
+            ) : isExpired ? (
+              <Button variant="destructive" className="w-full" disabled>
+                Order Expired
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                {/* Primary Action Button */}
+                <Button
+                  size="lg"
+                  className="w-full text-lg font-bold h-14 bg-green-600 hover:bg-green-700"
+                  onClick={
+                    ctx.initiate?.side === "SELL"
+                      ? handleInitiateRelease
+                      : handleMarkPaid
+                  }
+                  disabled={
+                    (status !== "pending_payment" &&
+                      ctx.initiate?.side !== "SELL") ||
+                    updating
+                  }
+                >
+                  {updating ? (
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  ) : (
+                    <CheckCircle className="h-5 w-5 mr-2" />
+                  )}
+                  {updating
+                    ? "Processing..."
+                    : ctx.initiate?.side === "SELL"
+                      ? "Payment Received"
+                      : "Payment Completed"}
+                </Button>
+
+                {/* Cancel Button - Only show for User Buy flow, not User Sell */}
+                {ctx.initiate?.side !== "SELL" && (
+                  <Button
+                    size="lg"
+                    variant="destructive"
+                    className="w-full text-lg font-bold h-14"
+                    onClick={() => setShowCancelDialog(true)}
+                    disabled={updating}
+                  >
+                    <XCircle className="h-5 w-5 mr-2" />
+                    Cancel Order
+                  </Button>
+                )}
+
+                {/* Report Issue Button - Opens Modal */}
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full text-lg font-bold h-14 text-orange-600 border-orange-300 hover:bg-orange-50"
+                  onClick={() => setShowDisputeModal(true)}
+                  disabled={updating}
+                >
+                  <AlertTriangle className="h-5 w-5 mr-2" />
+                  Report Issue
+                </Button>
+              </div>
+            )}
+
+            {/* Right Column: Chat/Support (Placeholder) */}
+          </div>
         </div>
         <div className="space-y-6">
           <Card className="h-full flex flex-col">
@@ -670,10 +704,33 @@ export default function PaymentPage() {
                 <CheckCircle className="h-8 w-8" />
               </div>
               <p>Chat feature coming soon.</p>
-              <p className="text-sm mt-2">
-                Please use the contact details provided in payment instructions
-                if needed.
-              </p>
+              <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20 flex flex-col items-center">
+                <h4 className="text-base font-semibold text-primary mb-2">
+                  For inquiries or assistance, please contact support:
+                </h4>
+                <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Whatsapp:</span>
+                    <a
+                      href="https://wa.me/2348164458437"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-600 underline hover:text-green-700"
+                    >
+                      +234 816 445 8437
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Email:</span>
+                    <a
+                      href="mailto:hello@usefinstack.co"
+                      className="text-blue-600 underline hover:text-blue-700"
+                    >
+                      hello@usefinstack.co
+                    </a>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -747,47 +804,48 @@ export default function PaymentPage() {
       />
 
       {/* Dispute Modal */}
-      <DisputeModal 
-        open={showDisputeModal} 
+      <DisputeModal
+        open={showDisputeModal}
         onClose={() => setShowDisputeModal(false)}
         onSubmit={async (reason, evidence) => {
-            try {
-                const reference = ctx?.initiate?.reference || ctx?.tradeId;
-                if (!reference) throw new Error("Trade reference is missing");
+          try {
+            const reference = ctx?.initiate?.reference || ctx?.tradeId;
+            if (!reference) throw new Error("Trade reference is missing");
 
-                const formData = new FormData();
-                formData.append('reason', reason);
-                if (evidence) {
-                    formData.append('evidence', evidence);
-                }
-
-                // Call Dispute API
-                const res = await fetch(`/api/fstack/p2p/${reference}/dispute`, {
-                    method: 'POST',
-                    body: formData, // No Content-Type header manually
-                });
-                
-                const data = await res.json();
-                
-                if (data.success) {
-                    toast({
-                        title: "Dispute Submitted",
-                        description: "Your dispute has been submitted. Our support team will review it shortly."
-                    });
-                    // Redirect to P2P page or refresh
-                    router.push('/dashboard/p2p');
-                } else {
-                    throw new Error(data.error || "Failed to submit dispute");
-                }
-            } catch (err: any) {
-                 toast({
-                    title: "Error",
-                    description: err.message || "Failed to submit dispute",
-                    variant: "destructive"
-                });
-                throw err; // Propagate error so modal stops loading spinner if implemented
+            const formData = new FormData();
+            formData.append("reason", reason);
+            if (evidence) {
+              formData.append("evidence", evidence);
             }
-        }} 
+
+            // Call Dispute API
+            const res = await fetch(`/api/fstack/p2p/${reference}/dispute`, {
+              method: "POST",
+              body: formData, // No Content-Type header manually
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+              toast({
+                title: "Dispute Submitted",
+                description:
+                  "Your dispute has been submitted. Our support team will review it shortly.",
+              });
+              // Redirect to P2P page or refresh
+              router.push("/dashboard/p2p");
+            } else {
+              throw new Error(data.error || "Failed to submit dispute");
+            }
+          } catch (err: any) {
+            toast({
+              title: "Error",
+              description: err.message || "Failed to submit dispute",
+              variant: "destructive",
+            });
+            throw err; // Propagate error so modal stops loading spinner if implemented
+          }
+        }}
       />
     </div>
   );

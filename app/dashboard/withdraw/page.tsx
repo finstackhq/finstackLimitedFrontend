@@ -126,13 +126,13 @@ interface WithdrawalWallet {
   asset: string;
 }
 
-
-
 export default function WithdrawPage() {
   const { toast } = useToast();
 
   // State for withdrawal wallets
-  const [withdrawalWallets, setWithdrawalWallets] = useState<WithdrawalWallet[]>([]);
+  const [withdrawalWallets, setWithdrawalWallets] = useState<
+    WithdrawalWallet[]
+  >([]);
   const [loadingWallets, setLoadingWallets] = useState(false);
 
   // Fetch withdrawal wallets from backend
@@ -140,17 +140,57 @@ export default function WithdrawPage() {
     const fetchWithdrawalWallets = async () => {
       setLoadingWallets(true);
       try {
-        const res = await fetch("https://finstacklimitedbackend.onrender.com/api/withdrawal-wallets", {
-          headers: {
-            "Content-Type": "application/json"
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+          setWithdrawalWallets([]);
+          toast({
+            title: "Error",
+            description: "You must be logged in to view wallets.",
+            variant: "destructive",
+          });
+          setLoadingWallets(false);
+          return;
+        }
+        const res = await fetch(
+          "https://finstacklimitedbackend.onrender.com/api/withdrawal-wallets",
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
           },
-          credentials: "include"
-        });
+        );
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("Withdrawal wallets GET failed:", {
+            status: res.status,
+            statusText: res.statusText,
+            errorText,
+            token,
+            headers: res.headers,
+          });
+          toast({
+            title: "Error",
+            description: `Failed to fetch wallets: ${res.status} ${res.statusText}`,
+            variant: "destructive",
+          });
+          setWithdrawalWallets([]);
+          setLoadingWallets(false);
+          return;
+        }
         const data = await res.json();
-        if (res.ok && Array.isArray(data)) {
-          setWithdrawalWallets(data);
-        } else if (res.ok && data.success && Array.isArray(data.data)) {
-          setWithdrawalWallets(data.data);
+        // Always map wallets to ensure 'id' is present
+        const mapWallets = (arr: any[]) =>
+          arr.map((w: any, i: number) => ({
+            ...w,
+            id: w.id || w._id || w.address || `wallet-${i}`,
+          }));
+        if (Array.isArray(data)) {
+          setWithdrawalWallets(mapWallets(data));
+        } else if (data.success && Array.isArray(data.wallets)) {
+          setWithdrawalWallets(mapWallets(data.wallets));
+        } else if (data.success && Array.isArray(data.data)) {
+          setWithdrawalWallets(mapWallets(data.data));
         } else {
           setWithdrawalWallets([]);
         }
@@ -438,17 +478,29 @@ export default function WithdrawPage() {
   const handleWalletAdded = async () => {
     setLoadingWallets(true);
     try {
-      const res = await fetch("https://finstacklimitedbackend.onrender.com/api/withdrawal-wallets", {
-        headers: {
-          "Content-Type": "application/json"
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch(
+        "https://finstacklimitedbackend.onrender.com/api/withdrawal-wallets",
+        {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
         },
-        credentials: "include"
-      });
+      );
       const data = await res.json();
+      // Always map wallets to ensure 'id' is present
+      const mapWallets = (arr: any[]) =>
+        arr.map((w: any, i: number) => ({
+          ...w,
+          id: w.id || w._id || w.address || `wallet-${i}`,
+        }));
       if (res.ok && Array.isArray(data)) {
-        setWithdrawalWallets(data);
+        setWithdrawalWallets(mapWallets(data));
+      } else if (res.ok && data.success && Array.isArray(data.wallets)) {
+        setWithdrawalWallets(mapWallets(data.wallets));
       } else if (res.ok && data.success && Array.isArray(data.data)) {
-        setWithdrawalWallets(data.data);
+        setWithdrawalWallets(mapWallets(data.data));
       }
     } catch (err) {
       // Optionally show error toast
@@ -516,31 +568,57 @@ export default function WithdrawPage() {
     if (otpCode.length !== 6) {
       toast({
         title: "Invalid OTP",
-
         description: "Please enter all 6 digits",
-
         variant: "destructive",
       });
-
+      console.warn("OTP code is not 6 digits", otpCode);
       return;
     }
 
-    if (!selectedWallet || !selectedDestination) return;
+    if (!selectedWallet) {
+      toast({
+        title: "No Wallet Selected",
+        description: "Please select a wallet to withdraw from.",
+        variant: "destructive",
+      });
+      console.warn("No wallet selected");
+      return;
+    }
+    if (!selectedDestination) {
+      toast({
+        title: "No Destination Selected",
+        description: "Please select a withdrawal destination.",
+        variant: "destructive",
+      });
+      console.warn("No destination selected");
+      return;
+    }
 
     setLoading(true);
 
     let endpoint = "";
-
     let body: any = {};
 
     try {
-
       const destination =
         selectedWallet === "NGN"
           ? bankAccounts.find((a) => a.id === selectedDestination)
           : withdrawalWallets.find((w) => w.id === selectedDestination);
 
-      if (!destination) throw new Error("Destination not found");
+      if (!destination) {
+        toast({
+          title: "Destination Not Found",
+          description:
+            "The selected withdrawal destination could not be found.",
+          variant: "destructive",
+        });
+        console.error("Destination not found", {
+          selectedWallet,
+          selectedDestination,
+        });
+        setLoading(false);
+        return;
+      }
 
       if (selectedWallet === "NGN") {
         // Fiat withdrawal
@@ -567,15 +645,16 @@ export default function WithdrawPage() {
         };
       }
 
+      console.log("Submitting withdrawal", { endpoint, body });
+
       const res = await fetch(endpoint, {
         method: "POST",
-
         headers: { "Content-Type": "application/json" },
-
         body: JSON.stringify(body),
       });
 
       const data = await res.json();
+      console.log("Withdrawal response", { status: res.status, data });
 
       if (!res.ok || !data.success) {
         throw new Error(
@@ -585,19 +664,15 @@ export default function WithdrawPage() {
 
       toast({
         title: "Withdrawal Successful",
-
         description: "Your withdrawal has been processed successfully",
       });
 
       setCurrentStep(5);
     } catch (error: any) {
       console.error("Complete withdrawal error:", error);
-
       toast({
         title: "Error",
-
         description: error.message || "Failed to complete withdrawal",
-
         variant: "destructive",
       });
     } finally {
@@ -711,11 +786,11 @@ export default function WithdrawPage() {
                 </div>
 
                 <h3 className="text-lg font-semibold text-foreground mb-1">
-                  USDT Wallet
+                  USDC Wallet
                 </h3>
 
                 <p className="text-sm text-gray-600 mb-2">
-                  Withdraw Tether (USDT)
+                  Withdraw Tethe (USDC)
                 </p>
 
                 <p className="text-lg font-semibold text-foreground">
@@ -749,20 +824,17 @@ export default function WithdrawPage() {
               <h2 className="text-xl font-semibold text-foreground mb-2">
                 Select Destination
               </h2>
-
               <p className="text-gray-600">
                 {selectedWallet === "NGN"
                   ? "Choose a bank account"
                   : "Choose a wallet address"}
               </p>
             </div>
-
             <div className="space-y-3">
               {selectedWallet === "NGN" ? (
                 loadingAccounts ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-[#2F67FA]" />
-
                     <span className="ml-2 text-gray-600">
                       Loading bank accounts...
                     </span>
@@ -770,7 +842,6 @@ export default function WithdrawPage() {
                 ) : bankAccounts.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <p className="mb-2">No bank accounts added yet.</p>
-
                     <p className="text-sm">
                       Add a bank account to withdraw funds.
                     </p>
@@ -778,10 +849,16 @@ export default function WithdrawPage() {
                 ) : (
                   bankAccounts.map((account) => (
                     <button
-                      key={account.id}
+                      key={
+                        account.id ||
+                        `${account.accountNumber}-${account.bankName}`
+                      }
                       onClick={() => {
-                        setSelectedDestination(account.id);
-
+                        setSelectedDestination(String(account.id));
+                        console.log(
+                          "Set selectedDestination (bank account):",
+                          String(account.id),
+                        );
                         setCurrentStep(3);
                       }}
                       className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-[#2F67FA] hover:bg-[#2F67FA]/5 transition-all duration-200 text-left"
@@ -789,47 +866,59 @@ export default function WithdrawPage() {
                       <p className="font-semibold text-foreground mb-1">
                         {account.accountName}
                       </p>
-
                       <p className="text-sm text-gray-600 font-mono">
                         {account.accountNumber} • {account.bankName}
                       </p>
                     </button>
                   ))
                 )
+              ) : loadingWallets ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#2F67FA]" />
+                  <span className="ml-2 text-gray-600">
+                    Loading withdrawal wallets...
+                  </span>
+                </div>
+              ) : withdrawalWallets.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="mb-2">No withdrawal wallets added yet.</p>
+                  <p className="text-sm">
+                    Add a wallet address to withdraw crypto.
+                  </p>
+                </div>
               ) : (
-                loadingWallets ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-[#2F67FA]" />
-                    <span className="ml-2 text-gray-600">Loading wallets...</span>
-                  </div>
-                ) : withdrawalWallets.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p className="mb-2">No withdrawal wallets added yet.</p>
-                    <p className="text-sm">Add a wallet address to withdraw crypto.</p>
-                  </div>
-                ) : (
-                  withdrawalWallets.map((wallet) => (
-                    <button
-                      key={wallet.id}
-                      onClick={() => {
-                        setSelectedDestination(wallet.id);
-                        setCurrentStep(3);
-                      }}
-                      className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-[#2F67FA] hover:bg-[#2F67FA]/5 transition-all duration-200 text-left"
-                    >
-                      <p className="font-semibold text-foreground mb-1">{wallet.name}</p>
-                      <p className="text-sm text-gray-600 font-mono">{wallet.address}</p>
-                      <p className="text-xs text-gray-400">{wallet.asset} • {wallet.network}</p>
-                    </button>
-                  ))
-                )
+                withdrawalWallets.map((wallet) => (
+                  <button
+                    key={
+                      wallet.id ||
+                      `${wallet.address}-${wallet.asset}-${wallet.network}`
+                    }
+                    onClick={() => {
+                      setSelectedDestination(String(wallet.id));
+                      console.log(
+                        "Set selectedDestination (wallet):",
+                        String(wallet.id),
+                      );
+                      setCurrentStep(3);
+                    }}
+                    className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-[#2F67FA] hover:bg-[#2F67FA]/5 transition-all duration-200 text-left"
+                  >
+                    <p className="font-semibold text-foreground mb-1">
+                      {wallet.name}
+                    </p>
+                    <p className="text-sm text-gray-600 font-mono">
+                      {wallet.address}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {wallet.asset} • {wallet.network}
+                    </p>
+                  </button>
+                ))
               )}
-
               {selectedWallet === "NGN" ? (
                 <AddAccountDialog onAccountAdded={handleAccountAdded}>
                   <button className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#2F67FA] hover:bg-[#2F67FA]/5 transition-all duration-200 flex items-center justify-center gap-2 text-gray-600 hover:text-[#2F67FA]">
                     <Plus className="w-5 h-5" />
-
                     <span className="font-medium">Add New Bank Account</span>
                   </button>
                 </AddAccountDialog>
@@ -842,9 +931,7 @@ export default function WithdrawPage() {
                 </AddWalletDialog>
               )}
             </div>
-
             {/* Add back button for step 2 */}
-
             <Button
               onClick={() => setCurrentStep(1)}
               variant="outline"
@@ -969,9 +1056,46 @@ export default function WithdrawPage() {
               <h2 className="text-xl font-semibold text-foreground mb-2">
                 Verify OTP
               </h2>
-
               <p className="text-gray-600">
                 Enter the 6-digit code sent to your email
+              </p>
+            </div>
+
+            {/* Debug: Show selected destination */}
+            <div className="text-center">
+              <p className="text-xs text-gray-500">
+                <strong>Selected Destination:</strong>{" "}
+                {selectedDestination === null ||
+                selectedDestination === undefined ? (
+                  <span style={{ color: "red" }}>[None Selected]</span>
+                ) : selectedWallet === "NGN" ? (
+                  (() => {
+                    const acc = bankAccounts.find(
+                      (a) => a.id === selectedDestination,
+                    );
+                    if (acc) {
+                      return ` ${acc.accountName} (${acc.accountNumber} - ${acc.bankName}) [id: ${acc.id}]`;
+                    } else {
+                      return ` [id: ${selectedDestination}] (not found)`;
+                    }
+                  })()
+                ) : (
+                  (() => {
+                    const w = withdrawalWallets.find(
+                      (w) => w.id === selectedDestination,
+                    );
+                    if (w) {
+                      return ` ${w.name} (${w.address} - ${w.asset} on ${w.network}) [id: ${w.id}]`;
+                    } else {
+                      return ` [id: ${selectedDestination}] (not found)`;
+                    }
+                  })()
+                )}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                <strong>Debug:</strong> selectedDestination ={" "}
+                {JSON.stringify(selectedDestination)}, selectedWallet ={" "}
+                {JSON.stringify(selectedWallet)}
               </p>
             </div>
 

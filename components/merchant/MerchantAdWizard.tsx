@@ -505,9 +505,16 @@ export function MerchantAdWizard() {
                   )}
                   {!loadingRates && !fetchError && computedBaseRate > 0 && (
                     <span className="font-medium">
-                      {displayFiatPerCNGN
-                        ? `${displayRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${ad.pair.split("/")[1]} = 1 ${ad.pair.split("/")[0]}`
-                        : `Current rate: 1 ${ad.pair.split("/")[0]} = ${computedBaseRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${ad.pair.split("/")[1]}`}
+                      {/* Always show '1 [fiat] = X CNGN' for CNGN pairs */}
+                      {(() => {
+                        const [crypto, fiat] = ad.pair.split("/");
+                        if (crypto === "CNGN") {
+                          // Show: 1 [fiat] = X CNGN
+                          return `1 ${fiat} = ${displayRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} CNGN`;
+                        }
+                        // Default: 1 [crypto] = X [fiat]
+                        return `1 ${crypto} = ${computedBaseRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${fiat}`;
+                      })()}
                     </span>
                   )}
                 </div>
