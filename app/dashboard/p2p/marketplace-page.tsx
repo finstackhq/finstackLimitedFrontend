@@ -182,6 +182,9 @@ export default function P2PMarketplacePage() {
         const reciprocal = ad.price !== 0 ? 1 / ad.price : 0;
         priceDisplay = `1 CNGN = ${reciprocal.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} USD`;
       }
+    } else if (ad.cryptoCurrency === "USDC") {
+      // For USDC/fiat pairs, always show: [fiat symbol][price] / USD
+      priceDisplay = `${getCurrencySymbol(ad.fiatCurrency)}${ad.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })} / USD`;
     } else {
       priceDisplay = `${getCurrencySymbol(ad.fiatCurrency)}${ad.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })} / ${ad.cryptoCurrency}`;
     }

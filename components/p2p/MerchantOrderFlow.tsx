@@ -324,16 +324,16 @@ export function MerchantOrderFlow({
           </div>
           <Badge
             className={
-              order.status === "completed"
+              currentStatus === "completed"
                 ? "bg-green-100 text-green-800"
-                : order.status === "disputed"
+                : currentStatus === "disputed"
                   ? "bg-red-100 text-red-800"
-                  : order.status === "PAYMENT_CONFIRMED_BY_BUYER"
+                  : currentStatus === "payment_confirmed_by_buyer"
                     ? "bg-blue-100 text-blue-800"
                     : "bg-yellow-100 text-yellow-800"
             }
           >
-            {order.status.replace(/_/g, " ").toUpperCase()}
+            {currentStatus.replace(/_/g, " ").toUpperCase()}
           </Badge>
         </div>
 
@@ -363,29 +363,41 @@ export function MerchantOrderFlow({
         </div>
 
         {/* Timer */}
-        <div
-          className={`mt-4 p-3 rounded-lg flex items-center gap-3 ${isExpiringSoon ? "bg-red-50 border border-red-200" : "bg-blue-50 border border-blue-200"}`}
-        >
-          <Clock
-            className={`w-5 h-5 ${isExpiringSoon ? "text-red-600" : "text-blue-600"}`}
-          />
-          <div className="flex-1">
-            <p
-              className={`text-sm font-medium ${isExpiringSoon ? "text-red-800" : "text-blue-800"}`}
-            >
-              {currentStatus === "pending_payment"
-                ? isMerchantBuying
-                  ? "Please pay the seller"
-                  : "Waiting for buyer payment"
-                : "Payment received - Verify and release"}
-            </p>
-            <p
-              className={`text-xs ${isExpiringSoon ? "text-red-600" : "text-blue-600"}`}
-            >
-              Time remaining: {timeRemaining} minutes
-            </p>
+        {/* Timer or Status Message */}
+        {currentStatus === 'completed' ? (
+          <div className="mt-4 p-3 rounded-lg flex items-center gap-3 bg-green-50 border border-green-200">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            <div>
+              <p className="text-sm font-medium text-green-800">
+                This order has been completed
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div
+            className={`mt-4 p-3 rounded-lg flex items-center gap-3 ${isExpiringSoon ? "bg-red-50 border border-red-200" : "bg-blue-50 border border-blue-200"}`}
+          >
+            <Clock
+              className={`w-5 h-5 ${isExpiringSoon ? "text-red-600" : "text-blue-600"}`}
+            />
+            <div className="flex-1">
+              <p
+                className={`text-sm font-medium ${isExpiringSoon ? "text-red-800" : "text-blue-800"}`}
+              >
+                {currentStatus === "pending_payment"
+                  ? isMerchantBuying
+                    ? "Please pay the seller"
+                    : "Waiting for buyer payment"
+                  : "Payment received - Verify and release"}
+              </p>
+              <p
+                className={`text-xs ${isExpiringSoon ? "text-red-600" : "text-blue-600"}`}
+              >
+                Time remaining: {timeRemaining} minutes
+              </p>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Merchant Buying Flow: Show Bank Details & I Have Paid */}

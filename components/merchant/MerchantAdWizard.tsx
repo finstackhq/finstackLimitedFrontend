@@ -25,7 +25,7 @@ import { P2PAd, PaymentMethod } from "@/lib/p2p-mock-data";
 
 // Supported pairs constant
 // Supported pairs constant removed to allow all combinations
-const CRYPTOS = ["USDC", "CNGN"];
+const CRYPTOS = ["CNGN", "USDC", "USDT"];
 const FIATS = ["RMB", "GHS", "XAF", "XOF", "USD", "NGN"];
 const TIME_LIMITS = [15, 30, 60]; // minutes
 
@@ -560,13 +560,19 @@ export function MerchantAdWizard() {
                       placeholder="Enter fixed price"
                     />
                     <p className="text-[11px] text-gray-500">
-                      Market reference:{" "}
+                      Market reference: FIXED @
                       {computedBaseRate
                         ? computedBaseRate.toLocaleString(undefined, {
                             maximumFractionDigits: 6,
                           })
                         : "—"}{" "}
-                      ({ad.pair})
+                      {ad.pair.split("/")[1]} (@#
+                      {computedBaseRate
+                        ? computedBaseRate.toLocaleString(undefined, {
+                            maximumFractionDigits: 6,
+                          })
+                        : "—"}
+                      /{ad.pair.split("/")[1]})
                     </p>
                   </div>
                 )}
@@ -826,7 +832,18 @@ export function MerchantAdWizard() {
                     label="Pricing"
                     value={
                       ad.priceType === "fixed"
-                        ? `Fixed @ ${ad.fixedPrice} ${ad.pair.split("/")[1]}`
+                        ? (() => {
+                            const [crypto, fiat] = ad.pair.split("/");
+                            if (crypto === "CNGN") {
+                              // Always show NGN symbol and live rate for CNGN
+                              return `Fixed @₦ ${computedBaseRate.toLocaleString(undefined, { maximumFractionDigits: 6 })}/${fiat}`;
+                            }
+                            if (crypto === "USDC") {
+                              // Always show $ symbol and live rate for USDC
+                              return `Fixed @$ ${computedBaseRate.toLocaleString(undefined, { maximumFractionDigits: 6 })}/${fiat}`;
+                            }
+                            return `Fixed @ ${ad.fixedPrice} ${fiat}`;
+                          })()
                         : `Floating @ ${ad.margin}% (Display: ${floatingDisplayPrice} ${ad.pair.split("/")[1]})`
                     }
                   />

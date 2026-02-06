@@ -601,9 +601,84 @@ export default function PaymentPage() {
                     support.
                   </AlertDescription>
                 </Alert>
+<<<<<<< HEAD
               )}
             </CardContent>
           </Card>
+=======
+                
+                {(status === 'completed') ? (
+                   <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center space-y-3 animate-in fade-in zoom-in duration-300">
+                       <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <CheckCircle className="w-8 h-8 text-green-600" />
+                       </div>
+                       <h3 className="text-xl font-bold text-green-700">Order Completed</h3>
+                       <p className="text-green-800 text-sm max-w-xs mx-auto">
+                           The trade has been successfully completed. The assets have been released.
+                       </p>
+                       <Button 
+                           variant="outline" 
+                           className="mt-4 border-green-200 text-green-700 hover:bg-green-100"
+                           onClick={() => window.location.href = '/dashboard/p2p'}
+                       >
+                           Back to P2P Dashboard
+                       </Button>
+                   </div>
+                ) : (status === 'paid' || localPaid) && ctx.initiate?.side !== 'SELL' ? (
+                   <div className="bg-primary/5 border border-primary/20 rounded-xl p-8 text-center space-y-3 animate-in fade-in zoom-in duration-300">
+                       <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <CheckCircle className="w-8 h-8 text-primary" />
+                       </div>
+                       <h3 className="text-xl font-bold text-primary">Awaiting Merchant Release</h3>
+                       <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                           You've successfully marked this as paid. The seller is verifying your payment. Once confirmed, they will release the crypto to your wallet.
+                       </p>
+                   </div>
+                ) : isExpired ? (
+                    <Button variant="destructive" className="w-full" disabled>
+                        Order Expired
+                    </Button>
+                ) : (
+                    <div className="space-y-3">
+                        {/* Primary Action Button */}
+                        <Button 
+                            size="lg" 
+                            className="w-full text-lg font-bold h-14 bg-green-600 hover:bg-green-700" 
+                            onClick={ctx.initiate?.side === 'SELL' ? handleInitiateRelease : handleMarkPaid}
+                            disabled={status !== 'pending_payment' && ctx.initiate?.side !== 'SELL' || updating}
+                        >
+                            {updating ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <CheckCircle className="h-5 w-5 mr-2" />}
+                            {updating 
+                              ? 'Processing...' 
+                              : (ctx.initiate?.side === 'SELL' ? 'Payment Received' : 'Payment Completed')}
+                        </Button>
+                        
+                        {/* Cancel Button - Only show for User Buy flow, not User Sell */}
+                        {ctx.initiate?.side !== 'SELL' && (
+                          <Button 
+                              size="lg"
+                              variant="destructive"
+                              className="w-full text-lg font-bold h-14" 
+                              onClick={() => setShowCancelDialog(true)}
+                              disabled={updating}
+                          >
+                              <XCircle className="h-5 w-5 mr-2" />
+                              Cancel Order
+                          </Button>
+                        )}
+                        
+                        {/* Report Issue Button - Opens Modal */}
+                        <Button 
+                            size="lg"
+                            variant="outline"
+                            className="w-full text-lg font-bold h-14 text-orange-600 border-orange-300 hover:bg-orange-50" 
+                            onClick={() => setShowDisputeModal(true)}
+                            disabled={updating}
+                        >
+                            <AlertTriangle className="h-5 w-5 mr-2" />
+                            Report Issue
+                        </Button>
+>>>>>>> 3810a9a415c2e5bc6bb211a5eeb7832c75200526
 
           <div className="flex flex-col gap-4">
             <Alert>

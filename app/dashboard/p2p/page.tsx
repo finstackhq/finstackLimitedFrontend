@@ -394,62 +394,35 @@ export default function P2PMarketplacePage() {
   const renderAdRow = (ad: P2PAd, actionLabel: string, actionColor: string) => {
     const merchant = getMerchant(ad.merchantId);
 
-    // Custom price display logic for USDC pairs
-    const fiatSymbols = ["NGN", "USD", "GHS", "XAF", "XOF", "RMB"];
-    let priceDisplay;
-    if (ad.cryptoCurrency === "USDC" && fiatSymbols.includes(ad.fiatCurrency)) {
-      // Show fiat symbol only, then price, then '/ USDC'
-      const getFiatSymbol = (fiat: string) => {
-        if (fiat === "NGN") return "₦";
-        if (fiat === "RMB" || fiat === "CNY") return "¥";
-        if (fiat === "GHS") return "₵";
-        if (fiat === "USD") return "$";
-        return fiat;
-      };
-      priceDisplay = (
-        <>
-          <span className="font-bold">
-            {getFiatSymbol(ad.fiatCurrency)}
-            {ad.price.toLocaleString("en-NG", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </span>{" "}
-          / USDC
-        </>
-      );
-    } else {
-      // Default: use symbol for fiat
-      const getSymbolForPair = (crypto: string, fiat: string) => {
-        if (crypto === "CNGN") return "₦";
-        // fallback to fiat symbol
-        if (fiat === "NGN") return "₦";
-        if (fiat === "RMB" || fiat === "CNY") return "¥";
-        if (fiat === "GHS") return "₵";
-        if (fiat === "USD") return "$";
-        return fiat;
-      };
-      const effectivePrice = ad.price < 0.1 ? 1 / ad.price : ad.price;
-      const formattedPrice = new Intl.NumberFormat("en-NG", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(effectivePrice);
-      const symbol = getSymbolForPair(ad.cryptoCurrency, ad.fiatCurrency);
-      priceDisplay = (
-        <>
-          <span className="font-bold">
-            {symbol}
-            {formattedPrice}
-          </span>
-          /{ad.fiatCurrency}
-        </>
-      );
-    }
+    // Determine symbol: CNGN=₦, USDC=$, fallback to fiat symbol
+    const getSymbolForPair = (crypto: string, fiat: string) => {
+      if (crypto === "CNGN") return "₦";
+      if (crypto === "USDC") return "$";
+      // fallback to fiat symbol
+      if (fiat === "NGN") return "₦";
+      if (fiat === "RMB" || fiat === "CNY") return "¥";
+      if (fiat === "GHS") return "₵";
+      if (fiat === "USD") return "$";
+      return fiat;
+    };
+    const effectivePrice = ad.price < 0.1 ? 1 / ad.price : ad.price;
+    const formattedPrice = new Intl.NumberFormat("en-NG", {
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3,
+    }).format(effectivePrice);
+    const symbol = getSymbolForPair(ad.cryptoCurrency, ad.fiatCurrency);
+    const priceDisplay = (
+      <>
+        {symbol}
+        {formattedPrice}
+        <span className="font-light">/{ad.fiatCurrency}</span>
+      </>
+    );
 
     return (
       <div
         key={ad.id}
-        className="grid md:grid-cols-7 gap-4 md:gap-6 p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition-colors hover:shadow-md cursor-pointer"
+        className="grid grid-cols-1 md:grid-cols-[1.2fr_1.8fr_1.2fr_1.8fr_1.5fr_0.8fr_1fr] gap-4 md:gap-6 p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition-colors hover:shadow-md cursor-pointer items-center"
         onClick={() => handleAdClick(ad)}
       >
         <div className="space-y-1">

@@ -26,6 +26,30 @@ const currencies = [
     symbol: "$", 
     logo: "https://otiktpyazqotihijbwhm.supabase.co/storage/v1/object/public/images/ef95eebe-7923-4b32-87a6-d755b8caba30-usdt%20logo.png"
   },
+  { 
+    value: "USDC", 
+    label: "USD Coin", 
+    symbol: "$", 
+    logo: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=026"
+  },
+  { 
+    value: "XOF", 
+    label: "West African CFA", 
+    symbol: "CFA", 
+    logo: "https://flagcdn.com/w40/sn.png"
+  },
+  { 
+    value: "XAF", 
+    label: "Central African CFA", 
+    symbol: "FCFA", 
+    logo: "https://flagcdn.com/w40/cm.png"
+  },
+  { 
+    value: "GHS", 
+    label: "Ghanaian Cedi", 
+    symbol: "₵", 
+    logo: "https://flagcdn.com/w40/gh.png"
+  },
 ]
 
 export function CurrencyConverter() {
