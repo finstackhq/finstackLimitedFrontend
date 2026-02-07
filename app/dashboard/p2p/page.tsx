@@ -409,7 +409,7 @@ export default function P2PMarketplacePage() {
     }).format(effectivePrice);
     let priceDisplay;
     if (ad.cryptoCurrency === "USDC") {
-      // Show as: [fiat symbol][price]/USD
+      // USDC: [fiat symbol][price]/USD
       priceDisplay = (
         <>
           {getFiatSymbol(ad.fiatCurrency)}
@@ -417,12 +417,20 @@ export default function P2PMarketplacePage() {
           <span className="font-light">/USD</span>
         </>
       );
-    } else {
-      // Default: [symbol][price]/[fiat]
-      const symbol = getFiatSymbol(ad.fiatCurrency);
+    } else if (ad.cryptoCurrency === "CNGN") {
+      // CNGN: ₦{price}/{fiatCurrency}
       priceDisplay = (
         <>
-          {symbol}
+          {"₦"}
+          {formattedPrice}
+          <span className="font-light">/{ad.fiatCurrency}</span>
+        </>
+      );
+    } else {
+      // Fallback for other cryptos
+      priceDisplay = (
+        <>
+          {getFiatSymbol(ad.fiatCurrency)}
           {formattedPrice}
           <span className="font-light">/{ad.fiatCurrency}</span>
         </>

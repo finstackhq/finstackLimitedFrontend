@@ -1,4 +1,48 @@
+
 "use client"
+// --- Auth Utilities for Token Refresh ---
+async function refreshAccessToken() {
+  const res = await fetch('/api/fstack/refresh', {
+    method: 'POST',
+    credentials: 'include', // Send cookies
+  });
+  if (res.ok) {
+    const data = await res.json();
+    if (data.accessToken) {
+      localStorage.setItem('accessToken', data.accessToken);
+      return data.accessToken;
+    }
+  }
+  // If refresh fails, force logout
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('user');
+  window.location.href = '/login?logged_out=true';
+  return null;
+}
+
+// Use this for all protected API calls
+export async function fetchWithAuth(url: string, options: any = {}) {
+  let token = localStorage.getItem('accessToken');
+  let res = await fetch(url, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: token ? `Bearer ${token}` : '',
+    },
+  });
+  if (res.status === 401 || res.status === 403) {
+    token = await refreshAccessToken();
+    if (!token) throw new Error('Session expired');
+    res = await fetch(url, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  }
+  return res;
+}
 
 import React, { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
@@ -181,6 +225,7 @@ export function AuthForm() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
+            credentials: 'include', // Ensure refresh token cookie is set
           })
           const data = await res.json()
           console.log("[auth-form] login response status:", res.status)
