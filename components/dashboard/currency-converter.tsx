@@ -95,12 +95,17 @@ export function CurrencyConverter() {
     return "-- " + currency
   }
 
+  // Optimized: Show direct rate for selected currencies
   const getRate = () => {
-    if (fromCurrency === toCurrency) return `1 ${fromCurrency} = 1 ${toCurrency}`
-    
-    const rate = convertedAmount / (Number.parseFloat(amount) || 1)
-    const decimals = fromCurrency === "USDT" || toCurrency === "USDT" ? 6 : 2
-    return `1 ${fromCurrency} ≈ ${rate.toFixed(decimals)} ${toCurrency}`
+    if (fromCurrency === toCurrency) return `1 ${fromCurrency} = 1 ${toCurrency}`;
+    // Calculate direct rate using exchangeRates
+    const fromRate = exchangeRates[fromCurrency as keyof typeof exchangeRates];
+    const toRate = exchangeRates[toCurrency as keyof typeof exchangeRates];
+    if (!fromRate || !toRate) return "Rate unavailable";
+    // Convert 1 unit of fromCurrency to toCurrency
+    const rate = (1 / fromRate) * toRate;
+    const decimals = fromCurrency === "USDT" || toCurrency === "USDT" ? 6 : 2;
+    return `1 ${fromCurrency} ≈ ${rate.toFixed(decimals)} ${toCurrency}`;
   }
 
   const getEquivalentValue = () => {

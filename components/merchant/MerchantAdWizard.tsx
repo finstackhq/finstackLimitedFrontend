@@ -824,11 +824,18 @@ export function MerchantAdWizard() {
                   />
                   <ReviewRow
                     label="Pricing"
-                    value={
-                      ad.priceType === "fixed"
-                        ? `Fixed @ ${ad.fixedPrice} ${ad.pair.split("/")[1]}`
-                        : `Floating @ ${ad.margin}% (Display: ${floatingDisplayPrice} ${ad.pair.split("/")[1]})`
-                    }
+                    value={(() => {
+                      if (ad.priceType === "fixed") {
+                        const [crypto, fiat] = ad.pair.split("/");
+                        if (crypto === "CNGN") {
+                          // Show: Fixed @₦ [live rate]/[fiat]
+                          return `Fixed @₦${ad.fixedPrice} /${fiat}`;
+                        }
+                        return `Fixed @ ${ad.fixedPrice} ${fiat}`;
+                      }
+                      // Floating pricing
+                      return `Floating @ ${ad.margin}% (Display: ${floatingDisplayPrice} ${ad.pair.split("/")[1]})`;
+                    })()}
                   />
                   <ReviewRow
                     label="Limits"

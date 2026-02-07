@@ -280,6 +280,7 @@ export function OrderModal({
           platformFeeCrypto: initiatePayload?.platformFeeCrypto,
           netCryptoAmount: initiatePayload?.netCryptoAmount,
           marketRate: initiatePayload?.marketRate,
+          paymentDetails: initiatePayload?.paymentDetails,
         },
       };
 

@@ -32,7 +32,7 @@ export default function P2PMarketplacePage() {
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
 
   // Currency selection
-  const [selectedCrypto, setSelectedCrypto] = useState<string>("USDT");
+  const [selectedCrypto, setSelectedCrypto] = useState<string>("CNGN");
   const [selectedFiat, setSelectedFiat] = useState<string>("all");
 
   // Filters
@@ -378,7 +378,7 @@ export default function P2PMarketplacePage() {
   };
 
   // Get unique pairs and countries for filters
-  const cryptoCurrencies = ["USDT", "USDC", "NGN", "CNGN"]; // Finstack supported currencies
+  const cryptoCurrencies = ["CNGN", "USDC", "USDT"];
   const fiatCurrencies = ["NGN", "RMB", "GHS", "XAF", "XOF", "RMB"];
   const uniqueCountries = Array.from(new Set(allAds.map((ad) => ad.country)));
 
