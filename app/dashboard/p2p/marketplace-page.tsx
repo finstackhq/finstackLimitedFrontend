@@ -1,15 +1,3 @@
-// Helper function for fiat currency symbols
-// function getCurrencySymbol(currency: string): string {
-//   switch (currency) {
-//     case "NGN": return "₦";
-//     case "USD": return "$";
-//     case "GHS": return "₵";
-//     case "XAF": return "FCFA";
-//     case "XOF": return "CFA";
-//     case "RMB": return "¥";
-//     default: return "";
-//   }
-// }
 function getCurrencySymbol(currency: string): string {
   switch (currency) {
     case "NGN":

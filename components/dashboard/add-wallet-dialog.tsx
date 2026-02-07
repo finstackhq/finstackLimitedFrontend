@@ -174,6 +174,15 @@ export function AddWalletDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Minimum Naira withdrawal info */}
+        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-2">
+          <p className="text-xs text-yellow-700 font-semibold">
+            <strong>Note:</strong> The minimum Naira withdrawal is{" "}
+            <span className="font-bold">₦1,000</span>. Withdrawals below this
+            amount will not be processed.
+          </p>
+        </div>
+
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="wallet-name">Wallet Name</Label>

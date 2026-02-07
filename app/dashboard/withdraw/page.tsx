@@ -715,6 +715,11 @@ export default function WithdrawPage() {
           </h1>
 
           <p className="text-gray-600">Transfer money from your wallet</p>
+          {/* Minimum withdrawal info text */}
+          <div className="mt-2 mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+            Minimum withdrawal amount for Naira is ₦1,000. Withdrawals below
+            this amount will not be processed.
+          </div>
         </div>
       </div>
 
