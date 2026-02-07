@@ -394,11 +394,8 @@ export default function P2PMarketplacePage() {
   const renderAdRow = (ad: P2PAd, actionLabel: string, actionColor: string) => {
     const merchant = getMerchant(ad.merchantId);
 
-    // Determine symbol: CNGN=₦, USDC=$, fallback to fiat symbol
-    const getSymbolForPair = (crypto: string, fiat: string) => {
-      if (crypto === "CNGN") return "₦";
-      if (crypto === "USDC") return "$";
-      // fallback to fiat symbol
+    // Helper for fiat symbol
+    const getFiatSymbol = (fiat: string) => {
       if (fiat === "NGN") return "₦";
       if (fiat === "RMB" || fiat === "CNY") return "¥";
       if (fiat === "GHS") return "₵";
@@ -410,21 +407,35 @@ export default function P2PMarketplacePage() {
       minimumFractionDigits: 3,
       maximumFractionDigits: 3,
     }).format(effectivePrice);
-    const symbol = getSymbolForPair(ad.cryptoCurrency, ad.fiatCurrency);
-    const priceDisplay = (
-      <>
-        {symbol}
-        {formattedPrice}
-        <span className="font-light">/{ad.fiatCurrency}</span>
-      </>
-    );
+    let priceDisplay;
+    if (ad.cryptoCurrency === "USDC") {
+      // Show as: [fiat symbol][price]/USD
+      priceDisplay = (
+        <>
+          {getFiatSymbol(ad.fiatCurrency)}
+          {formattedPrice}
+          <span className="font-light">/USD</span>
+        </>
+      );
+    } else {
+      // Default: [symbol][price]/[fiat]
+      const symbol = getFiatSymbol(ad.fiatCurrency);
+      priceDisplay = (
+        <>
+          {symbol}
+          {formattedPrice}
+          <span className="font-light">/{ad.fiatCurrency}</span>
+        </>
+      );
+    }
 
     return (
       <div
         key={ad.id}
-        className="grid grid-cols-1 md:grid-cols-[1.2fr_1.8fr_1.2fr_1.8fr_1.5fr_0.8fr_1fr] gap-4 md:gap-6 p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition-colors hover:shadow-md cursor-pointer items-center"
+        className="grid grid-cols-1 md:grid-cols-7 gap-4 md:gap-6 p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition-colors hover:shadow-md cursor-pointer items-center"
         onClick={() => handleAdClick(ad)}
       >
+        {/* Merchant */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Merchant</p>
           <div className="font-medium text-foreground flex items-center gap-1">
@@ -435,6 +446,7 @@ export default function P2PMarketplacePage() {
           </div>
         </div>
 
+        {/* Price */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Price</p>
           <p className="text-base font-medium text-foreground">
@@ -446,6 +458,7 @@ export default function P2PMarketplacePage() {
           </p>
         </div>
 
+        {/* Available */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Available</p>
           <p className="text-sm text-foreground">
@@ -453,6 +466,7 @@ export default function P2PMarketplacePage() {
           </p>
         </div>
 
+        {/* Limits */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Limits</p>
           <p className="text-sm text-foreground">
@@ -461,6 +475,7 @@ export default function P2PMarketplacePage() {
           <p className="text-xs text-gray-600">{ad.fiatCurrency}</p>
         </div>
 
+        {/* Payment */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Payment</p>
           <div className="flex flex-wrap gap-1">
@@ -480,6 +495,7 @@ export default function P2PMarketplacePage() {
           </div>
         </div>
 
+        {/* Status */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Status</p>
           <div className="flex items-center gap-1">
@@ -496,6 +512,7 @@ export default function P2PMarketplacePage() {
           </div>
         </div>
 
+        {/* Action */}
         <div>
           <Button
             onClick={(e) => {
@@ -601,9 +618,17 @@ export default function P2PMarketplacePage() {
             {fiatCurrencies.map((currency) => (
               <SelectItem key={currency} value={currency}>
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
-                    {currency === "NGN" ? "₦" : currency === "RMB" ? "¥" : "₵"}
-                  </div>
+                  {currency === "NGN" ||
+                  currency === "RMB" ||
+                  currency === "GHS" ? (
+                    <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
+                      {currency === "NGN"
+                        ? "₦"
+                        : currency === "RMB"
+                          ? "¥"
+                          : "₵"}
+                    </div>
+                  ) : null}
                   <span>{currency}</span>
                 </div>
               </SelectItem>

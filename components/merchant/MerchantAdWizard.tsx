@@ -834,8 +834,8 @@ export function MerchantAdWizard() {
                       if (ad.priceType === "fixed") {
                         const [crypto, fiat] = ad.pair.split("/");
                         if (crypto === "CNGN") {
-                          // Show: Fixed @₦ [live rate]/[fiat]
-                          return `Fixed @₦${ad.fixedPrice} /${fiat}`;
+                          // Show: Fixed @₦[fixedPrice]/[fiat]
+                          return `Fixed @₦${ad.fixedPrice}/${fiat}`;
                         }
                         return `Fixed @ ${ad.fixedPrice} ${fiat}`;
                       }
