@@ -187,7 +187,11 @@ export function AuthForm() {
           console.log("[auth-form] login response body:", data)
           if (res.ok) {
             try {
-              // Persist auth info for dashboard greeting and session
+              // Persist user object for session (required by dashboard and delete logic)
+              if (data?.user?.accessToken) {
+                localStorage.setItem("user", JSON.stringify(data.user));
+              }
+              // Optionally, keep the other keys for backward compatibility
               if (data?.user?.accessToken) {
                 localStorage.setItem("accessToken", data.user.accessToken)
               }
@@ -203,9 +207,6 @@ export function AuthForm() {
               if (data?.user?.kycStatus) {
                 localStorage.setItem("kycStatus", String(data.user.kycStatus))
               }
-              // Set merchant status based on role and kycVerified
-              // User logic: must be role='merchant' AND kycVerified=true to be considered 'approved'
-              // Otherwise, they see the application form
               if (data?.user?.role === 'merchant' && data?.user?.kycVerified === true) {
                 localStorage.setItem("merchant-status", "approved")
               } else {

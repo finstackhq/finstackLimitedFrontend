@@ -32,7 +32,7 @@ export default function P2PMarketplacePage() {
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
 
   // Currency selection
-  const [selectedCrypto, setSelectedCrypto] = useState<string>("USDT");
+  const [selectedCrypto, setSelectedCrypto] = useState<string>("CNGN");
   const [selectedFiat, setSelectedFiat] = useState<string>("all");
 
   // Filters
@@ -104,7 +104,9 @@ export default function P2PMarketplacePage() {
             available: item.availableAmount || 0,
             minLimit: item.minLimit || 0,
             maxLimit: item.maxLimit || 0,
-            paymentMethods: Array.isArray(item.paymentMethods) ? item.paymentMethods : ['Bank Transfer'],
+            paymentMethods: Array.isArray(item.paymentMethods)
+              ? item.paymentMethods
+              : ["Bank Transfer"],
             // Map payment method details
             paymentMethodDetails: item.paymentMethodDetails || [],
             paymentWindow: item.timeLimit || 15,
@@ -203,40 +205,42 @@ export default function P2PMarketplacePage() {
   const cleanMethodName = (name: string) => {
     // 1. Split by hyphen (taking FIRST part)
     // Supports "Bank - Number", "Bank-Number", "Bank – Number"
-    let clean = name.split(/[\-\–]/)[0].trim()
-    
+    let clean = name.split(/[\-\–]/)[0].trim();
+
     // 2. Remove content in parentheses e.g. "PalmPay (My Name)"
-    clean = clean.replace(/\s*\(.*\)/, '').trim()
+    clean = clean.replace(/\s*\(.*\)/, "").trim();
 
     // 3. Fallback: if it became empty, return original
-    return clean || name
-  }
+    return clean || name;
+  };
 
   // Helper to extract specific payment method names (e.g. "PalmPay") or fall back to type
   const getAdPaymentMethods = (ad: P2PAd): string[] => {
-    let methods: string[] = []
+    let methods: string[] = [];
 
     // Priority 1: Use bankName from details if available
     if (ad.paymentMethodDetails && ad.paymentMethodDetails.length > 0) {
       methods = ad.paymentMethodDetails
-        .map(d => d.bankName || d.type)
-        .filter(Boolean) as string[]
+        .map((d) => d.bankName || d.type)
+        .filter(Boolean) as string[];
     }
 
     // Priority 2: Use paymentMethods array if details extraction failed
     if (methods.length === 0) {
-      methods = ad.paymentMethods
+      methods = ad.paymentMethods;
     }
-    
+
     // Apply cleaning to ALL results
     // Filter out purely numeric strings if they look like account numbers (10+ digits)
-    return methods
+    return (
+      methods
         .map(cleanMethodName)
         // Set removes duplicates within the single ad
         .filter((val, index, self) => self.indexOf(val) === index)
         // Optional: filter out strings that are JUST numbers (likely accidental account numbers)
-        .filter(m => !/^\d{10,}$/.test(m)) 
-  }
+        .filter((m) => !/^\d{10,}$/.test(m))
+    );
+  };
 
   // Filter and sort ads
   const filterAds = (ads: P2PAd[], type: "buy" | "sell") => {
@@ -247,16 +251,18 @@ export default function P2PMarketplacePage() {
         const correctType = type === "buy" ? "sell" : "buy";
         return ad.type === correctType;
       })
-      .filter(ad => ad.isActive !== false) // Only show active ads
-      .filter(ad => ad.cryptoCurrency === selectedCrypto)
-      .filter(ad => selectedFiat === 'all' || ad.fiatCurrency === selectedFiat)
-      .filter(ad => {
-        if (filterPayment === 'all') return true
-        const methods = getAdPaymentMethods(ad)
-        return methods.includes(filterPayment)
+      .filter((ad) => ad.isActive !== false) // Only show active ads
+      .filter((ad) => ad.cryptoCurrency === selectedCrypto)
+      .filter(
+        (ad) => selectedFiat === "all" || ad.fiatCurrency === selectedFiat,
+      )
+      .filter((ad) => {
+        if (filterPayment === "all") return true;
+        const methods = getAdPaymentMethods(ad);
+        return methods.includes(filterPayment);
       })
-      .filter(ad => filterCountry === 'all' || ad.country === filterCountry)
-      .filter(ad => {
+      .filter((ad) => filterCountry === "all" || ad.country === filterCountry)
+      .filter((ad) => {
         if (verifiedOnly) {
           const merchant = getMerchant(ad.merchantId);
           return merchant?.verifiedBadge === true;
@@ -372,25 +378,24 @@ export default function P2PMarketplacePage() {
   };
 
   // Get unique pairs and countries for filters
-  const cryptoCurrencies = ['CNGN', 'USDC', 'USDT'] // Finstack supported currencies
-  const fiatCurrencies = ['NGN', 'RMB', 'GHS']
-  const uniqueCountries = Array.from(new Set(allAds.map(ad => ad.country)))
-  
+  const cryptoCurrencies = ["CNGN", "USDC", "USDT"];
+  const fiatCurrencies = ["NGN", "RMB", "GHS", "XAF", "XOF", "RMB"];
+  const uniqueCountries = Array.from(new Set(allAds.map((ad) => ad.country)));
+
   // Dynamic Payment Methods from Ads
   const uniquePaymentMethods = Array.from(
-    new Set(allAds.flatMap(ad => getAdPaymentMethods(ad)))
-  ).filter(Boolean).sort();
+    new Set(allAds.flatMap((ad) => getAdPaymentMethods(ad))),
+  )
+    .filter(Boolean)
+    .sort();
 
   // const renderAdRow = (ad: P2PAd, actionLabel: string, actionColor: string) => {
   //   const merchant = getMerchant(ad.merchantId);
   const renderAdRow = (ad: P2PAd, actionLabel: string, actionColor: string) => {
     const merchant = getMerchant(ad.merchantId);
 
-    // Determine symbol: CNGN=₦, USDC=$, fallback to fiat symbol
-    const getSymbolForPair = (crypto: string, fiat: string) => {
-      if (crypto === "CNGN") return "₦";
-      if (crypto === "USDC") return "$";
-      // fallback to fiat symbol
+    // Helper for fiat symbol
+    const getFiatSymbol = (fiat: string) => {
       if (fiat === "NGN") return "₦";
       if (fiat === "RMB" || fiat === "CNY") return "¥";
       if (fiat === "GHS") return "₵";
@@ -402,33 +407,35 @@ export default function P2PMarketplacePage() {
       minimumFractionDigits: 3,
       maximumFractionDigits: 3,
     }).format(effectivePrice);
-    
-    const symbol = getSymbolForPair(ad.cryptoCurrency, ad.fiatCurrency);
-    
-    // Special formatting for USDC: Show fiat symbol and / USD
-    let suffix = `/${ad.fiatCurrency}`;
-    let displaySymbol = symbol;
-
-    if (ad.cryptoCurrency === 'USDC') {
-        suffix = '/ USD';
-        // Ensure we use the fiat symbol for the price value
-        displaySymbol = getSymbolForPair(ad.cryptoCurrency, ad.fiatCurrency); 
+    let priceDisplay;
+    if (ad.cryptoCurrency === "USDC") {
+      // Show as: [fiat symbol][price]/USD
+      priceDisplay = (
+        <>
+          {getFiatSymbol(ad.fiatCurrency)}
+          {formattedPrice}
+          <span className="font-light">/USD</span>
+        </>
+      );
+    } else {
+      // Default: [symbol][price]/[fiat]
+      const symbol = getFiatSymbol(ad.fiatCurrency);
+      priceDisplay = (
+        <>
+          {symbol}
+          {formattedPrice}
+          <span className="font-light">/{ad.fiatCurrency}</span>
+        </>
+      );
     }
-
-    const priceDisplay = (
-      <>
-        {displaySymbol}
-        {formattedPrice}
-        <span className="font-light">{suffix}</span>
-      </>
-    );
 
     return (
       <div
         key={ad.id}
-        className="grid grid-cols-1 md:grid-cols-[1.2fr_1.8fr_1.2fr_1.8fr_1.5fr_0.8fr_1fr] gap-4 md:gap-6 p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition-colors hover:shadow-md cursor-pointer items-center"
+        className="grid grid-cols-1 md:grid-cols-7 gap-4 md:gap-6 p-4 border border-gray-200 rounded-lg hover:border-blue-400 transition-colors hover:shadow-md cursor-pointer items-center"
         onClick={() => handleAdClick(ad)}
       >
+        {/* Merchant */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Merchant</p>
           <div className="font-medium text-foreground flex items-center gap-1">
@@ -439,9 +446,10 @@ export default function P2PMarketplacePage() {
           </div>
         </div>
 
+        {/* Price */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Price</p>
-          <p className="text-lg font-semibold text-foreground">
+          <p className="text-base font-medium text-foreground">
             {priceDisplay}
           </p>
           <p className="text-xs text-gray-400 font-light">
@@ -450,6 +458,7 @@ export default function P2PMarketplacePage() {
           </p>
         </div>
 
+        {/* Available */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Available</p>
           <p className="text-sm text-foreground">
@@ -457,6 +466,7 @@ export default function P2PMarketplacePage() {
           </p>
         </div>
 
+        {/* Limits */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Limits</p>
           <p className="text-sm text-foreground">
@@ -465,11 +475,16 @@ export default function P2PMarketplacePage() {
           <p className="text-xs text-gray-600">{ad.fiatCurrency}</p>
         </div>
 
+        {/* Payment */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Payment</p>
           <div className="flex flex-wrap gap-1">
             {getAdPaymentMethods(ad).map((method, idx) => (
-              <span key={`${method}-${idx}`} className="text-[10px] md:text-sm px-2 py-1 bg-gray-100 text-gray-700 rounded-md border border-gray-200 break-words leading-relaxed md:whitespace-nowrap md:overflow-hidden md:text-ellipsis md:max-w-[140px]" title={method}>
+              <span
+                key={`${method}-${idx}`}
+                className="text-[10px] md:text-sm px-2 py-1 bg-gray-100 text-gray-700 rounded-md border border-gray-200 break-words leading-relaxed md:whitespace-nowrap md:overflow-hidden md:text-ellipsis md:max-w-[140px]"
+                title={method}
+              >
                 {method}
               </span>
             ))}
@@ -480,6 +495,7 @@ export default function P2PMarketplacePage() {
           </div>
         </div>
 
+        {/* Status */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Status</p>
           <div className="flex items-center gap-1">
@@ -496,6 +512,7 @@ export default function P2PMarketplacePage() {
           </div>
         </div>
 
+        {/* Action */}
         <div>
           <Button
             onClick={(e) => {
@@ -601,9 +618,17 @@ export default function P2PMarketplacePage() {
             {fiatCurrencies.map((currency) => (
               <SelectItem key={currency} value={currency}>
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
-                    {currency === "NGN" ? "₦" : currency === "RMB" ? "¥" : "₵"}
-                  </div>
+                  {currency === "NGN" ||
+                  currency === "RMB" ||
+                  currency === "GHS" ? (
+                    <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
+                      {currency === "NGN"
+                        ? "₦"
+                        : currency === "RMB"
+                          ? "¥"
+                          : "₵"}
+                    </div>
+                  ) : null}
                   <span>{currency}</span>
                 </div>
               </SelectItem>
@@ -618,8 +643,10 @@ export default function P2PMarketplacePage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All payment methods</SelectItem>
-            {uniquePaymentMethods.map(method => (
-              <SelectItem key={method} value={method}>{method}</SelectItem>
+            {uniquePaymentMethods.map((method) => (
+              <SelectItem key={method} value={method}>
+                {method}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

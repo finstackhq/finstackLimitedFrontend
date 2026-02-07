@@ -505,9 +505,16 @@ export function MerchantAdWizard() {
                   )}
                   {!loadingRates && !fetchError && computedBaseRate > 0 && (
                     <span className="font-medium">
-                      {displayFiatPerCNGN
-                        ? `${displayRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${ad.pair.split("/")[1]} = 1 ${ad.pair.split("/")[0]}`
-                        : `Current rate: 1 ${ad.pair.split("/")[0]} = ${computedBaseRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${ad.pair.split("/")[1]}`}
+                      {/* Always show '1 [fiat] = X CNGN' for CNGN pairs */}
+                      {(() => {
+                        const [crypto, fiat] = ad.pair.split("/");
+                        if (crypto === "CNGN") {
+                          // Show: 1 [fiat] = X CNGN
+                          return `1 ${fiat} = ${displayRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} CNGN`;
+                        }
+                        // Default: 1 [crypto] = X [fiat]
+                        return `1 ${crypto} = ${computedBaseRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${fiat}`;
+                      })()}
                     </span>
                   )}
                 </div>
@@ -553,12 +560,14 @@ export function MerchantAdWizard() {
                       placeholder="Enter fixed price"
                     />
                     <p className="text-[11px] text-gray-500">
-                      Market reference: FIXED @{computedBaseRate
+                      Market reference: FIXED @
+                      {computedBaseRate
                         ? computedBaseRate.toLocaleString(undefined, {
                             maximumFractionDigits: 6,
                           })
                         : "—"}{" "}
-                      {ad.pair.split("/")[1]} (@#{computedBaseRate
+                      {ad.pair.split("/")[1]} (@#
+                      {computedBaseRate
                         ? computedBaseRate.toLocaleString(undefined, {
                             maximumFractionDigits: 6,
                           })
@@ -821,11 +830,18 @@ export function MerchantAdWizard() {
                   />
                   <ReviewRow
                     label="Pricing"
-                    value={
-                      ad.priceType === "fixed"
-                        ? `Fixed @ ${ad.fixedPrice} ${ad.pair.split("/")[1]}`
-                        : `Floating @ ${ad.margin}% (Display: ${floatingDisplayPrice} ${ad.pair.split("/")[1]})`
-                    }
+                    value={(() => {
+                      if (ad.priceType === "fixed") {
+                        const [crypto, fiat] = ad.pair.split("/");
+                        if (crypto === "CNGN") {
+                          // Show: Fixed @₦[fixedPrice]/[fiat]
+                          return `Fixed @₦${ad.fixedPrice}/${fiat}`;
+                        }
+                        return `Fixed @ ${ad.fixedPrice} ${fiat}`;
+                      }
+                      // Floating pricing
+                      return `Floating @ ${ad.margin}% (Display: ${floatingDisplayPrice} ${ad.pair.split("/")[1]})`;
+                    })()}
                   />
                   <ReviewRow
                     label="Limits"
