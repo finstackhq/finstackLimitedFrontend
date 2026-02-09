@@ -24,6 +24,7 @@ import {
   Merchant,
 } from "@/lib/p2p-types";
 import { P2P_CURRENCY_COUNTRIES, P2PCurrency } from "@/lib/constants";
+import { CurrencyCircleIcon } from "@/components/CurrencyCircleIcon";
 import { getMerchantAds } from "@/lib/p2p-storage";
 import { TraderProfileModal } from "@/components/p2p/TraderProfileModal";
 import { OrderModal } from "@/components/p2p/OrderModal";
@@ -379,7 +380,8 @@ export default function P2PMarketplacePage() {
 
   // Get unique pairs and countries for filters
   const cryptoCurrencies = ["CNGN", "USDC", "USDT"];
-  const fiatCurrencies = ["NGN", "RMB", "GHS", "XAF", "XOF", "RMB"];
+  // Remove duplicate RMB
+  const fiatCurrencies = ["NGN", "RMB", "GHS", "XAF", "XOF"];
   const uniqueCountries = Array.from(new Set(allAds.map((ad) => ad.country)));
 
   // Dynamic Payment Methods from Ads
@@ -609,7 +611,8 @@ export default function P2PMarketplacePage() {
                       ? "¥"
                       : selectedFiat === "GHS"
                         ? "₵"
-                        : "?"}
+                        : null}
+                {/* For XAF/XOF, the icon is rendered separately below, so no '?' here */}
               </div>
               <SelectValue placeholder="Select currency" />
             </div>
@@ -635,6 +638,21 @@ export default function P2PMarketplacePage() {
                         : currency === "RMB"
                           ? "¥"
                           : "₵"}
+                    </div>
+                  ) : null}
+                  {currency === "XAF" || currency === "XOF" ? (
+                    <CurrencyCircleIcon code={currency} size={20} />
+                  ) : null}
+                  {/* Only show '?' for truly unknown currencies */}
+                  {!(
+                    currency === "NGN" ||
+                    currency === "RMB" ||
+                    currency === "GHS" ||
+                    currency === "XAF" ||
+                    currency === "XOF"
+                  ) ? (
+                    <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
+                      ?
                     </div>
                   ) : null}
                   <span>{currency}</span>
