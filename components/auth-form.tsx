@@ -1,10 +1,9 @@
 "use client";
 
-const API_BASE = "https://finstacklimitedbackend.onrender.com/api";
+// const API_BASE = "/api/fstack";
 // --- Auth Utilities for Token Refresh ---
 async function refreshAccessToken() {
-  // Use correct endpoint path (likely /fstack/refresh)
-  const res = await fetch(`${API_BASE}/fstack/refresh`, {
+  const res = await fetch("/api/fstack/refresh", {
     method: "POST",
     credentials: "include", // Send cookies
   });
@@ -205,7 +204,7 @@ export function AuthForm() {
       ) {
         try {
           // const res = await fetch("/api/fstack/register", {
-          const res = await fetch(`${API_BASE}/register`, {
+          const res = await fetch("/api/fstack/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -215,7 +214,6 @@ export function AuthForm() {
               password,
               howYouHeardAboutUs: referralSource,
             }),
-            credentials: "include",
           });
           const data = await res.json();
           console.log("[auth-form] register response status:", res.status);
@@ -243,7 +241,7 @@ export function AuthForm() {
       if (isEmailValid && isPasswordValid) {
         try {
           // const res = await fetch("/api/fstack/login", {
-          const res = await fetch(`${API_BASE}/login`, {
+          const res = await fetch("/api/fstack/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
