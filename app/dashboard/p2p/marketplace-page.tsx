@@ -1,4 +1,6 @@
-function getCurrencySymbol(currency: string): string {
+import { CurrencyCircleIcon } from "@/components/CurrencyCircleIcon";
+
+function getCurrencySymbol(currency: string): React.ReactNode {
   switch (currency) {
     case "NGN":
       return "₦";
@@ -7,9 +9,21 @@ function getCurrencySymbol(currency: string): string {
     case "GHS":
       return "₵";
     case "XAF":
-      return "FCFA ";
+      return (
+        <CurrencyCircleIcon
+          code="XAF"
+          size={32}
+          className="mr-1 align-middle"
+        />
+      );
     case "XOF":
-      return "CFA ";
+      return (
+        <CurrencyCircleIcon
+          code="XOF"
+          size={32}
+          className="mr-1 align-middle"
+        />
+      );
     case "RMB":
       return "¥";
     default:
