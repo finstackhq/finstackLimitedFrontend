@@ -3,7 +3,8 @@
 const API_BASE = "https://finstacklimitedbackend.onrender.com/api";
 // --- Auth Utilities for Token Refresh ---
 async function refreshAccessToken() {
-  const res = await fetch(`${API_BASE}/refresh-token`, {
+  // Use correct endpoint path (likely /fstack/refresh)
+  const res = await fetch(`${API_BASE}/fstack/refresh`, {
     method: "POST",
     credentials: "include", // Send cookies
   });
@@ -214,6 +215,7 @@ export function AuthForm() {
               password,
               howYouHeardAboutUs: referralSource,
             }),
+            credentials: "include",
           });
           const data = await res.json();
           console.log("[auth-form] register response status:", res.status);
