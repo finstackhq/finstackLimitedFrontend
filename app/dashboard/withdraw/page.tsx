@@ -702,8 +702,9 @@ export default function WithdrawPage() {
     }
   };
 
-  const fee = selectedWallet === "NGN" ? 50 : 1;
-
+  // const fee = selectedWallet === "NGN" ? 50 : 1;
+  // Transaction fee logic commented out. No fee will be added.
+  const fee = 0;
   const totalAmount = amount ? Number.parseFloat(amount) + fee : 0;
 
   return (
@@ -979,42 +980,21 @@ export default function WithdrawPage() {
                   <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Amount</span>
-
                       <span className="font-medium text-foreground">
                         {selectedWallet === "NGN" ? "₦" : "$"}
-
                         {Number.parseFloat(amount).toFixed(2)}
                       </span>
                     </div>
-
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Transaction Fee</span>
-
-                      <span className="font-medium text-foreground">
-                        {selectedWallet === "NGN" ? "₦" : "$"}
-
-                        {fee.toFixed(2)}
-                      </span>
-                    </div>
-
                     <div className="pt-2 border-t border-gray-200 flex justify-between">
-                      <span className="font-semibold text-foreground">
-                        Total
-                      </span>
-
+                      <span className="font-semibold text-foreground">Total</span>
                       <span className="font-semibold text-foreground">
                         {selectedWallet === "NGN" ? "₦" : "$"}
-
                         {totalAmount.toFixed(2)}
                       </span>
                     </div>
                   </div>
-
                   <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-600 mb-1">
-                      You will receive
-                    </p>
-
+                    <p className="text-sm text-gray-600 mb-1">You will receive</p>
                     <p className="text-lg font-semibold text-foreground">
                       {selectedWallet === "NGN" ? "₦" : "$"}
                       {Number.parseFloat(amount).toFixed(2)}
