@@ -1,5 +1,6 @@
-const BACKEND_URL = "https://finstacklimitedbackend.onrender.com";
+
 "use client";
+const BACKEND_URL = "https://finstacklimitedbackend.onrender.com";
 
 // const API_BASE = "/api/fstack";
 // --- Auth Utilities for Token Refresh ---
