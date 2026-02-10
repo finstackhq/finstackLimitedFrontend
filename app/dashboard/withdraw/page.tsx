@@ -238,56 +238,6 @@ export default function WithdrawPage() {
 
   const [loadingBalances, setLoadingBalances] = useState(true);
 
-  // Fetch wallet balances on mount
-
-  // useEffect(() => {
-
-  //   const fetchBalances = async () => {
-
-  //     setLoadingBalances(true);
-
-  //     try {
-
-  //       const res = await fetch("/api/fstack/wallet/user-balances");
-
-  //       const data = await res.json();
-
-  //       // Example response: { success: true, data: [ { currency: "NGN", ... }, { currency: "USDC", ... }, { currency: "CNGN", ... } ] }
-
-  //       if (res.ok && data.success && Array.isArray(data.data)) {
-
-  //         // Find CNGN and USDC balances
-
-  //         const cngn = data.data.find((w: any) => w.currency === "CNGN");
-
-  //         const usdc = data.data.find((w: any) => w.currency === "USDC");
-
-  //         setWalletBalances({
-
-  //           NGN: cngn?.balance?.available ?? 0,
-
-  //           USDT: usdc?.balance?.available ?? 0,
-
-  //         });
-
-  //       }
-
-  //     } catch (err) {
-
-  //       console.error("Failed to fetch wallet balances:", err);
-
-  //     } finally {
-
-  //       setLoadingBalances(false);
-
-  //     }
-
-  //   };
-
-  //   fetchBalances();
-
-  // }, []);
-
   useEffect(() => {
     const fetchBalances = async () => {
       setLoadingBalances(true);
@@ -986,7 +936,9 @@ export default function WithdrawPage() {
                       </span>
                     </div>
                     <div className="pt-2 border-t border-gray-200 flex justify-between">
-                      <span className="font-semibold text-foreground">Total</span>
+                      <span className="font-semibold text-foreground">
+                        Total
+                      </span>
                       <span className="font-semibold text-foreground">
                         {selectedWallet === "NGN" ? "₦" : "$"}
                         {totalAmount.toFixed(2)}
@@ -994,7 +946,9 @@ export default function WithdrawPage() {
                     </div>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-600 mb-1">You will receive</p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      You will receive
+                    </p>
                     <p className="text-lg font-semibold text-foreground">
                       {selectedWallet === "NGN" ? "₦" : "$"}
                       {Number.parseFloat(amount).toFixed(2)}
