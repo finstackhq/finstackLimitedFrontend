@@ -1,12 +1,15 @@
 "use client";
-const BACKEND_URL = "https://finstacklimitedbackend.onrender.com";
 
 // const API_BASE = "/api/fstack";
 // --- Auth Utilities for Token Refresh ---
 async function refreshAccessToken() {
-  const res = await fetch(`/api/fstack/refresh`, {
+  const res = await fetch("/api/auth/refresh-token", {
     method: "POST",
-    credentials: "include", // Send cookies
+    credentials: "include", // Important for cookies!
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      /* your payload, if any */
+    }),
   });
   if (res.ok) {
     const data = await res.json();
