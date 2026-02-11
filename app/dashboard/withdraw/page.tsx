@@ -71,6 +71,7 @@ const SUPPORTED_BANKS = [
 ];
 
 import { useState, useEffect } from "react";
+import { fetchWithAuth } from "@/components/auth-form";
 
 import { Card } from "@/components/ui/card";
 
@@ -151,7 +152,7 @@ export default function WithdrawPage() {
           setLoadingWallets(false);
           return;
         }
-        const res = await fetch(
+        const res = await fetchWithAuth(
           "https://finstacklimitedbackend.onrender.com/api/withdrawal-wallets",
           {
             headers: {
@@ -243,7 +244,7 @@ export default function WithdrawPage() {
       setLoadingBalances(true);
 
       try {
-        const res = await fetch("/api/fstack/wallet/user-balances");
+        const res = await fetchWithAuth("/api/fstack/wallet/user-balances");
 
         const data = await res.json();
 
@@ -283,7 +284,7 @@ export default function WithdrawPage() {
       setLoadingAccounts(true);
 
       try {
-        const res = await fetch("/api/fstack/profile?type=bank-accounts");
+        const res = await fetchWithAuth("/api/fstack/profile?type=bank-accounts");
 
         const data = await res.json();
 
@@ -357,16 +358,12 @@ export default function WithdrawPage() {
     try {
       // Save to backend
 
-      const res = await fetch("/api/fstack/profile", {
+      const res = await fetchWithAuth("/api/fstack/profile", {
         method: "PUT",
-
         headers: { "Content-Type": "application/json" },
-
         body: JSON.stringify({
           bankName: account.bankName,
-
           accountNumber: account.accountNumber,
-
           accountName: account.accountName,
         }),
       });
@@ -429,7 +426,7 @@ export default function WithdrawPage() {
     setLoadingWallets(true);
     try {
       const token = localStorage.getItem("accessToken");
-      const res = await fetch(
+      const res = await fetchWithAuth(
         "https://finstacklimitedbackend.onrender.com/api/withdrawal-wallets",
         {
           headers: {
@@ -466,14 +463,11 @@ export default function WithdrawPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/fstack/withdraw/initiate", {
+      const res = await fetchWithAuth("/api/fstack/withdraw/initiate", {
         method: "POST",
-
         headers: { "Content-Type": "application/json" },
-
         body: JSON.stringify({
           walletCurrency: selectedWallet === "NGN" ? "CNGN" : "USDC",
-
           amount: parseFloat(amount),
         }),
       });
@@ -597,7 +591,7 @@ export default function WithdrawPage() {
 
       console.log("Submitting withdrawal", { endpoint, body });
 
-      const res = await fetch(endpoint, {
+      const res = await fetchWithAuth(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

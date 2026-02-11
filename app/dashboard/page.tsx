@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { fetchWithAuth } from "@/components/auth-form";
 import { Loader2 } from "lucide-react";
 
 // Dynamically import components to prevent SSR issues
@@ -80,7 +81,7 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       // Fetch wallets
-      const walletsRes = await fetch("/api/fstack/wallet/user-balances", {
+      const walletsRes = await fetchWithAuth("/api/fstack/wallet/user-balances", {
         cache: "no-store",
       });
       const walletsData = await walletsRes.json();
@@ -121,7 +122,7 @@ export default function DashboardPage() {
       setWallets(normalizedWallets);
 
       // Fetch recent transactions (limit to 5)
-      const txnRes = await fetch("/api/fstack/transactions?limit=5");
+      const txnRes = await fetchWithAuth("/api/fstack/transactions?limit=5");
       const txnData = await txnRes.json();
       if (txnData.success && Array.isArray(txnData.transactions)) {
         // Map to expected format
