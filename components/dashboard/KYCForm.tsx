@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { fetchWithAuth } from '@/components/auth-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -327,7 +328,7 @@ export function KYCForm() {
         if (refToSend) form.append('liveliness_provider_reference', String(refToSend))
         if (typeof confToSend === 'number') form.append('liveliness_confidence', String(confToSend))
 
-        const res = await fetch('/api/fstack/userkyc', {
+        const res = await fetchWithAuth('/api/fstack/userkyc', {
           method: 'POST',
           body: form,
           cache: 'no-store',
@@ -391,7 +392,7 @@ export function KYCForm() {
         if (refToSend) form.append('liveliness_provider_reference', String(refToSend))
         if (typeof confToSend === 'number') form.append('liveliness_confidence', String(confToSend))
 
-        const res = await fetch('/api/fstack/userkyc', {
+        const res = await fetchWithAuth('/api/fstack/userkyc', {
           method: 'POST',
           body: form,
           cache: 'no-store',
@@ -459,7 +460,7 @@ export function KYCForm() {
   const startLivelinessSession = async () => {
     try {
       setStartingSession(true);
-      const res = await fetch('/api/fstack/kycSession', { method: 'POST', cache: 'no-store', credentials: 'include' })
+      const res = await fetchWithAuth('/api/fstack/kycSession', { method: 'POST', cache: 'no-store', credentials: 'include' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as any)?.message || 'Failed to start session')
       const sessionId = (data as any)?.kyc_session_id || (data as any)?.sessionId
@@ -482,7 +483,7 @@ export function KYCForm() {
     try {
       const fd = new FormData()
       fd.append('file', formData.selfie)
-      const res = await fetch('/api/cloudinary/upload', { method: 'POST', body: fd })
+      const res = await fetchWithAuth('/api/cloudinary/upload', { method: 'POST', body: fd })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as any)?.error || 'Cloudinary upload failed')
       const url = (data as any)?.secure_url || (data as any)?.url
@@ -498,7 +499,7 @@ export function KYCForm() {
     try {
       setCheckingLiveliness(true)
       const url = selfieCloudUrl || (await uploadSelfieToCloudinary())
-      const res = await fetch('/api/fstack/kycLiveliness', {
+      const res = await fetchWithAuth('/api/fstack/kycLiveliness', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kyc_session_id: kycSessionId, selfie_url: url }),
