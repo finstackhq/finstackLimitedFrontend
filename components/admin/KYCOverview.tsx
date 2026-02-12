@@ -373,7 +373,8 @@ export function KYCOverview({ records, onApprove, onReject, onSuspend }: KYCOver
                         <img
                           src={selected.frontIdImage}
                           alt="ID Front"
-                          className="w-full h-48 object-cover cursor-pointer group-hover:scale-[1.01] transition-transform"
+                          className="w-full max-h-[320px] object-contain cursor-pointer group-hover:scale-[1.01] transition-transform"
+                          style={{ height: 'auto' }}
                           onClick={() => window.open(selected.frontIdImage, '_blank')}
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
@@ -388,7 +389,8 @@ export function KYCOverview({ records, onApprove, onReject, onSuspend }: KYCOver
                         <img
                           src={selected.backIdImage}
                           alt="ID Back"
-                          className="w-full h-48 object-cover cursor-pointer group-hover:scale-[1.01] transition-transform"
+                          className="w-full max-h-[320px] object-contain cursor-pointer group-hover:scale-[1.01] transition-transform"
+                          style={{ height: 'auto' }}
                           onClick={() => window.open(selected.backIdImage, '_blank')}
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
@@ -403,7 +405,8 @@ export function KYCOverview({ records, onApprove, onReject, onSuspend }: KYCOver
                         <img
                           src={selected.selfieImage}
                           alt="Selfie"
-                          className="w-full h-48 object-cover cursor-pointer group-hover:scale-[1.01] transition-transform"
+                          className="w-full max-h-[320px] object-contain cursor-pointer group-hover:scale-[1.01] transition-transform"
+                          style={{ height: 'auto' }}
                           onClick={() => window.open(selected.selfieImage!, '_blank')}
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
@@ -419,7 +422,8 @@ export function KYCOverview({ records, onApprove, onReject, onSuspend }: KYCOver
                         <img
                           src={src}
                           alt={`Document ${idx + 1}`}
-                          className="w-full h-52 object-cover cursor-pointer group-hover:scale-[1.01] transition-transform"
+                          className="w-full max-h-[320px] object-contain cursor-pointer group-hover:scale-[1.01] transition-transform"
+                          style={{ height: 'auto' }}
                           onClick={() => window.open(src, '_blank')}
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
