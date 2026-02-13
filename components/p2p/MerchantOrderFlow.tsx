@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { fetchWithAuth } from "@/components/auth-form";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,7 +65,7 @@ export function MerchantOrderFlow({
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otpError, setOtpError] = useState("");
-  
+
   // Dispute Modal State
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -89,7 +89,7 @@ export function MerchantOrderFlow({
     if (isMerchantBuying && currentStatus === "pending_payment") {
       setLoadingDetails(true);
       // Use reference, not ID, as per backend requirement (e.g. P2P-...)
-      fetch(`/api/fstack/trade/${order.reference}`)
+      fetchWithAuth(`/api/fstack/trade/${order.reference}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.success && data.data?.paymentDetails) {
@@ -110,7 +110,7 @@ export function MerchantOrderFlow({
   const handleSendOtp = async () => {
     setSendingOtp(true);
     try {
-      const res = await fetch("/api/fstack/orders/initiate-release", {
+      const res = await fetchWithAuth("/api/fstack/orders/initiate-release", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reference: order.reference }),
@@ -151,7 +151,7 @@ export function MerchantOrderFlow({
 
     setVerifyingOtp(true);
     try {
-      const res = await fetch("/api/fstack/orders/confirm-release", {
+      const res = await fetchWithAuth("/api/fstack/orders/confirm-release", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reference: order.reference, otpCode: otpCode }),
@@ -202,13 +202,9 @@ export function MerchantOrderFlow({
     setMarkingPaid(true);
     try {
       // Endpoint: /api/fstack/trade/[id]/merchant-paid
-      const res = await fetch(
+      const res = await fetchWithAuth(
         `/api/fstack/trade/${order.reference}/merchant-paid`,
         {
-          // User said "use this to fetch... wait... p2p... reference... initiate-release... confirm-release... merchant-paid"
-          // Actually, the user requirement for merchant-paid endpoint was:
-          // https://finstack-backend-api.onrender.com/api/trade/P2P-1767127643379/merchant-paid
-          // So we use reference.
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),
@@ -240,76 +236,85 @@ export function MerchantOrderFlow({
     } finally {
       setMarkingPaid(false);
     }
-
   };
 
   const handleCancel = async () => {
-      setCancelling(true);
-      try {
-          const res = await fetch(`/api/fstack/p2p/${order.reference}/cancel`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({})
-          });
-          const data = await res.json();
-          
-          if (data.success) {
-              toast({ title: "Success", description: "Order cancelled" });
-              // Trigger a refresh or callback?
-              // Ideally onComplete or a new onCancel callback, but for now just toast.
-              // We might want to refresh the page state.
-              window.location.reload(); 
-          } else {
-              let errorMsg = data.error || data.message || "Failed to cancel order";
-              toast({ title: "Cannot Cancel", description: errorMsg, variant: "destructive" });
-          }
-      } catch (e) {
-           toast({ title: "Error", description: "Failed to cancel order", variant: "destructive" });
-      } finally {
-          setCancelling(false);
+    setCancelling(true);
+    try {
+      const res = await fetchWithAuth(
+        `/api/fstack/p2p/${order.reference}/cancel`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        },
+      );
+      const data = await res.json();
+
+      if (data.success) {
+        toast({ title: "Success", description: "Order cancelled" });
+        // Trigger a refresh or callback?
+        // Ideally onComplete or a new onCancel callback, but for now just toast.
+        // We might want to refresh the page state.
+        window.location.reload();
+      } else {
+        let errorMsg = data.error || data.message || "Failed to cancel order";
+        toast({
+          title: "Cannot Cancel",
+          description: errorMsg,
+          variant: "destructive",
+        });
       }
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: "Failed to cancel order",
+        variant: "destructive",
+      });
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const submitDispute = async (reason: string, evidence: File | null) => {
     try {
-        const formData = new FormData();
-        formData.append('reason', reason);
-        if (evidence) {
-            formData.append('evidence', evidence);
-        }
+      const formData = new FormData();
+      formData.append("reason", reason);
+      if (evidence) {
+        formData.append("evidence", evidence);
+      }
 
-        const tradeId = order.reference || order.id;
-        const res = await fetch(`/api/fstack/p2p/${tradeId}/dispute`, {
-            method: 'POST',
-            body: formData, // No Content-Type header when using FormData, browser sets it with boundary
-        });
-        
-        const data = await res.json();
+      const tradeId = order.reference || order.id;
+      const res = await fetchWithAuth(`/api/fstack/p2p/${tradeId}/dispute`, {
+        method: "POST",
+        body: formData, // No Content-Type header when using FormData, browser sets it with boundary
+      });
 
-        if (data.success) {
-            toast({
-                title: "Dispute Submitted",
-                description: "Your dispute has been submitted. Admin will review this order.",
-            });
-            onDispute();
-        } else {
-            throw new Error(data.error || "Failed to submit dispute");
-        }
-    } catch (error: any) {
+      const data = await res.json();
+
+      if (data.success) {
         toast({
-            title: "Error",
-            description: error.message || "Failed to submit dispute",
-            variant: "destructive",
+          title: "Dispute Submitted",
+          description:
+            "Your dispute has been submitted. Admin will review this order.",
         });
-        throw error; // Re-throw to let modal know it failed
+        onDispute();
+      } else {
+        throw new Error(data.error || "Failed to submit dispute");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit dispute",
+        variant: "destructive",
+      });
+      throw error; // Re-throw to let modal know it failed
     }
   };
 
   const handleDisputeClick = () => {
-      setShowDisputeModal(true);
+    setShowDisputeModal(true);
   };
-
-
 
   return (
     <div className="space-y-6">
@@ -364,7 +369,7 @@ export function MerchantOrderFlow({
 
         {/* Timer */}
         {/* Timer or Status Message */}
-        {currentStatus === 'completed' ? (
+        {currentStatus === "completed" ? (
           <div className="mt-4 p-3 rounded-lg flex items-center gap-3 bg-green-50 border border-green-200">
             <CheckCircle className="w-5 h-5 text-green-600" />
             <div>
@@ -401,62 +406,68 @@ export function MerchantOrderFlow({
       </Card>
 
       {/* Merchant Buying Flow: Show Bank Details & I Have Paid */}
-      {isMerchantBuying && currentStatus === 'pending_payment' && (
-         <Card className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-                <Shield className="w-6 h-6 text-blue-600" />
-                <h3 className="text-lg font-semibold">Make Payment</h3>
-            </div>
-            
-            <div className="p-4 bg-gray-50 rounded-lg border mb-4">
-               <h4 className="font-medium mb-3">Seller Bank Details</h4>
-               {loadingDetails ? (
-                   <div className="text-sm text-gray-500">Loading details...</div>
-               ) : bankDetails ? (
-                   <div className="space-y-2">
-                       <div className="flex justify-between">
-                           <span className="text-sm text-gray-600">Bank Name</span>
-                           <span className="font-medium">{bankDetails.bankName}</span>
-                       </div>
-                       <div className="flex justify-between">
-                           <span className="text-sm text-gray-600">Account Number</span>
-                           <span className="font-medium font-mono">{bankDetails.accountNumber}</span>
-                       </div>
-                       <div className="flex justify-between">
-                           <span className="text-sm text-gray-600">Account Name</span>
-                           <span className="font-medium">{bankDetails.accountName}</span>
-                       </div>
-                   </div>
-               ) : (
-                   <div className="text-sm text-red-500">Failed to load bank details or none provided.</div>
-               )}
-            </div>
+      {isMerchantBuying && currentStatus === "pending_payment" && (
+        <Card className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Shield className="w-6 h-6 text-blue-600" />
+            <h3 className="text-lg font-semibold">Make Payment</h3>
+          </div>
 
-            <div className="space-y-3">
-               <Button 
-                   onClick={handleMerchantMarkPaid}
-                   disabled={markingPaid || !bankDetails}
-                   className="w-full bg-green-600 hover:bg-green-700 text-white"
-               >
-                   {markingPaid ? 'Processing...' : 'I have made payment'}
-               </Button>
-               
-               {/* Cancel Button for Merchant in Buy Flow */}
-               <Button 
-                   variant="destructive"
-                   className="w-full"
-                   onClick={handleCancel}
-                   disabled={markingPaid || cancelling}
-               >
-                   <XCircle className="w-4 h-4 mr-2" />
-                   {cancelling ? "Cancelling..." : "Cancel Order"}
-               </Button>
-            </div>
-         </Card>
+          <div className="p-4 bg-gray-50 rounded-lg border mb-4">
+            <h4 className="font-medium mb-3">Seller Bank Details</h4>
+            {loadingDetails ? (
+              <div className="text-sm text-gray-500">Loading details...</div>
+            ) : bankDetails ? (
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Bank Name</span>
+                  <span className="font-medium">{bankDetails.bankName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Account Number</span>
+                  <span className="font-medium font-mono">
+                    {bankDetails.accountNumber}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Account Name</span>
+                  <span className="font-medium">{bankDetails.accountName}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-red-500">
+                Failed to load bank details or none provided.
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <Button
+              onClick={handleMerchantMarkPaid}
+              disabled={markingPaid || !bankDetails}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              {markingPaid ? "Processing..." : "I have made payment"}
+            </Button>
+
+            {/* Cancel Button for Merchant in Buy Flow */}
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={handleCancel}
+              disabled={markingPaid || cancelling}
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              {cancelling ? "Cancelling..." : "Cancel Order"}
+            </Button>
+          </div>
+        </Card>
       )}
 
       {/* Merchant Selling Flow: Payment Verification (Existing Code) */}
-      {!isMerchantBuying && (currentStatus === 'payment_confirmed_by_buyer' || currentStatus === 'paid') && (
+      {!isMerchantBuying &&
+        (currentStatus === "payment_confirmed_by_buyer" ||
+          currentStatus === "paid") && (
           <Card className="p-6">
             <div className="flex items-center gap-3 mb-4">
               <Shield className="w-6 h-6 text-blue-600" />
@@ -633,12 +644,11 @@ export function MerchantOrderFlow({
         </div>
       )}
 
-
       {/* Dispute Modal */}
-      <DisputeModal 
-        open={showDisputeModal} 
-        onClose={() => setShowDisputeModal(false)} 
-        onSubmit={submitDispute} 
+      <DisputeModal
+        open={showDisputeModal}
+        onClose={() => setShowDisputeModal(false)}
+        onSubmit={submitDispute}
       />
     </div>
   );

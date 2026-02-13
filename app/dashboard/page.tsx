@@ -81,9 +81,12 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       // Fetch wallets
-      const walletsRes = await fetchWithAuth("/api/fstack/wallet/user-balances", {
-        cache: "no-store",
-      });
+      const walletsRes = await fetchWithAuth(
+        "/api/fstack/wallet/user-balances",
+        {
+          cache: "no-store",
+        },
+      );
       const walletsData = await walletsRes.json();
 
       // Normalize wallet data to match UI expectations (copied from lib/server/wallets.ts)

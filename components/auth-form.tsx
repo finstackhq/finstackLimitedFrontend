@@ -574,6 +574,29 @@ export function AuthForm() {
                   ? "Sign In"
                   : "Create Account"}
             </Button>
+            {mode === "signup" && (
+              <p className="mt-4 text-xs text-center text-muted-foreground">
+                By registering, you accept our{' '}
+                <a
+                  href="/terms-of-use"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold underline hover:text-primary"
+                >
+                  Terms of use
+                </a>
+                {' '}and{' '}
+                <a
+                  href="/privacy-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold underline hover:text-primary"
+                >
+                  Privacy Policy
+                </a>
+                .
+              </p>
+            )}
           </form>
 
           {/* Additional Links */}

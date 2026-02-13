@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePaymentMethods } from "@/hooks/use-payment-methods";
+import { fetchWithAuth } from "@/components/auth-form";
 import {
   Dialog,
   DialogContent,
@@ -45,13 +47,19 @@ export function OrderModal({
   onClose,
   onOrderCreated,
 }: OrderModalProps) {
+  // Removed debug log for production
   const { toast } = useToast();
   const router = useRouter();
   const [fiatAmount, setFiatAmount] = useState("");
   const [cryptoAmount, setCryptoAmount] = useState("");
-  const [selectedPayment, setSelectedPayment] = useState<string>(
-    ad.paymentMethods[0],
-  );
+  // For SELL flow, selectedPayment is the user's payment method object
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  // Fetch user payment methods for SELL flow
+  const {
+    methods: userPaymentMethods,
+    loading: loadingUserPayments,
+    error: userPaymentsError,
+  } = usePaymentMethods();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -152,6 +160,15 @@ export function OrderModal({
   };
 
   const handleConfirm = async () => {
+    // STEP2: Log selectedPayment and ad.type before proceeding
+    console.log("[STEP2] handleConfirm called");
+    console.log("[STEP2] ad.type:", ad.type);
+    console.log("[STEP2] selectedPayment:", selectedPayment);
+
+    // STEP2: Extra debug: log userPaymentMethods
+    if (ad.type === "sell") {
+      // Removed debug log for production
+    }
     const fiat = parseFloat(fiatAmount);
     const crypto = parseFloat(cryptoAmount);
 
@@ -173,49 +190,115 @@ export function OrderModal({
       return;
     }
 
-    // Temporary warning instead of blocking for available check
-    // to allow testing if ad data is inconsistent
-    if (crypto > parseFloat(ad.available.toString())) {
-      // We'll show a toast but NOT return, to allow the user to proceed if they insist (per user request)
-      // Or usually we should return.
-      // Given the user said "confirm order page doestn work", they might be blocked by this.
-      // I'll block it but log it clearly.
-
-      // actually, let's comment out the return for now to let them proceed if the Ad is just broken in UI
-      // return;
-
-      toast({
-        title: "Warning: Insufficient Available",
-        description: `Requested ${crypto} but only ${ad.available} available. Proceeding anyway...`,
-        variant: "default", // not destructive so it doesn't look like an error
-      });
-    }
+    // Removed warning toast for production
 
     setIsLoading(true);
     setError(null);
 
-    try {
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-        throw new Error("You must be logged in to trade");
+
+      // STEP3: Robust paymentMethod extraction for SELL
+      let paymentMethod = undefined;
+      if (ad.type === "sell") {
+        if (!selectedPayment) {
+          toast({
+            title: "Select Payment Method",
+            description: "Please select your payment method to receive payment.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        if (typeof selectedPayment === "object") {
+          if (selectedPayment.type === "ALIPAY") {
+            paymentMethod = "ALIPAY";
+          } else if (selectedPayment._id) {
+            paymentMethod = selectedPayment._id;
+          } else {
+            toast({
+              title: "Invalid Payment Method",
+              description: "Selected payment method is missing an ID.",
+              variant: "destructive",
+            });
+            setIsLoading(false);
+            return;
+          }
+        } else if (typeof selectedPayment === "string") {
+          paymentMethod = selectedPayment;
+        } else {
+          toast({
+            title: "Invalid Payment Method",
+            description: "Please select a valid payment method.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        if (!paymentMethod) {
+          toast({
+            title: "Payment Method Required",
+            description: "Please select a valid payment method.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
       }
 
-      // Always use fiatAmount as amountSource for backend validation
-      const amountSource = parseFloat(fiatAmount);
-      const amountTarget = parseFloat(cryptoAmount);
-      const currencySource = ad.fiatCurrency;
-      const currencyTarget = ad.cryptoCurrency;
+      // STEP3: log paymentMethod before payload
+      if (ad.type === "sell") {
+        console.log("[STEP3] paymentMethod to send:", paymentMethod);
+      }
 
-      const response = await fetch("/api/fstack/p2p", {
+
+      // Always build paymentDetails for SELL
+      let paymentDetails = undefined;
+      if (ad.type === "sell" && selectedPayment) {
+        if (selectedPayment.type === "ALIPAY") {
+          paymentDetails = {
+            alipayAccountName: selectedPayment.alipayAccountName,
+            alipayEmail: selectedPayment.alipayEmail,
+            alipayQrImage: selectedPayment.alipayQrImage,
+            country: selectedPayment.country || "NG",
+            type: "ALIPAY",
+          };
+        } else {
+          paymentDetails = {
+            bankName: selectedPayment.bankName,
+            accountNumber: selectedPayment.accountNumber,
+            accountName: selectedPayment.accountName,
+            bankCode: selectedPayment.bankCode,
+            country: selectedPayment.country || "NG",
+            type: "BANK",
+          };
+        }
+      }
+
+      const payload = {
+        adId: ad.id,
+        amountSource: Number(fiatAmount),
+        ...(ad.type === "sell"
+          ? {
+              paymentMethod,
+              paymentDetails: paymentDetails || (typeof selectedPayment === "object" ? { ...selectedPayment } : undefined),
+            }
+          : {}),
+      };
+      console.log("[STEP4] Payload to send:", payload);
+      if (ad.type === "sell" && !payload.paymentMethod) {
+        toast({
+          title: "Payment Method Missing (Failsafe)",
+          description: "Payload is missing paymentMethod. Please select a payment method and try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      const response = await fetchWithAuth("/api/fstack/p2p", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          adId: ad.id,
-          amountSource: Number(amountSource),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -224,6 +307,7 @@ export function OrderModal({
         throw new Error(data.error || data.message || "Failed to create order");
       }
 
+      // Always use backend's returned paymentDetails if present
       const initiatePayload = (
         data && typeof data === "object" ? data.data || data : null
       ) as any;
@@ -240,10 +324,7 @@ export function OrderModal({
         throw new Error("Order created but ID missing");
       }
 
-      toast({
-        title: "Order Created",
-        description: `Order created successfully. Redirecting to payment...`,
-      });
+      // Removed order created toast for production
 
       const fullName =
         typeof trader?.name === "string" ? trader.name.trim() : "";
@@ -252,6 +333,147 @@ export function OrderModal({
         : [""];
       const sellerLastName = restName.join(" ");
 
+      // Patch: Always save full payment method for BUY and SELL
+      let patchedPaymentDetails = initiatePayload?.paymentDetails;
+      if (ad.type === "sell") {
+        // SELL: use selectedPayment (user's own method)
+        if (
+          selectedPayment &&
+          selectedPayment.type === "ALIPAY" &&
+          patchedPaymentDetails &&
+          Object.keys(patchedPaymentDetails).length <= 2
+        ) {
+          patchedPaymentDetails = {
+            ...patchedPaymentDetails,
+            alipayQrImage: selectedPayment.alipayQrImage,
+            alipayAccountName: selectedPayment.alipayAccountName,
+            alipayEmail: selectedPayment.alipayEmail,
+          };
+        }
+      } else {
+        // BUY: use merchant's payment method from ad.paymentMethodDetails or ad.paymentMethods
+        let merchantAlipay = null;
+        if (Array.isArray(ad.paymentMethodDetails)) {
+          merchantAlipay = ad.paymentMethodDetails.find(
+            (m) => m.type === "ALIPAY",
+          );
+        }
+        if (merchantAlipay) {
+          patchedPaymentDetails = {
+            ...patchedPaymentDetails,
+            ...merchantAlipay,
+          };
+        }
+      }
+      // Debug: Log selectedPayment and patchedPaymentDetails
+      console.log("[DEBUG] selectedPayment:", selectedPayment);
+    try {
+      // ...existing code...
+      // Build paymentDetails for SELL
+      let paymentDetails = undefined;
+      if (ad.type === "sell" && selectedPayment) {
+        if (selectedPayment.type === "ALIPAY") {
+          paymentDetails = {
+            alipayAccountName: selectedPayment.alipayAccountName,
+            alipayEmail: selectedPayment.alipayEmail,
+            alipayQrImage: selectedPayment.alipayQrImage,
+            country: selectedPayment.country || "NG",
+            type: "ALIPAY",
+          };
+        } else {
+          // Assume bank account object
+          paymentDetails = {
+            bankName: selectedPayment.bankName,
+            accountNumber: selectedPayment.accountNumber,
+            accountName: selectedPayment.accountName,
+            bankCode: selectedPayment.bankCode,
+            country: selectedPayment.country || "NG",
+            type: "BANK",
+          };
+        }
+      }
+
+      // Always include paymentMethod and paymentDetails in payload for SELL
+      let paymentMethod = undefined;
+      if (ad.type === "sell") {
+        if (!selectedPayment) {
+          toast({
+            title: "Select Payment Method",
+            description: "Please select your payment method to receive payment.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        if (typeof selectedPayment === "object") {
+          if (selectedPayment.type === "ALIPAY") {
+            paymentMethod = "ALIPAY";
+          } else if (selectedPayment._id) {
+            paymentMethod = selectedPayment._id;
+          } else {
+            toast({
+              title: "Invalid Payment Method",
+              description: "Selected payment method is missing an ID.",
+              variant: "destructive",
+            });
+            setIsLoading(false);
+            return;
+          }
+        } else if (typeof selectedPayment === "string") {
+          paymentMethod = selectedPayment;
+        } else {
+          toast({
+            title: "Invalid Payment Method",
+            description: "Please select a valid payment method.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        if (!paymentMethod) {
+          toast({
+            title: "Payment Method Required",
+            description: "Please select a valid payment method.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+      const payload = {
+        adId: ad.id,
+        amountSource: Number(fiatAmount),
+        ...(ad.type === "sell"
+          ? {
+              paymentMethod,
+              paymentDetails: paymentDetails || (typeof selectedPayment === "object" ? { ...selectedPayment } : undefined),
+            }
+          : {}),
+      };
+      console.log("[STEP4] Payload to send:", payload);
+      if (ad.type === "sell" && !payload.paymentMethod) {
+        toast({
+          title: "Payment Method Missing (Failsafe)",
+          description: "Payload is missing paymentMethod. Please select a payment method and try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      const response = await fetchWithAuth("/api/fstack/p2p", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || data.message || "Failed to create order");
+      }
+
+      // ...existing code for tradeContext and navigation...
+      // Removed debug log for production
       const tradeContext = {
         tradeId: orderId,
         createdAt: new Date().toISOString(),
@@ -280,7 +502,7 @@ export function OrderModal({
           platformFeeCrypto: initiatePayload?.platformFeeCrypto,
           netCryptoAmount: initiatePayload?.netCryptoAmount,
           marketRate: initiatePayload?.marketRate,
-          paymentDetails: initiatePayload?.paymentDetails,
+          paymentDetails: paymentDetails,
         },
       };
 
@@ -468,46 +690,124 @@ export function OrderModal({
           <div>
             <Label>Select Payment Method</Label>
             <div className="grid grid-cols-1 gap-2 mt-2 max-h-[160px] overflow-y-auto pr-1">
-              {ad.paymentMethodDetails && ad.paymentMethodDetails.length > 0
-                ? ad.paymentMethodDetails.map((detail, index) => (
-                    <button
-                      key={`${detail.type}-${index}`}
-                      type="button"
-                      onClick={() => setSelectedPayment(detail.type)} // Keep using type for selection logic for now, or change state to full object
-                      disabled={isLoading}
-                      className={`flex flex-col items-start p-3 rounded-lg border text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                        selectedPayment === detail.type
-                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                          : "bg-white hover:bg-gray-50 border-gray-200"
-                      }`}
-                    >
-                      <span className="font-semibold">
-                        {detail.bankName || detail.type}
+              {ad.type === "sell" ? (
+                loadingUserPayments ? (
+                  <div className="text-sm text-gray-500">
+                    Loading payment methods...
+                  </div>
+                ) : userPaymentsError ? (
+                  <div className="text-sm text-red-500">
+                    {userPaymentsError}
+                  </div>
+                ) : userPaymentMethods.length === 0 ? (
+                  <div className="text-sm text-gray-500">
+                    No payment methods found. Please add one in your profile.
+                  </div>
+                ) : (
+                  <>
+                    {/* Debug: Show all payment methods in console */}
+                    {console.log(
+                      "[DEBUG] userPaymentMethods:",
+                      userPaymentMethods,
+                    )}
+                    {userPaymentMethods.map((method) => {
+                      const isAlipay = method.type === "ALIPAY";
+                      return (
+                        <button
+                          key={isAlipay ? "ALIPAY" : String(method._id)}
+                          type="button"
+                          onClick={() => {
+                            console.log("[STEP1] Payment method button clicked", method);
+                            setSelectedPayment(method);
+                          }}
+                          disabled={isLoading}
+                          className={`flex flex-col items-start p-3 rounded-lg border text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                            (selectedPayment &&
+                              selectedPayment._id === method._id) ||
+                            (isAlipay &&
+                              selectedPayment &&
+                              selectedPayment.type === "ALIPAY")
+                              ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                              : "bg-white hover:bg-gray-50 border-gray-200"
+                          }`}
+                        >
+                          <span className="font-semibold">
+                            {isAlipay ? "Alipay" : `Bank: ${method.bankName}`}
+                          </span>
+                          {method.accountName && (
+                            <span className="text-xs opacity-90">
+                              Acct Name: {method.accountName}
+                            </span>
+                          )}
+                          {method.accountNumber && (
+                            <span className="text-xs opacity-90">
+                              Acct #: {method.accountNumber}
+                            </span>
+                          )}
+                          {method.alipayAccountName && (
+                            <span className="text-xs opacity-90">
+                              Alipay Name: {method.alipayAccountName}
+                            </span>
+                          )}
+                          {method.alipayEmail && (
+                            <span className="text-xs opacity-90">
+                              Alipay Email: {method.alipayEmail}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </>
+                )
+              ) : // BUY flow: show ad's payment methods
+              ad.paymentMethodDetails && ad.paymentMethodDetails.length > 0 ? (
+                ad.paymentMethodDetails.map((detail, index) => (
+                  <button
+                    key={`${detail.type}-${index}`}
+                    type="button"
+                    onClick={() => {
+                      console.log("[STEP1] Payment method button clicked (BUY)", detail.type);
+                      setSelectedPayment(detail.type);
+                    }}
+                    disabled={isLoading}
+                    className={`flex flex-col items-start p-3 rounded-lg border text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                      selectedPayment === detail.type
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-white hover:bg-gray-50 border-gray-200"
+                    }`}
+                  >
+                    <span className="font-semibold">
+                      {detail.bankName || detail.type}
+                    </span>
+                    {detail.accountName && (
+                      <span className="text-xs opacity-90">
+                        {detail.accountName}
                       </span>
-                      {detail.accountName && (
-                        <span className="text-xs opacity-90">
-                          {detail.accountName}
-                        </span>
-                      )}
-                    </button>
-                  ))
-                : ad.paymentMethods.map((method) => (
-                    <button
-                      key={method}
-                      type="button"
-                      onClick={() => setSelectedPayment(method)}
-                      disabled={isLoading}
-                      className={`flex flex-col items-start p-3 rounded-lg border text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                        selectedPayment === method
-                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                          : "bg-white hover:bg-gray-50 border-gray-200"
-                      }`}
-                    >
-                      <span className="font-semibold">
-                        {method.split(" - ")[0]}
-                      </span>
-                    </button>
-                  ))}
+                    )}
+                  </button>
+                ))
+              ) : (
+                ad.paymentMethods.map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => {
+                      console.log("[STEP1] Payment method button clicked (BUY fallback)", method);
+                      setSelectedPayment(method);
+                    }}
+                    disabled={isLoading}
+                    className={`flex flex-col items-start p-3 rounded-lg border text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                      selectedPayment === method
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-white hover:bg-gray-50 border-gray-200"
+                    }`}
+                  >
+                    <span className="font-semibold">
+                      {method.split(" - ")[0]}
+                    </span>
+                  </button>
+                ))
+              )}
             </div>
           </div>
 
@@ -537,7 +837,15 @@ export function OrderModal({
               Cancel
             </Button>
             <Button
-              onClick={handleConfirm}
+              onClick={() => {
+                console.log("[STEP0] Confirm Order button clicked. selectedPayment:", selectedPayment);
+                toast({
+                  title: "Confirm Order Clicked",
+                  description: `selectedPayment: ${JSON.stringify(selectedPayment)}`,
+                  variant: "default",
+                });
+                handleConfirm();
+              }}
               disabled={isLoading}
               className="flex-1 bg-blue-600 text-white"
             >
