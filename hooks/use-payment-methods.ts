@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "@/components/auth-form";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
-
 export interface PaymentMethod {
   _id: string;
   type: string;
@@ -21,13 +19,17 @@ export function usePaymentMethods() {
 
   useEffect(() => {
     setLoading(true);
-    fetchWithAuth(`${API_BASE}/api/payment-methods`)
+    fetchWithAuth(
+      "https://finstacklimitedbackend.onrender.com/api/payment-methods",
+    )
       .then(async (res) => {
         const data = await res.json();
         if (data.success && data.data) {
           let methods: PaymentMethod[] = [];
           if (Array.isArray(data.data.bankAccounts)) {
-            methods = methods.concat(data.data.bankAccounts.map((b: any) => ({ ...b, type: "BANK" })));
+            methods = methods.concat(
+              data.data.bankAccounts.map((b: any) => ({ ...b, type: "BANK" })),
+            );
           }
           if (data.data.alipay) {
             methods.push({ ...data.data.alipay, type: "ALIPAY" });
