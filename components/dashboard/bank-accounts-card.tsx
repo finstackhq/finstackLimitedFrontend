@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { fetchWithAuth } from "@/components/auth-form";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ export function BankAccountsCard() {
     setLoading(true);
     try {
       // Note: Ensure this GET route also matches your backend (likely /api/my-bank-accounts)
-      const res = await fetch("/api/fstack/profile?type=bank-accounts");
+      const res = await fetchWithAuth("/api/fstack/profile?type=bank-accounts");
       const data = await res.json();
 
       if (data.success && Array.isArray(data.data)) {
@@ -62,7 +63,7 @@ export function BankAccountsCard() {
 
   const handleDeleteAccount = async (id: string) => {
     const performDelete = async (token: string) => {
-      return await fetch(
+      return await fetchWithAuth(
         `https://finstacklimitedbackend.onrender.com/api/bank-account/${id}`,
         {
           method: "DELETE",
@@ -86,7 +87,7 @@ export function BankAccountsCard() {
 
       // If session expired (401), try to refresh
       if (res.status === 401) {
-        const refreshRes = await fetch(
+        const refreshRes = await fetchWithAuth(
           "https://finstacklimitedbackend.onrender.com/api/auth/refresh",
           {
             method: "POST",
@@ -138,7 +139,7 @@ export function BankAccountsCard() {
     accountName: string;
   }) => {
     try {
-      const res = await fetch("/api/fstack/profile", {
+      const res = await fetchWithAuth("/api/fstack/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(account),

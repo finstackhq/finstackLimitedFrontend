@@ -284,7 +284,9 @@ export default function WithdrawPage() {
       setLoadingAccounts(true);
 
       try {
-        const res = await fetchWithAuth("/api/fstack/profile?type=bank-accounts");
+        const res = await fetchWithAuth(
+          "/api/fstack/profile?type=bank-accounts",
+        );
 
         const data = await res.json();
 

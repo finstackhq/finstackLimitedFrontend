@@ -46,16 +46,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { adId, amountSource } = body;
+    const { adId, amountSource, paymentMethod, paymentDetails } = body;
 
     if (!adId) {
       return NextResponse.json({ success: false, error: 'Ad ID is required' }, { status: 400 });
     }
 
-    const tradeData = { amountSource };
+    // Forward all relevant fields to backend
+    const tradeData: any = { amountSource };
+    if (paymentMethod !== undefined) tradeData.paymentMethod = paymentMethod;
+    if (paymentDetails !== undefined) tradeData.paymentDetails = paymentDetails;
 
     const apiUrl = `${baseUrl}trade/initiate/${adId}`;
-    
+
     console.log(`Initiating trade at ${apiUrl}`);
     console.log('Request payload:', JSON.stringify(tradeData, null, 2));
 

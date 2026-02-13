@@ -21,7 +21,9 @@ import {
   Eye,
 } from "lucide-react";
 import { saveMerchantAd } from "@/lib/p2p-storage";
+import { fetchWithAuth } from "@/components/auth-form";
 import { P2PAd, PaymentMethod } from "@/lib/p2p-mock-data";
+import { usePaymentMethods } from "@/hooks/use-payment-methods";
 
 // Supported pairs constant
 // Supported pairs constant removed to allow all combinations
@@ -112,27 +114,9 @@ export function MerchantAdWizard() {
     return () => clearInterval(id);
   }, []);
 
-  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
-  const [fetchingBanks, setFetchingBanks] = useState(false);
+  const { methods: allPaymentMethods, loading: loadingMethods } = usePaymentMethods();
 
-  // Fetch saved bank accounts
-  useEffect(() => {
-    const fetchBanks = async () => {
-      setFetchingBanks(true);
-      try {
-        const res = await fetch("/api/fstack/profile?type=bank-accounts");
-        const data = await res.json();
-        if (data.success && Array.isArray(data.data)) {
-          setBankAccounts(data.data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch bank accounts:", err);
-      } finally {
-        setFetchingBanks(false);
-      }
-    };
-    fetchBanks();
-  }, []);
+  // Removed old bank account fetching logic; now using usePaymentMethods
 
   // Compute base rate for selected pair (generic for all pairs)
   // For CNGN/fiat, also compute the inverse for display
@@ -292,7 +276,7 @@ export function MerchantAdWizard() {
         instructions: ad.instructions || "Transfer only from your own account.",
       };
 
-      const res = await fetch("/api/fstack/merchant", {
+      const res = await fetchWithAuth("/api/fstack/merchant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -687,24 +671,24 @@ export function MerchantAdWizard() {
               <div>
                 <h2 className="text-xl font-semibold mb-4">Payment Methods</h2>
                 <div className="space-y-6">
-                  {/* Saved Bank Accounts Section */}
+                  {/* All Payment Methods Section */}
                   <div className="space-y-3">
                     <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-                      Your Bank Accounts
+                      Your Payment Methods
                     </p>
-                    {fetchingBanks ? (
-                      <p className="text-sm text-gray-400">
-                        Loading bank accounts...
-                      </p>
-                    ) : bankAccounts.length > 0 ? (
+                    {loadingMethods ? (
+                      <p className="text-sm text-gray-400">Loading payment methods...</p>
+                    ) : allPaymentMethods.length > 0 ? (
                       <div className="grid gap-3">
-                        {bankAccounts.map((acc) => {
-                          const displayStr = `${acc.bankName} - ${acc.accountNumber} (${acc.accountName})`;
-                          const isSelected =
-                            ad.paymentMethods.includes(displayStr);
+                        {allPaymentMethods.map((method) => {
+                          const displayStr =
+                            method.type === "BANK"
+                              ? `${method.bankName} - ${method.accountNumber} (${method.accountName})`
+                              : `Alipay - ${method.alipayAccountName} (${method.alipayEmail})`;
+                          const isSelected = ad.paymentMethods.includes(displayStr);
                           return (
                             <label
-                              key={acc._id}
+                              key={method._id || method.alipayEmail || method.type}
                               className={cn(
                                 "flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all",
                                 isSelected
@@ -720,11 +704,22 @@ export function MerchantAdWizard() {
                               />
                               <div>
                                 <p className="font-semibold text-sm">
-                                  {acc.bankName}
+                                  {method.type === "BANK"
+                                    ? method.bankName
+                                    : "Alipay"}
                                 </p>
                                 <p className="text-xs text-gray-600">
-                                  {acc.accountNumber} • {acc.accountName}
+                                  {method.type === "BANK"
+                                    ? `${method.accountNumber} • ${method.accountName}`
+                                    : `${method.alipayAccountName} • ${method.alipayEmail}`}
                                 </p>
+                                {method.type === "ALIPAY" && method.alipayQrImage && (
+                                  <img
+                                    src={method.alipayQrImage}
+                                    alt="Alipay QR"
+                                    className="w-16 h-16 object-contain mt-2 border rounded"
+                                  />
+                                )}
                               </div>
                             </label>
                           );
@@ -732,7 +727,7 @@ export function MerchantAdWizard() {
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500 italic">
-                        No bank accounts found in your profile.
+                        No payment methods found in your profile.
                       </p>
                     )}
                   </div>

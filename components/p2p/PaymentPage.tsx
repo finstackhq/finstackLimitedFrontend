@@ -22,6 +22,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { fetchWithAuth } from "@/components/auth-form";
 import { useRouter, useParams } from "next/navigation";
 import { TradeCancelScreen } from "./TradeCancelScreen";
 import { TradeDisputeScreen } from "./TradeDisputeScreen";
@@ -101,11 +102,22 @@ export default function PaymentPage() {
       window.open(imageUrl, "_blank");
     }
   };
+
+  // ...existing code...
   const params = useParams();
   // tradeId declaration moved below, remove duplicate
   // ...existing code...
   // ...existing code...
   const [ctx, setCtx] = useState<StoredTradeContext | null>(null);
+
+  // Debug log for Alipay payment details (moved below ctx declaration)
+  useEffect(() => {
+    if (ctx && ctx.initiate && ctx.initiate.paymentDetails) {
+      console.log("[DEBUG] Alipay paymentDetails:", ctx.initiate.paymentDetails);
+    } else {
+      console.log("[DEBUG] No Alipay paymentDetails found.", ctx);
+    }
+  }, [ctx]);
   // Debug: Log ctx and paymentDetails to check Alipay QR presence
   useEffect(() => {
     console.log("PaymentPage ctx:", ctx);
@@ -222,7 +234,7 @@ export default function PaymentPage() {
       const reference = ctx?.initiate?.reference;
       if (!reference) throw new Error("Trade reference not found");
 
-      const res = await fetch("/api/fstack/p2p/confirm-payment", {
+      const res = await fetchWithAuth("/api/fstack/p2p/confirm-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reference }),
@@ -259,7 +271,7 @@ export default function PaymentPage() {
       const reference = ctx?.initiate?.reference;
       if (!reference) throw new Error("Trade reference not found");
 
-      const res = await fetch(
+      const res = await fetchWithAuth(
         `/api/fstack/trade/${reference}/initiate-release`,
         {
           method: "POST",
@@ -297,7 +309,7 @@ export default function PaymentPage() {
     setVerifyingOtp(true);
     try {
       const reference = ctx?.initiate?.reference;
-      const res = await fetch(
+      const res = await fetchWithAuth(
         `/api/fstack/trade/${reference}/confirm-release`,
         {
           method: "POST",
@@ -324,7 +336,7 @@ export default function PaymentPage() {
     setCancelling(true);
     try {
       const reference = ctx?.initiate?.reference;
-      const res = await fetch(`/api/fstack/p2p/${reference}/cancel`, {
+      const res = await fetchWithAuth(`/api/fstack/p2p/${reference}/cancel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -523,181 +535,45 @@ export default function PaymentPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* ALIPAY SECTION - Debug-Safe Version */}
-              {ctx.paymentMethods?.includes("ALIPAY") && (
+              {/* ALIPAY QR CODE SECTION - Always show if alipayQrImage is present */}
+              {ctx.initiate?.paymentDetails?.alipayQrImage && (
                 <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-blue-200 rounded-xl bg-blue-50/50">
                   <div className="flex items-center gap-2 mb-4 text-blue-700 font-bold">
                     <QrCode className="h-5 w-5" />
                     <span>Alipay QR Code</span>
                   </div>
-
-                  {/* Search for the image in multiple possible locations, and handle full URLs */}
-                  {/* {(() => {
-                    const qrRaw = ctx.initiate?.paymentDetails?.alipayQrImage || (ctx as any).alipayQrImage;
-                    let qrSrc = "";
-                    if (qrRaw) {
-                      qrSrc = qrRaw.startsWith("http") ? qrRaw : `https://api.usefinstack.co/${qrRaw}`;
-                    }
-                    return qrRaw ? (
-                      <div className="bg-white p-3 rounded-lg shadow-md mb-4 border border-gray-100 flex flex-col items-center">
-                        <img
-                          src={qrSrc}
-                          alt="Alipay QR"
-                          className="w-48 h-48 object-contain"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            // If the full URL fails, try relative or placeholder
-                            target.src = "https://placehold.co/200x200?text=QR+Error";
-                          }}
-                        />
-                        <a
-                          href={qrSrc}
-                          download="alipay-qr.png"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-block mt-2"
-                        >
-                          <Button variant="outline" size="sm">
-                            Download QR
-                          </Button>
-                        </a>
-                      </div>
-                    ) : (
-                      <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg mb-4 text-center">
-                        <p className="text-amber-700 text-sm font-medium">QR Code Data Missing in Trade Context</p>
-                        <p className="text-[10px] text-amber-600">Please check backend p2pService</p>
-                      </div>
-                    );
-                  })()} */}
-                  {/* ALIPAY SECTION - Fixes the Double URL Bug */}
-                  {ctx.paymentMethods?.includes("ALIPAY") && (
-                    <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-blue-200 rounded-xl bg-blue-50/50">
-                      <div className="flex items-center gap-2 mb-4 text-blue-700 font-bold">
-                        <QrCode className="h-5 w-5" />
-                        <span>Alipay QR Code</span>
-                      </div>
-
-                      {/* Logic to handle both Cloudinary URLs and local backend paths */}
-                      {(() => {
-                        const qrPath =
-                          ctx.initiate?.paymentDetails?.alipayQrImage ||
-                          (ctx as any).paymentDetails?.alipayQrImage;
-
-                        if (!qrPath)
-                          return (
-                            <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg mb-4 text-center">
-                              <p className="text-amber-700 text-sm font-medium">
-                                QR Code missing in state
-                              </p>
-                            </div>
-                          );
-
-                        // SMART URL LOGIC:
-                        // If it starts with http, use it directly.
-                        // Otherwise, prepend your API domain.
-                        const finalSrc = qrPath.startsWith("http")
-                          ? qrPath
-                          : `https://api.usefinstack.co/${qrPath}`;
-
-                        return (
-                          <div className="bg-white p-3 rounded-lg shadow-md mb-4 border border-gray-100 flex flex-col items-center">
-                            <img
-                              src={finalSrc}
-                              alt="Alipay QR"
-                              className="w-48 h-48 object-contain"
-                              onError={(e) => {
-                                console.error(
-                                  "Image failed to load:",
-                                  finalSrc,
-                                );
-                                (e.target as HTMLImageElement).src =
-                                  "https://placehold.co/200?text=QR+Error";
-                              }}
-                            />
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="mt-2"
-                              onClick={() => downloadQRCode(finalSrc)}
-                            >
-                              Download QR
-                            </Button>
-                          </div>
-                        );
-                      })()}
-
-                      <div className="text-center space-y-2 w-full max-w-[280px]">
-                        <div className="bg-white px-4 py-2 rounded-lg border border-blue-100 shadow-sm text-left">
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold">
-                            Account Name
-                          </p>
-                          <p className="text-sm font-bold">
-                            {ctx.initiate?.paymentDetails?.alipayAccountName ||
-                              (ctx as any).paymentDetails?.alipayAccountName ||
-                              ctx.sellerName}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center justify-between bg-white px-4 py-2 rounded-lg border border-blue-100 shadow-sm">
-                          <div className="text-left overflow-hidden">
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold">
-                              Alipay Email/ID
-                            </p>
-                            <p className="text-sm font-medium truncate">
-                              {ctx.initiate?.paymentDetails?.alipayEmail ||
-                                (ctx as any).paymentDetails?.alipayEmail ||
-                                "N/A"}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              handleCopy(
-                                ctx.initiate?.paymentDetails?.alipayEmail ||
-                                  (ctx as any).paymentDetails?.alipayEmail ||
-                                  "",
-                              )
-                            }
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  <div className="bg-white p-3 rounded-lg shadow-md mb-4 border border-gray-100 flex flex-col items-center">
+                    <img
+                      src={ctx.initiate?.paymentDetails?.alipayQrImage}
+                      alt="Alipay QR"
+                      className="w-48 h-48 object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://placehold.co/200?text=QR+Error";
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => downloadQRCode(ctx.initiate?.paymentDetails?.alipayQrImage!)}
+                    >
+                      Download QR
+                    </Button>
+                  </div>
                   <div className="text-center space-y-2 w-full max-w-[280px]">
                     <div className="bg-white px-4 py-2 rounded-lg border border-blue-100 shadow-sm text-left">
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold">
-                        Account Name
-                      </p>
-                      <p className="text-sm font-bold">
-                        {ctx.initiate?.paymentDetails?.alipayAccountName ||
-                          (ctx as any).alipayAccountName ||
-                          ctx.sellerName}
-                      </p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Account Name</p>
+                      <p className="text-sm font-bold">{ctx.initiate?.paymentDetails?.alipayAccountName || ctx.sellerName}</p>
                     </div>
                     <div className="flex items-center justify-between bg-white px-4 py-2 rounded-lg border border-blue-100 shadow-sm">
                       <div className="text-left overflow-hidden">
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold">
-                          Alipay Email/ID
-                        </p>
-                        <p className="text-sm font-medium truncate">
-                          {ctx.initiate?.paymentDetails?.alipayEmail ||
-                            (ctx as any).alipayEmail ||
-                            "Not Provided"}
-                        </p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold">Alipay Email/ID</p>
+                        <p className="text-sm font-medium truncate">{ctx.initiate?.paymentDetails?.alipayEmail || "N/A"}</p>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() =>
-                          handleCopy(
-                            ctx.initiate?.paymentDetails?.alipayEmail ||
-                              (ctx as any).alipayEmail ||
-                              "",
-                          )
-                        }
+                        onClick={() => handleCopy(ctx.initiate?.paymentDetails?.alipayEmail || "")}
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
@@ -866,10 +742,13 @@ export default function PaymentPage() {
           const formData = new FormData();
           formData.append("reason", reason);
           if (evidence) formData.append("evidence", evidence);
-          const res = await fetch(`/api/fstack/p2p/${reference}/dispute`, {
-            method: "POST",
-            body: formData,
-          });
+          const res = await fetchWithAuth(
+            `/api/fstack/p2p/${reference}/dispute`,
+            {
+              method: "POST",
+              body: formData,
+            },
+          );
           const data = await res.json();
           if (data.success) {
             toast({
