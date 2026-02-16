@@ -1,8 +1,8 @@
-import { Button } from "@/components/ui/button"
-import { Twitter, Linkedin, Instagram } from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
-import BlurText from "@/components/ui/blur-text"
+import { Button } from "@/components/ui/button";
+import { Twitter, Linkedin, Instagram } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import BlurText from "@/components/ui/blur-text";
 
 export function Footer() {
   return (
@@ -20,16 +20,18 @@ export function Footer() {
                 className="text-4xl lg:text-5xl font-bold leading-tight text-balance"
               />
               <p className="text-xl text-gray-300 leading-relaxed text-pretty text-center">
-                Join thousands of users already sending and receiving money across the world with speed, security, and the best rates.
+                Join thousands of users already sending and receiving money
+                across the world with speed, security, and the best rates.
               </p>
             </div>
 
             {/* CTA Button */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 py-4 text-lg font-semibold">
-                <Link href="/login">
-                  Get Started Free
-                </Link>
+              <Button
+                asChild
+                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 py-4 text-lg font-semibold"
+              >
+                <Link href="/login">Get Started Free</Link>
               </Button>
             </div>
           </div>
@@ -39,10 +41,10 @@ export function Footer() {
             <div className="relative w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96">
               <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black opacity-60 z-10 rounded-2xl"></div>
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black opacity-40 z-10 rounded-2xl"></div>
-              <Image 
-                src="/cta-img.png" 
-                alt="CTA illustration" 
-                fill 
+              <Image
+                src="/cta-img.png"
+                alt="CTA illustration"
+                fill
                 className="object-contain rounded-2xl"
                 priority
               />
@@ -126,11 +128,11 @@ export function Footer() {
                     Cookie Policy
                   </a>
                 </li>
-                <li>
+                {/* <li>
                   <a href="#" className="hover:text-white transition-colors">
                     Licenses
                   </a>
-                </li>
+                </li> */}
               </ul>
             </div>
 
@@ -138,13 +140,22 @@ export function Footer() {
             <div>
               <h3 className="font-semibold mb-4">Follow Us</h3>
               <div className="flex space-x-4">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <a
+                  href="#"
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
                   <Twitter className="w-6 h-6" />
                 </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <a
+                  href="#"
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
                   <Linkedin className="w-6 h-6" />
                 </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <a
+                  href="#"
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
                   <Instagram className="w-6 h-6" />
                 </a>
               </div>
@@ -155,14 +166,22 @@ export function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-gray-800">
             <div className="flex items-center mb-4 md:mb-0">
               <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="Finstack logo" className="w-8 h-8 object-contain" />
-                <span className="text-xl font-semibold text-white">Finstack</span>
+                <img
+                  src="/logo.png"
+                  alt="Finstack logo"
+                  className="w-8 h-8 object-contain"
+                />
+                <span className="text-xl font-semibold text-white">
+                  Finstack
+                </span>
               </div>
             </div>
-            <p className="text-gray-400 text-sm">© 2025 Finstack. All rights reserved.</p>
+            <p className="text-gray-400 text-sm">
+              © 2025 Finstack. All rights reserved.
+            </p>
           </div>
         </div>
       </div>
     </footer>
-  )
+  );
 }
