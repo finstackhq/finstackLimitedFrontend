@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 // GET /api/admin/users -> proxy to backend admin/users and normalize shape
 export async function GET(request: NextRequest) {
@@ -7,23 +7,26 @@ export async function GET(request: NextRequest) {
 
   try {
     if (!endpoint) {
-      console.error('[admin/users] FINSTACK_BACKEND_API_URL not set');
-      return NextResponse.json({ error: 'Server not configured' }, { status: 500 });
+      console.error("[admin/users] FINSTACK_BACKEND_API_URL not set");
+      return NextResponse.json(
+        { error: "Server not configured" },
+        { status: 500 },
+      );
     }
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search') || '';
-    const status = searchParams.get('status') || '';
+    const search = searchParams.get("search") || "";
+    const status = searchParams.get("status") || "";
 
-    const token = request.cookies.get('access_token')?.value;
+    const token = request.cookies.get("access_token")?.value;
     const res = await fetch(endpoint, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
+        Accept: "application/json",
+        "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      cache: 'no-store',
+      cache: "no-store",
     });
 
     let upstream: any = null;
@@ -37,15 +40,15 @@ export async function GET(request: NextRequest) {
     if (res.status === 401) {
       const out = NextResponse.json(upstream, { status: 401 });
       try {
-        out.cookies.delete('access_token');
-        out.cookies.set('admin_session', '', {
-          path: '/admin',
+        out.cookies.delete("access_token");
+        out.cookies.set("admin_session", "", {
+          path: "/admin",
           maxAge: 0,
           httpOnly: true,
-          sameSite: 'lax',
-          secure: process.env.NODE_ENV === 'production',
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
         });
-      } catch { }
+      } catch {}
       return out;
     }
 
@@ -99,25 +102,41 @@ export async function GET(request: NextRequest) {
         return Number(u.balance.total) || 0;
       }
       // Try direct balance field
-      if (u?.balance !== undefined && typeof u?.balance !== 'object') {
+      if (u?.balance !== undefined && typeof u?.balance !== "object") {
         return Number(u.balance) || 0;
       }
       return 0;
     };
 
     let users: NormalizedUser[] = list.map((u: any) => ({
-      id: String(u?._id || u?.id || ''),
-      name: typeof u?.name === 'string' && u.name.trim().length
-        ? u.name
-        : (typeof u?.email === 'string' ? u.email.split('@')[0] : '—'),
-      email: String(u?.email || '—'),
-      country: String(u?.country || '—'),
+      id: String(u?._id || u?.id || ""),
+      firstName:
+        typeof u?.firstName === "string" && u.firstName.trim().length
+          ? u.firstName
+          : "",
+      lastName:
+        typeof u?.lastName === "string" && u.lastName.trim().length
+          ? u.lastName
+          : "",
+      fullname:
+        typeof u?.fullname === "string" && u.fullname.trim().length
+          ? u.fullname
+          : (typeof u?.firstName === "string" && u.firstName.trim().length) ||
+              (typeof u?.lastName === "string" && u.lastName.trim().length)
+            ? `${u.firstName || ""} ${u.lastName || ""}`.trim()
+            : typeof u?.name === "string" && u.name.trim().length
+              ? u.name
+              : typeof u?.email === "string"
+                ? u.email.split("@")[0]
+                : "—",
+      email: String(u?.email || "—"),
+      country: String(u?.country || "—"),
       balance: extractBalance(u),
-      currency: String(u?.currency || 'NGN'),
-      kycStatus: String(u?.kycStatus || 'not_required').toLowerCase(),
-      status: String(u?.status || 'active'),
-      joinedAt: String(u?.createdAt || u?.joinedAt || ''),
-      role: String(u?.role || 'user'),
+      currency: String(u?.currency || "NGN"),
+      kycStatus: String(u?.kycStatus || "not_required").toLowerCase(),
+      status: String(u?.status || "active"),
+      joinedAt: String(u?.createdAt || u?.joinedAt || ""),
+      role: String(u?.role || "user"),
       // Pass the full balances array with walletAddress, externalWalletId, currency, balance details
       balances: Array.isArray(u?.balances) ? u.balances : [],
       totalBalance: Number(u?.totalBalance) || extractBalance(u),
@@ -126,9 +145,10 @@ export async function GET(request: NextRequest) {
     // Apply filters client-side
     if (search) {
       const q = search.toLowerCase();
-      users = users.filter((user: NormalizedUser) =>
-        user.name.toLowerCase().includes(q) ||
-        user.email.toLowerCase().includes(q)
+      users = users.filter(
+        (user: NormalizedUser) =>
+          user.name.toLowerCase().includes(q) ||
+          user.email.toLowerCase().includes(q),
       );
     }
 
@@ -138,10 +158,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(users, { status: res.status });
   } catch (error: any) {
-    console.error('[admin/users] GET error:', error?.message || error);
+    console.error("[admin/users] GET error:", error?.message || error);
     return NextResponse.json(
-      { error: error?.message || 'Failed to fetch users' },
-      { status: 500 }
+      { error: error?.message || "Failed to fetch users" },
+      { status: 500 },
     );
   }
 }
@@ -150,10 +170,10 @@ export async function PATCH(request: NextRequest) {
   try {
     const { id, action } = await request.json();
 
-    if (!id || !action || !['suspend', 'activate', 'delete'].includes(action)) {
+    if (!id || !action || !["suspend", "activate", "delete"].includes(action)) {
       return NextResponse.json(
-        { error: 'Invalid request data' },
-        { status: 400 }
+        { error: "Invalid request data" },
+        { status: 400 },
       );
     }
 
@@ -162,12 +182,12 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `User ${action}d successfully`
+      message: `User ${action}d successfully`,
     });
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to process user action' },
-      { status: 500 }
+      { error: "Failed to process user action" },
+      { status: 500 },
     );
   }
 }

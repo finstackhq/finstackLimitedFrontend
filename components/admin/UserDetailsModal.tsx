@@ -1,16 +1,23 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { 
-  User as UserIcon, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Calendar, 
-  Shield, 
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  User as UserIcon,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Shield,
   Activity,
   Wallet,
   Flag,
@@ -19,10 +26,10 @@ import {
   Clock,
   TrendingUp,
   ArrowRightLeft,
-  AlertTriangle
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+  AlertTriangle,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface Transaction {
   id: string;
@@ -35,10 +42,12 @@ interface Transaction {
 
 interface User {
   id: string;
-  name: string;
+  firstName?: string;
+  lastName?: string;
+  fullname?: string;
   email: string;
   phone?: string;
-  country: string;
+  country?: string;
   balance: number;
   currency: string;
   kycStatus: string;
@@ -61,48 +70,66 @@ interface UserDetailsModalProps {
   onRoleChange?: (userId: string, newRole: string) => Promise<void> | void;
 }
 
-export function UserDetailsModal({ user, open, onOpenChange, transactions = [], onRoleChange }: UserDetailsModalProps) {
+export function UserDetailsModal({
+  user,
+  open,
+  onOpenChange,
+  transactions = [],
+  onRoleChange,
+}: UserDetailsModalProps) {
   const [roleChangeOpen, setRoleChangeOpen] = useState(false);
   const [changingRole, setChangingRole] = useState(false);
   const { toast } = useToast();
 
   if (!user) return null;
 
+  // ...existing code...
+
+  // Helper: Get best full name display
+  const fullNameDisplay =
+    user.fullname && user.fullname.trim().length
+      ? user.fullname
+      : ((user.firstName || "") + " " + (user.lastName || "")).trim() ||
+        "Unknown User";
+
   const handleRoleChange = async (newRole: string) => {
     if (!user || !onRoleChange) return;
-    
+
     setChangingRole(true);
     try {
       await onRoleChange(user.id, newRole);
-      
+
       // Log the role change for audit trail
       const auditLog = {
         userId: user.id,
-        userName: user.name,
-        action: 'role_change',
-        oldRole: user.role || 'user',
+        userName: fullNameDisplay,
+        action: "role_change",
+        oldRole: user.role || "user",
         newRole: newRole,
         timestamp: new Date().toISOString(),
-        admin: 'current_admin', // In production, get from auth context
+        admin: "current_admin", // In production, get from auth context
       };
-      
+
       // Store in localStorage for demonstration (in production, send to API)
-      const existingLogs = JSON.parse(localStorage.getItem('role-change-logs') || '[]');
+      const existingLogs = JSON.parse(
+        localStorage.getItem("role-change-logs") || "[]",
+      );
       existingLogs.push(auditLog);
-      localStorage.setItem('role-change-logs', JSON.stringify(existingLogs));
-      
+      localStorage.setItem("role-change-logs", JSON.stringify(existingLogs));
+
       toast({
-        title: 'Role Updated Successfully',
-        description: `${user.name} has been ${newRole === 'merchant' ? 'upgraded to merchant' : 'changed to ' + newRole}.`,
+        title: "Role Updated Successfully",
+        description: `${fullNameDisplay} has been ${newRole === "merchant" ? "upgraded to merchant" : "changed to " + newRole}.`,
       });
-      
+
       setRoleChangeOpen(false);
       onOpenChange(false);
     } catch (error) {
       toast({
-        title: 'Role Change Failed',
-        description: 'There was an error updating the user role. Please try again.',
-        variant: 'destructive',
+        title: "Role Change Failed",
+        description:
+          "There was an error updating the user role. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setChangingRole(false);
@@ -111,66 +138,67 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
 
   const formatCurrency = (amount: number, currency: string) => {
     // Handle invalid or missing currency codes
-    const validCurrency = currency && /^[A-Z]{3}$/i.test(currency) ? currency.toUpperCase() : 'USD';
-    
+    const validCurrency =
+      currency && /^[A-Z]{3}$/i.test(currency) ? currency.toUpperCase() : "USD";
+
     try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
         currency: validCurrency,
         minimumFractionDigits: 2,
       }).format(amount);
     } catch {
       // Fallback for any other issues
-      return `${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${validCurrency}`;
+      return `${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${validCurrency}`;
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'suspended':
-        return 'bg-red-100 text-red-800';
-      case 'inactive':
-        return 'bg-gray-100 text-gray-800';
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "suspended":
+        return "bg-red-100 text-red-800";
+      case "inactive":
+        return "bg-gray-100 text-gray-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getKYCStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      case 'not_required':
-      case 'not_submitted':
-        return 'bg-blue-100 text-blue-800';
+      case "approved":
+        return "bg-green-100 text-green-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "rejected":
+        return "bg-red-100 text-red-800";
+      case "not_required":
+      case "not_submitted":
+        return "bg-blue-100 text-blue-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getKYCStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'approved':
+      case "approved":
         return <CheckCircle2 className="w-4 h-4" />;
-      case 'pending':
+      case "pending":
         return <Clock className="w-4 h-4" />;
-      case 'rejected':
+      case "rejected":
         return <XCircle className="w-4 h-4" />;
       default:
         return <Shield className="w-4 h-4" />;
@@ -193,7 +221,7 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                 </div>
                 <div>
                   <DialogTitle className="text-2xl font-bold text-white mb-1">
-                    {user.name}
+                    {fullNameDisplay}
                   </DialogTitle>
                   <DialogDescription className="text-blue-100 flex items-center gap-2">
                     <Mail className="w-4 h-4" />
@@ -202,12 +230,18 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                 </div>
               </div>
               <div className="flex gap-2">
-                <Badge className={cn('text-xs', getStatusColor(user.status))}>
+                <Badge className={cn("text-xs", getStatusColor(user.status))}>
                   {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                 </Badge>
-                <Badge className={cn('text-xs flex items-center gap-1', getKYCStatusColor(user.kycStatus))}>
+                <Badge
+                  className={cn(
+                    "text-xs flex items-center gap-1",
+                    getKYCStatusColor(user.kycStatus),
+                  )}
+                >
                   {getKYCStatusIcon(user.kycStatus)}
-                  {user.kycStatus.replace('_', ' ').charAt(0).toUpperCase() + user.kycStatus.slice(1).replace('_', ' ')}
+                  {user.kycStatus.replace("_", " ").charAt(0).toUpperCase() +
+                    user.kycStatus.slice(1).replace("_", " ")}
                 </Badge>
               </div>
             </div>
@@ -229,7 +263,9 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Full Name</p>
-                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {fullNameDisplay}
+                  </p>
                 </div>
               </div>
 
@@ -239,7 +275,9 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Email Address</p>
-                  <p className="text-sm font-medium text-gray-900 break-all">{user.email}</p>
+                  <p className="text-sm font-medium text-gray-900 break-all">
+                    {user.email}
+                  </p>
                 </div>
               </div>
 
@@ -250,7 +288,9 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Phone Number</p>
-                    <p className="text-sm font-medium text-gray-900">{user.phone}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {user.phone}
+                    </p>
                   </div>
                 </div>
               )}
@@ -261,7 +301,9 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Country</p>
-                  <p className="text-sm font-medium text-gray-900">{user.country}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {user.country}
+                  </p>
                 </div>
               </div>
 
@@ -271,7 +313,9 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Role</p>
-                  <p className="text-sm font-medium text-gray-900 capitalize">{user.role || 'User'}</p>
+                  <p className="text-sm font-medium text-gray-900 capitalize">
+                    {user.role || "User"}
+                  </p>
                 </div>
               </div>
 
@@ -280,8 +324,12 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                   <Calendar className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Registration Date</p>
-                  <p className="text-sm font-medium text-gray-900">{formatDate(user.joinedAt)}</p>
+                  <p className="text-xs text-gray-500 mb-1">
+                    Registration Date
+                  </p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {formatDate(user.joinedAt)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -292,32 +340,44 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
             {/* Wallet Balance */}
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-5 border border-green-200">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-900">Wallet Balance</h3>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Wallet Balance
+                </h3>
                 <div className="w-10 h-10 rounded-lg bg-green-600 flex items-center justify-center">
                   <Wallet className="w-5 h-5 text-white" />
                 </div>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{formatCurrency(user.balance, user.currency)}</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {formatCurrency(user.balance, user.currency)}
+              </p>
               <p className="text-xs text-gray-600 mt-1">Available Balance</p>
             </div>
 
             {/* Activity Stats */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-5 border border-blue-200">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-900">Activity</h3>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Activity
+                </h3>
                 <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
                   <Activity className="w-5 h-5 text-white" />
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Total Transactions</span>
-                  <span className="text-lg font-bold text-gray-900">{user.totalTransactions || 0}</span>
+                  <span className="text-sm text-gray-600">
+                    Total Transactions
+                  </span>
+                  <span className="text-lg font-bold text-gray-900">
+                    {user.totalTransactions || 0}
+                  </span>
                 </div>
                 {user.lastActive && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Last Active</span>
-                    <span className="text-xs text-gray-700">{formatDate(user.lastActive)}</span>
+                    <span className="text-xs text-gray-700">
+                      {formatDate(user.lastActive)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -333,35 +393,45 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {user.balances.map((wallet: any, index: number) => (
-                  <div key={index} className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div
+                    key={wallet.walletAddress || wallet.currency || index}
+                    className="bg-white rounded-lg p-4 border border-gray-200"
+                  >
                     {/* Currency Header */}
                     <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
                       <span className="text-sm font-semibold text-gray-900">
-                        {wallet.currency || 'Unknown'}
+                        {wallet.currency || "Unknown"}
                       </span>
                       <span className="text-lg font-bold text-green-600">
-                        {typeof wallet.balance?.total === 'number' 
-                          ? wallet.balance.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                          : '0.00'}
+                        {typeof wallet.balance?.total === "number"
+                          ? wallet.balance.total.toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })
+                          : "0.00"}
                       </span>
                     </div>
-                    
+
                     {/* Balance Breakdown */}
                     <div className="space-y-2 mb-3">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-500">Available</span>
                         <span className="text-gray-900 font-medium">
-                          {typeof wallet.balance?.available === 'number' 
-                            ? wallet.balance.available.toLocaleString('en-US', { minimumFractionDigits: 2 })
-                            : '0.00'}
+                          {typeof wallet.balance?.available === "number"
+                            ? wallet.balance.available.toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                              })
+                            : "0.00"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-500">Locked</span>
                         <span className="text-gray-900 font-medium">
-                          {typeof wallet.balance?.locked === 'number' 
-                            ? wallet.balance.locked.toLocaleString('en-US', { minimumFractionDigits: 2 })
-                            : '0.00'}
+                          {typeof wallet.balance?.locked === "number"
+                            ? wallet.balance.locked.toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                              })
+                            : "0.00"}
                         </span>
                       </div>
                     </div>
@@ -369,7 +439,9 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                     {/* Wallet Address */}
                     {wallet.walletAddress && (
                       <div className="pt-3 border-t border-gray-100">
-                        <p className="text-xs text-gray-500 mb-1">Wallet Address</p>
+                        <p className="text-xs text-gray-500 mb-1">
+                          Wallet Address
+                        </p>
                         <p className="text-xs font-mono text-gray-700 break-all bg-gray-50 px-2 py-1.5 rounded">
                           {wallet.walletAddress}
                         </p>
@@ -379,7 +451,9 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                     {/* External Wallet ID */}
                     {wallet.externalWalletId && (
                       <div className="pt-2">
-                        <p className="text-xs text-gray-500 mb-1">External ID</p>
+                        <p className="text-xs text-gray-500 mb-1">
+                          External ID
+                        </p>
                         <p className="text-xs font-mono text-gray-600 break-all">
                           {wallet.externalWalletId}
                         </p>
@@ -400,25 +474,44 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
             <div className="space-y-3">
               {userTransactions.length > 0 ? (
                 userTransactions.slice(0, 5).map((transaction) => (
-                  <div key={transaction.id} className="flex items-center justify-between py-2 px-3 bg-white rounded-lg border border-gray-200">
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between py-2 px-3 bg-white rounded-lg border border-gray-200"
+                  >
                     <div className="flex items-center gap-3">
-                      <div className={cn(
-                        'w-8 h-8 rounded-full flex items-center justify-center',
-                        transaction.type === 'Deposit' ? 'bg-green-100' : 
-                        transaction.type === 'Withdrawal' ? 'bg-red-100' : 'bg-blue-100'
-                      )}>
+                      <div
+                        className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center",
+                          transaction.type === "Deposit"
+                            ? "bg-green-100"
+                            : transaction.type === "Withdrawal"
+                              ? "bg-red-100"
+                              : "bg-blue-100",
+                        )}
+                      >
                         <span className="text-xs font-bold">
-                          {transaction.type === 'Deposit' ? '↓' : transaction.type === 'Withdrawal' ? '↑' : '↔'}
+                          {transaction.type === "Deposit"
+                            ? "↓"
+                            : transaction.type === "Withdrawal"
+                              ? "↑"
+                              : "↔"}
                         </span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{transaction.type}</p>
-                        <p className="text-xs text-gray-500">{new Date(transaction.date).toLocaleDateString()}</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {transaction.type}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(transaction.date).toLocaleDateString()}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-900">
-                        {formatCurrency(transaction.amount, transaction.currency)}
+                        {formatCurrency(
+                          transaction.amount,
+                          transaction.currency,
+                        )}
                       </p>
                       <Badge className="text-xs bg-green-100 text-green-800">
                         {transaction.status}
@@ -427,7 +520,9 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-gray-500 text-center py-4">No recent transactions</p>
+                <p className="text-sm text-gray-500 text-center py-4">
+                  No recent transactions
+                </p>
               )}
             </div>
           </div>
@@ -444,7 +539,10 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                   <p className="text-xs text-gray-600 mb-2">Active Flags:</p>
                   <div className="flex flex-wrap gap-2">
                     {user.flags.map((flag, index) => (
-                      <Badge key={index} className="bg-yellow-200 text-yellow-900">
+                      <Badge
+                        key={index}
+                        className="bg-yellow-200 text-yellow-900"
+                      >
                         {flag}
                       </Badge>
                     ))}
@@ -489,8 +587,12 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                 <ArrowRightLeft className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-semibold">Change User Role</DialogTitle>
-                <DialogDescription className="text-sm">Select the new role for {user?.name}</DialogDescription>
+                <DialogTitle className="text-lg font-semibold">
+                  Change User Role
+                </DialogTitle>
+                <DialogDescription className="text-sm">
+                  Select the new role for {fullNameDisplay}
+                </DialogDescription>
               </div>
             </div>
           </DialogHeader>
@@ -500,7 +602,7 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <p className="text-xs text-gray-600 mb-2">Current Role</p>
               <Badge className="bg-blue-100 text-blue-800 capitalize">
-                {user?.role || 'user'}
+                {user?.role || "user"}
               </Badge>
             </div>
 
@@ -508,21 +610,26 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-amber-900 mb-1">Important Notice</p>
+                <p className="text-sm font-medium text-amber-900 mb-1">
+                  Important Notice
+                </p>
                 <p className="text-xs text-amber-800">
-                  Changing a user's role will immediately update their permissions and access levels. 
-                  This action will be logged in the audit trail.
+                  Changing a user's role will immediately update their
+                  permissions and access levels. This action will be logged in
+                  the audit trail.
                 </p>
               </div>
             </div>
 
             {/* Role Options */}
             <div className="space-y-3">
-              <p className="text-sm font-medium text-gray-900">Select New Role:</p>
-              
+              <p className="text-sm font-medium text-gray-900">
+                Select New Role:
+              </p>
+
               <Button
-                onClick={() => handleRoleChange('admin')}
-                disabled={changingRole || user?.role === 'admin'}
+                onClick={() => handleRoleChange("admin")}
+                disabled={changingRole || user?.role === "admin"}
                 className="w-full justify-start h-auto p-4 bg-white border-2 border-gray-200 hover:border-[#2F67FA] hover:bg-blue-50 text-left"
                 variant="outline"
               >
@@ -533,18 +640,21 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                   <div className="flex-1">
                     <p className="font-semibold text-gray-900">Admin</p>
                     <p className="text-xs text-gray-600">
-                      Full administrative access to manage users, settings, and system
+                      Full administrative access to manage users, settings, and
+                      system
                     </p>
                   </div>
-                  {user?.role === 'admin' && (
-                    <Badge className="bg-green-100 text-green-800 text-xs">Current</Badge>
+                  {user?.role === "admin" && (
+                    <Badge className="bg-green-100 text-green-800 text-xs">
+                      Current
+                    </Badge>
                   )}
                 </div>
               </Button>
 
               <Button
-                onClick={() => handleRoleChange('merchant')}
-                disabled={changingRole || user?.role === 'merchant'}
+                onClick={() => handleRoleChange("merchant")}
+                disabled={changingRole || user?.role === "merchant"}
                 className="w-full justify-start h-auto p-4 bg-white border-2 border-gray-200 hover:border-[#2F67FA] hover:bg-blue-50 text-left"
                 variant="outline"
               >
@@ -558,15 +668,17 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                       Can create ads, manage orders, and conduct P2P trading
                     </p>
                   </div>
-                  {user?.role === 'merchant' && (
-                    <Badge className="bg-green-100 text-green-800 text-xs">Current</Badge>
+                  {user?.role === "merchant" && (
+                    <Badge className="bg-green-100 text-green-800 text-xs">
+                      Current
+                    </Badge>
                   )}
                 </div>
               </Button>
 
               <Button
-                onClick={() => handleRoleChange('user')}
-                disabled={changingRole || user?.role === 'user'}
+                onClick={() => handleRoleChange("user")}
+                disabled={changingRole || user?.role === "user"}
                 className="w-full justify-start h-auto p-4 bg-white border-2 border-gray-200 hover:border-[#2F67FA] hover:bg-blue-50 text-left"
                 variant="outline"
               >
@@ -580,8 +692,10 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
                       Standard access to buy, trade, and manage personal wallet
                     </p>
                   </div>
-                  {user?.role === 'user' && (
-                    <Badge className="bg-green-100 text-green-800 text-xs">Current</Badge>
+                  {user?.role === "user" && (
+                    <Badge className="bg-green-100 text-green-800 text-xs">
+                      Current
+                    </Badge>
                   )}
                 </div>
               </Button>
@@ -590,8 +704,9 @@ export function UserDetailsModal({ user, open, onOpenChange, transactions = [], 
             {/* Audit Trail Info */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-xs text-blue-900">
-                <strong>📝 Audit Trail:</strong> This change will be recorded with timestamp, 
-                admin details, and the user's information for security and compliance purposes.
+                <strong>📝 Audit Trail:</strong> This change will be recorded
+                with timestamp, admin details, and the user's information for
+                security and compliance purposes.
               </p>
             </div>
           </div>
