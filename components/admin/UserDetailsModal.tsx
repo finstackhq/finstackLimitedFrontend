@@ -42,24 +42,26 @@ interface Transaction {
 
 interface User {
   id: string;
-  firstName?: string;
-  lastName?: string;
-  fullname?: string;
+  name: string;
   email: string;
   phone?: string;
   country?: string;
-  balance: number;
-  currency: string;
-  kycStatus: string;
-  status: string;
+  balance?: number;
+  currency?: string;
+  kycStatus?: string;
+  status?: string;
   role?: string;
-  joinedAt: string;
+  joinedAt?: string;
   lastActive?: string;
   totalTransactions?: number;
   flags?: string[];
   notes?: string;
   balances?: any[];
   totalBalance?: number;
+  firstName?: string;
+  lastName?: string;
+  fullname?: string;
+  howYouHeardAboutUs?: string;
 }
 
 interface UserDetailsModalProps {
@@ -81,16 +83,12 @@ export function UserDetailsModal({
   const [changingRole, setChangingRole] = useState(false);
   const { toast } = useToast();
 
+  // Debug: Log user details when modal opens
+  if (open && user) {
+    console.log("UserDetailsModal user object:", user);
+  }
+
   if (!user) return null;
-
-  // ...existing code...
-
-  // Helper: Get best full name display
-  const fullNameDisplay =
-    user.fullname && user.fullname.trim().length
-      ? user.fullname
-      : ((user.firstName || "") + " " + (user.lastName || "")).trim() ||
-        "Unknown User";
 
   const handleRoleChange = async (newRole: string) => {
     if (!user || !onRoleChange) return;
@@ -102,7 +100,7 @@ export function UserDetailsModal({
       // Log the role change for audit trail
       const auditLog = {
         userId: user.id,
-        userName: fullNameDisplay,
+        userName: user.name,
         action: "role_change",
         oldRole: user.role || "user",
         newRole: newRole,
@@ -119,7 +117,7 @@ export function UserDetailsModal({
 
       toast({
         title: "Role Updated Successfully",
-        description: `${fullNameDisplay} has been ${newRole === "merchant" ? "upgraded to merchant" : "changed to " + newRole}.`,
+        description: `${user.name} has been ${newRole === "merchant" ? "upgraded to merchant" : "changed to " + newRole}.`,
       });
 
       setRoleChangeOpen(false);
@@ -221,7 +219,7 @@ export function UserDetailsModal({
                 </div>
                 <div>
                   <DialogTitle className="text-2xl font-bold text-white mb-1">
-                    {fullNameDisplay}
+                    {user.name}
                   </DialogTitle>
                   <DialogDescription className="text-blue-100 flex items-center gap-2">
                     <Mail className="w-4 h-4" />
@@ -230,18 +228,30 @@ export function UserDetailsModal({
                 </div>
               </div>
               <div className="flex gap-2">
-                <Badge className={cn("text-xs", getStatusColor(user.status))}>
-                  {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                <Badge
+                  className={cn(
+                    "text-xs",
+                    getStatusColor(user.status ?? "inactive"),
+                  )}
+                >
+                  {String(user.status ?? "inactive")
+                    .charAt(0)
+                    .toUpperCase() + String(user.status ?? "inactive").slice(1)}
                 </Badge>
                 <Badge
                   className={cn(
                     "text-xs flex items-center gap-1",
-                    getKYCStatusColor(user.kycStatus),
+                    getKYCStatusColor(user.kycStatus ?? "not_submitted"),
                   )}
                 >
-                  {getKYCStatusIcon(user.kycStatus)}
-                  {user.kycStatus.replace("_", " ").charAt(0).toUpperCase() +
-                    user.kycStatus.slice(1).replace("_", " ")}
+                  {getKYCStatusIcon(String(user.kycStatus ?? "not_submitted"))}
+                  {String(user.kycStatus ?? "not_submitted")
+                    .replace("_", " ")
+                    .charAt(0)
+                    .toUpperCase() +
+                    String(user.kycStatus ?? "not_submitted")
+                      .slice(1)
+                      .replace("_", " ")}
                 </Badge>
               </div>
             </div>
@@ -264,7 +274,23 @@ export function UserDetailsModal({
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Full Name</p>
                   <p className="text-sm font-medium text-gray-900">
-                    {fullNameDisplay}
+                    {(() => {
+                      if (
+                        "firstName" in user &&
+                        "lastName" in user &&
+                        user.firstName &&
+                        user.lastName
+                      ) {
+                        return `${user.firstName} ${user.lastName}`;
+                      }
+                      if ("fullname" in user && user.fullname) {
+                        return user.fullname;
+                      }
+                      if (user.name) {
+                        return user.name;
+                      }
+                      return "—";
+                    })()}
                   </p>
                 </div>
               </div>
@@ -328,7 +354,24 @@ export function UserDetailsModal({
                     Registration Date
                   </p>
                   <p className="text-sm font-medium text-gray-900">
-                    {formatDate(user.joinedAt)}
+                    {user.joinedAt ? formatDate(String(user.joinedAt)) : "—"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="w-5 h-5 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">
+                    How You Heard About Us
+                  </p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {user.howYouHeardAboutUs &&
+                    user.howYouHeardAboutUs.trim().length > 0
+                      ? user.howYouHeardAboutUs.trim()
+                      : "—"}
                   </p>
                 </div>
               </div>
@@ -348,7 +391,10 @@ export function UserDetailsModal({
                 </div>
               </div>
               <p className="text-3xl font-bold text-gray-900">
-                {formatCurrency(user.balance, user.currency)}
+                {formatCurrency(
+                  Number(user.balance ?? 0),
+                  String(user.currency ?? "USD"),
+                )}
               </p>
               <p className="text-xs text-gray-600 mt-1">Available Balance</p>
             </div>
@@ -394,7 +440,7 @@ export function UserDetailsModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {user.balances.map((wallet: any, index: number) => (
                   <div
-                    key={wallet.walletAddress || wallet.currency || index}
+                    key={index}
                     className="bg-white rounded-lg p-4 border border-gray-200"
                   >
                     {/* Currency Header */}
@@ -591,7 +637,7 @@ export function UserDetailsModal({
                   Change User Role
                 </DialogTitle>
                 <DialogDescription className="text-sm">
-                  Select the new role for {fullNameDisplay}
+                  Select the new role for {user?.name}
                 </DialogDescription>
               </div>
             </div>

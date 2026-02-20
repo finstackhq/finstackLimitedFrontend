@@ -33,33 +33,27 @@ interface AddWalletDialogProps {
   }) => void;
 }
 
-const walletAssets = [
-  { value: "USDT", label: "USDT (Tether)" },
-  { value: "USDC", label: "USDC (USD Coin)" },
-  { value: "CNGN", label: "CNGN (Crypto Naira)" },
+const assetTypes = [
+  { value: "USDC", label: "USDC" },
+  { value: "CNGN", label: "CNGN" },
+  { value: "USDT", label: "USDT" },
 ];
 
 const networks = [
-  {
-    value: "Base Mainnet",
-    label: "Base Mainnet",
-    description: "USDC on Base Network",
-  },
+  { value: "Base", label: "Base", description: "Base (supported)" },
   {
     value: "BSC",
     label: "BSC (Binance Smart Chain)",
-    description: "USDC on Binance Smart Chain",
+    description: "Coming soon",
+    disabled: true,
   },
   {
     value: "Ethereum",
     label: "Ethereum",
-    description: "USDC on Ethereum Network",
+    description: "Coming soon",
+    disabled: true,
   },
-  {
-    value: "Tron",
-    label: "Tron",
-    description: "USDC on Tron Network",
-  },
+  { value: "Tron", label: "Tron", description: "Coming soon", disabled: true },
 ];
 
 export function AddWalletDialog({
@@ -68,25 +62,15 @@ export function AddWalletDialog({
 }: AddWalletDialogProps) {
   const [open, setOpen] = useState(false);
   const [walletName, setWalletName] = useState("");
-  const [walletAsset, setWalletAsset] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [selectedNetwork, setSelectedNetwork] = useState("");
+  const [selectedAsset, setSelectedAsset] = useState("");
   const { toast } = useToast();
 
   const isValidAddress = (address: string) => {
     // Basic validation for crypto addresses
     if (!address) return false;
-
-    // TRC20 addresses start with T and are 34 characters
-    if (selectedNetwork === "TRC20") {
-      return address.startsWith("T") && address.length === 34;
-    }
-
-    // ERC20, BEP20, BASE addresses start with 0x and are 42 characters
-    if (["ERC20", "BEP20", "BASE"].includes(selectedNetwork)) {
-      return address.startsWith("0x") && address.length === 42;
-    }
-
+    // For Base, BSC, Ethereum, Tron, just check length and alphanumeric
     return address.length >= 26 && address.length <= 62;
   };
 
@@ -95,47 +79,35 @@ export function AddWalletDialog({
       walletName &&
       walletAddress &&
       selectedNetwork &&
-      walletAsset &&
+      selectedAsset &&
       isValidAddress(walletAddress)
     ) {
       try {
-        const token = localStorage.getItem("accessToken");
-        if (!token) {
-          toast({
-            title: "Error",
-            description: "You must be logged in to add a wallet.",
-            variant: "destructive",
-          });
-          return;
-        }
-        const res = await fetch(
-          "https://finstacklimitedbackend.onrender.com/api/withdrawal-wallets",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              name: walletName,
-              address: walletAddress,
-              network: selectedNetwork,
-              asset: walletAsset,
-            }),
+        const res = await fetch("/api/fstack/withdrawal-wallets", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            // Add Authorization header if needed, e.g. 'Authorization': `Bearer ${token}`
           },
-        );
+          body: JSON.stringify({
+            name: walletName,
+            address: walletAddress,
+            network: selectedNetwork,
+            asset: selectedAsset,
+          }),
+        });
         const data = await res.json();
-        if (res.ok && (data.wallet || data.success)) {
+        if (res.ok && data.wallet) {
           toast({
             title: "Wallet Added",
             description: `${walletName} wallet has been added successfully.`,
           });
-          onWalletAdded?.(data.wallet || data.data);
+          onWalletAdded?.(data.wallet);
           // Reset form
           setWalletName("");
           setWalletAddress("");
           setSelectedNetwork("");
-          setWalletAsset("");
+          setSelectedAsset("");
           setOpen(false);
         } else {
           toast({
@@ -144,10 +116,10 @@ export function AddWalletDialog({
             variant: "destructive",
           });
         }
-      } catch (error: any) {
+      } catch (err) {
         toast({
           title: "Error",
-          description: error.message || "Failed to add wallet.",
+          description: "Network error. Please try again.",
           variant: "destructive",
         });
       }
@@ -156,9 +128,9 @@ export function AddWalletDialog({
 
   const canSubmit =
     walletName &&
-    walletAsset &&
     walletAddress &&
     selectedNetwork &&
+    selectedAsset &&
     isValidAddress(walletAddress);
 
   return (
@@ -168,20 +140,12 @@ export function AddWalletDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wallet className="w-5 h-5" />
+            Add Wallet Address
           </DialogTitle>
           <DialogDescription>
-            Add a new wallet address for withdrawals
+            Add a new USDT wallet address for withdrawals
           </DialogDescription>
         </DialogHeader>
-
-        {/* Minimum Naira withdrawal info */}
-        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-2">
-          <p className="text-xs text-yellow-700 font-semibold">
-            <strong>Note:</strong> The minimum Naira withdrawal is{" "}
-            <span className="font-bold">₦1,000</span>. Withdrawals below this
-            amount will not be processed.
-          </p>
-        </div>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
@@ -196,12 +160,12 @@ export function AddWalletDialog({
 
           <div className="space-y-2">
             <Label htmlFor="asset-type">Asset Type</Label>
-            <Select value={walletAsset} onValueChange={setWalletAsset}>
+            <Select value={selectedAsset} onValueChange={setSelectedAsset}>
               <SelectTrigger>
-                <SelectValue placeholder="Select asset (e.g. USDC)" />
+                <SelectValue placeholder="Select asset type" />
               </SelectTrigger>
               <SelectContent>
-                {walletAssets.map((asset) => (
+                {assetTypes.map((asset) => (
                   <SelectItem key={asset.value} value={asset.value}>
                     {asset.label}
                   </SelectItem>
@@ -218,7 +182,11 @@ export function AddWalletDialog({
               </SelectTrigger>
               <SelectContent>
                 {networks.map((network) => (
-                  <SelectItem key={network.value} value={network.value}>
+                  <SelectItem
+                    key={network.value}
+                    value={network.value}
+                    disabled={network.disabled}
+                  >
                     <div>
                       <div className="font-medium">{network.label}</div>
                       <div className="text-xs text-gray-500">
@@ -229,10 +197,10 @@ export function AddWalletDialog({
                 ))}
               </SelectContent>
             </Select>
-            {/* <p className="text-xs text-blue-700 mt-1">
+            <p className="text-xs text-blue-700 mt-1">
               Only Base withdrawals are currently supported. Other networks
               coming soon.
-            </p> */}
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -240,7 +208,7 @@ export function AddWalletDialog({
             <div className="relative">
               <Input
                 id="wallet-address"
-                placeholder={selectedNetwork === "TRC20" ? "T..." : "0x..."}
+                placeholder="Enter wallet address"
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 className={`pr-10 ${
@@ -272,8 +240,8 @@ export function AddWalletDialog({
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-xs text-blue-900">
                 <strong>Important:</strong> Make sure this address supports the
-                selected asset on the NETWORK. Sending to an incorrect address
-                may result in permanent loss of funds.
+                selected asset on the {selectedNetwork} network. Sending to an
+                incorrect address may result in permanent loss of funds.
               </p>
             </div>
           )}
