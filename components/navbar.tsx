@@ -32,6 +32,9 @@ export function Navbar() {
               <Link href="/features" className="text-muted-foreground hover:text-foreground transition-colors">
                 Features
               </Link>
+              <Link href="/contact" className="text-muted-foreground hover:text-foreground transition-colors">
+                Contact Us
+              </Link>
             </div>
 
             {/* CTA Button */}
@@ -103,6 +106,14 @@ export function Navbar() {
                 onClick={() => setIsOpen(false)}
               >
                 <span className="text-gray-700 font-medium">Features</span>
+                <ArrowRight size={16} className="text-gray-400 group-hover:text-primary transition-colors" />
+              </Link>
+              <Link
+                href="/contact"
+                className="flex items-center justify-between py-4 px-4 rounded-xl hover:bg-gray-50 transition-colors group"
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="text-gray-700 font-medium">Contact Us</span>
                 <ArrowRight size={16} className="text-gray-400 group-hover:text-primary transition-colors" />
               </Link>
             </nav>

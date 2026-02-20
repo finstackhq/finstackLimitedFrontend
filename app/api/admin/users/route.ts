@@ -110,25 +110,31 @@ export async function GET(request: NextRequest) {
 
     let users: NormalizedUser[] = list.map((u: any) => ({
       id: String(u?._id || u?.id || ""),
-      firstName:
-        typeof u?.firstName === "string" && u.firstName.trim().length
-          ? u.firstName
-          : "",
-      lastName:
-        typeof u?.lastName === "string" && u.lastName.trim().length
-          ? u.lastName
-          : "",
-      fullname:
+      name:
         typeof u?.fullname === "string" && u.fullname.trim().length
           ? u.fullname
-          : (typeof u?.firstName === "string" && u.firstName.trim().length) ||
-              (typeof u?.lastName === "string" && u.lastName.trim().length)
-            ? `${u.firstName || ""} ${u.lastName || ""}`.trim()
-            : typeof u?.name === "string" && u.name.trim().length
-              ? u.name
-              : typeof u?.email === "string"
-                ? u.email.split("@")[0]
-                : "—",
+          : `${u.firstName || ""} ${u.lastName || ""}`.trim() ||
+            u.email?.split("@")[0] ||
+            "—",
+      // firstName:
+      //   typeof u?.firstName === "string" && u.firstName.trim().length
+      //     ? u.firstName
+      //     : "",
+      // lastName:
+      //   typeof u?.lastName === "string" && u.lastName.trim().length
+      //     ? u.lastName
+      //     : "",
+      // fullname:
+      //   typeof u?.fullname === "string" && u.fullname.trim().length
+      //     ? u.fullname
+      //     : (typeof u?.firstName === "string" && u.firstName.trim().length) ||
+      //         (typeof u?.lastName === "string" && u.lastName.trim().length)
+      //       ? `${u.firstName || ""} ${u.lastName || ""}`.trim()
+      //       : typeof u?.name === "string" && u.name.trim().length
+      //         ? u.name
+      //         : typeof u?.email === "string"
+      //           ? u.email.split("@")[0]
+      //           : "—",
       email: String(u?.email || "—"),
       country: String(u?.country || "—"),
       balance: extractBalance(u),
@@ -140,6 +146,7 @@ export async function GET(request: NextRequest) {
       // Pass the full balances array with walletAddress, externalWalletId, currency, balance details
       balances: Array.isArray(u?.balances) ? u.balances : [],
       totalBalance: Number(u?.totalBalance) || extractBalance(u),
+      howYouHeardAboutUs: u?.howYouHeardAboutUs || "—",
     }));
 
     // Apply filters client-side

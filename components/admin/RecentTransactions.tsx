@@ -18,11 +18,20 @@ interface RecentTransactionsProps {
 
 export function RecentTransactions({ transactions }: RecentTransactionsProps) {
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-    }).format(amount);
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: 2,
+      }).format(amount);
+    } catch (e) {
+      // Fallback for non-ISO currencies like CNGN
+      if (currency === 'CNGN') {
+        return amount.toLocaleString('en-NG', { minimumFractionDigits: 2 }) + ' CNGN';
+      }
+      // Fallback for other unknown currencies
+      return amount.toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' ' + currency;
+    }
   };
 
   const formatDate = (dateString: string) => {
