@@ -20,11 +20,13 @@ interface KYCRequest {
   phone?: string;
   address?: string;
   documentType?: string;
+  howYouHeardAboutUs?: string;
 }
 
 export default function KYCPage() {
   const [requests, setRequests] = useState<KYCRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const router = useRouter();
 
   useEffect(() => {
@@ -49,6 +51,18 @@ export default function KYCPage() {
             const first = r?.firstname ?? r?.firstName ?? r?.user_id?.firstName;
             const last = r?.lastname ?? r?.lastName ?? r?.user_id?.lastName;
             const builtName = `${first || ""} ${last || ""}`.trim();
+
+            // Extract and normalize referral source
+            let referral = r?.howYouHeardAboutUs || r?.referralSource || r?.referral || r?.heardFrom || "Unknown";
+            referral = typeof referral === "string" ? referral.trim().toLowerCase() : "Unknown";
+            // Group similar sources
+            if (referral.includes("youtube")) referral = "YouTube";
+            else if (referral.includes("google")) referral = "Google";
+            else if (referral.includes("friend")) referral = "Friend";
+            else if (referral.includes("whatsapp")) referral = "WhatsApp";
+            else if (referral.includes("facebook")) referral = "Facebook";
+            else if (referral.includes("social media")) referral = "Social Media";
+
             return {
               id:
                 r?.id ||
@@ -97,6 +111,7 @@ export default function KYCPage() {
               idType: r?.idType || r?.id_type,
               issuingCountry: r?.issuingCountry || r?.country,
               idNumber: r?.idNumber || r?.id_number,
+              howYouHeardAboutUs: referral,
             };
           });
           setRequests(mapped);
@@ -213,18 +228,50 @@ export default function KYCPage() {
     );
   }
 
+
+  // Aggregate referral sources
+  const referralCounts: Record<string, number> = {};
+  requests.forEach((r) => {
+    const source = (r.howYouHeardAboutUs || "Unknown").trim();
+    referralCounts[source] = (referralCounts[source] || 0) + 1;
+  });
+
+  // Filter records based on status
+  const filteredRequests = statusFilter === "all"
+    ? requests
+    : requests.filter((r) => r.status === statusFilter);
+
   return (
     <div className="space-y-6">
+
+      {/* KYC Table & Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
           KYC Requests
         </h1>
-        <div className="text-xs md:text-sm text-gray-600">
-          {requests.length} pending request{requests.length !== 1 ? "s" : ""}
+        <div className="flex items-center gap-2">
+          <label htmlFor="kyc-status-filter" className="text-xs md:text-sm text-gray-600 font-semibold mr-1">Status:</label>
+          <div className="relative">
+            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" d="M7 10l5 5 5-5"/></svg>
+            </span>
+            <select
+              id="kyc-status-filter"
+              className="pl-7 pr-6 py-2 rounded-full shadow-md border border-gray-200 bg-white text-xs md:text-sm font-medium text-gray-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-150 outline-none appearance-none hover:border-blue-300 hover:bg-blue-50"
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+            >
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
         </div>
       </div>
       <KYCOverview
-        records={requests}
+        records={filteredRequests}
         onApprove={approve}
         onReject={reject}
         onSuspend={suspend}
