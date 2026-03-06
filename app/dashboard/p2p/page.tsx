@@ -26,8 +26,10 @@ import {
 import { P2P_CURRENCY_COUNTRIES, P2PCurrency } from "@/lib/constants";
 import { CurrencyCircleIcon } from "@/components/CurrencyCircleIcon";
 import { getMerchantAds } from "@/lib/p2p-storage";
+// ...existing code...
 import { TraderProfileModal } from "@/components/p2p/TraderProfileModal";
 import { OrderModal } from "@/components/p2p/OrderModal";
+// ...existing code...
 
 export default function P2PMarketplacePage() {
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");

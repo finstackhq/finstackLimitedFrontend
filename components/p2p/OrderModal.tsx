@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
 import { fetchWithAuth } from "@/components/auth-form";
 import {
@@ -13,6 +13,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { P2PAd, Trader, P2POrder } from "@/lib/p2p-mock-data";
+
+// Extend Trader interface if completedTrades doesn't exist
+interface TraderWithStats extends Trader {
+  completedTrades?: number;
+  ratingPercentage?: number;
+}
+
+export { OrderModal };
+
+// Extend P2PAd interface to include paymentDetails
+interface P2PAdExtended extends P2PAd {
+  paymentDetails?: {
+    bankName?: string;
+    accountNumber?: string;
+    accountName?: string;
+    country?: string;
+    type?: string;
+  };
+}
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeftRight,
@@ -25,8 +44,8 @@ import {
 import { useRouter } from "next/navigation";
 
 interface OrderModalProps {
-  ad: P2PAd;
-  trader: Trader;
+  ad: P2PAdExtended;
+  trader: TraderWithStats;
   open: boolean;
   onClose: () => void;
   onOrderCreated: (order: P2POrder) => void;
@@ -34,13 +53,11 @@ interface OrderModalProps {
 
 function getFiatSymbol(fiat: string) {
   if (fiat === "NGN") return "₦";
-  if (fiat === "RMB" || fiat === "CNY") return "¥";
   if (fiat === "GHS") return "₵";
   if (fiat === "USD") return "$";
-  return fiat;
 }
 
-export function OrderModal({
+function OrderModal({
   ad,
   trader,
   open,
@@ -62,6 +79,7 @@ export function OrderModal({
   } = usePaymentMethods();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initiatePayload, setInitiatePayload] = useState<any>(null);
 
   // Only allow CNGN and USDC as crypto
   const supportedCryptos = ["CNGN", "USDC"];
@@ -161,14 +179,8 @@ export function OrderModal({
 
   const handleConfirm = async () => {
     // STEP2: Log selectedPayment and ad.type before proceeding
-    console.log("[STEP2] handleConfirm called");
-    console.log("[STEP2] ad.type:", ad.type);
-    console.log("[STEP2] selectedPayment:", selectedPayment);
 
-    // STEP2: Extra debug: log userPaymentMethods
-    if (ad.type === "sell") {
-      // Removed debug log for production
-    }
+    // Only declare fiat and crypto once at the top of handleConfirm
     const fiat = parseFloat(fiatAmount);
     const crypto = parseFloat(cryptoAmount);
 
@@ -190,19 +202,18 @@ export function OrderModal({
       return;
     }
 
-    // Removed warning toast for production
-
     setIsLoading(true);
     setError(null);
 
-
+    try {
       // STEP3: Robust paymentMethod extraction for SELL
       let paymentMethod = undefined;
       if (ad.type === "sell") {
         if (!selectedPayment) {
           toast({
             title: "Select Payment Method",
-            description: "Please select your payment method to receive payment.",
+            description:
+              "Please select your payment method to receive payment.",
             variant: "destructive",
           });
           setIsLoading(false);
@@ -243,12 +254,6 @@ export function OrderModal({
           return;
         }
       }
-
-      // STEP3: log paymentMethod before payload
-      if (ad.type === "sell") {
-        console.log("[STEP3] paymentMethod to send:", paymentMethod);
-      }
-
 
       // Always build paymentDetails for SELL
       let paymentDetails = undefined;
@@ -279,38 +284,70 @@ export function OrderModal({
         ...(ad.type === "sell"
           ? {
               paymentMethod,
-              paymentDetails: paymentDetails || (typeof selectedPayment === "object" ? { ...selectedPayment } : undefined),
+              paymentDetails:
+                paymentDetails ||
+                (typeof selectedPayment === "object"
+                  ? { ...selectedPayment }
+                  : undefined),
             }
           : {}),
       };
-      console.log("[STEP4] Payload to send:", payload);
       if (ad.type === "sell" && !payload.paymentMethod) {
         toast({
           title: "Payment Method Missing (Failsafe)",
-          description: "Payload is missing paymentMethod. Please select a payment method and try again.",
+          description:
+            "Payload is missing paymentMethod. Please select a payment method and try again.",
           variant: "destructive",
         });
         setIsLoading(false);
         return;
       }
-      const response = await fetchWithAuth("/api/fstack/p2p", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
+      let response, data;
+      try {
+        response = await fetchWithAuth("/api/fstack/p2p", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        data = await response.json();
+      } catch (networkError) {
+        toast({
+          title: "Network Error",
+          description:
+            "Unable to reach server. Please check your connection and try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
 
       if (!data.success) {
-        throw new Error(data.error || data.message || "Failed to create order");
+        // Show specific error for liquidity or other backend issues
+        let errorMsg = data.error || data.message || "Failed to create order";
+        let toastTitle = "Order Failed";
+        if (errorMsg.toLowerCase().includes("liquidity")) {
+          toastTitle = "Insufficient Liquidity";
+        } else if (errorMsg.toLowerCase().includes("network")) {
+          toastTitle = "Network Error";
+        } else if (errorMsg.toLowerCase().includes("internal server error")) {
+          toastTitle = "Server Error";
+        }
+        toast({
+          title: toastTitle,
+          description: errorMsg,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
       }
 
       // Always use backend's returned paymentDetails if present
-      const initiatePayload = (
+      const initiatePayloadData = (
         data && typeof data === "object" ? data.data || data : null
       ) as any;
+      setInitiatePayload(initiatePayloadData);
       const orderId =
         initiatePayload?._id ||
         initiatePayload?.tradeId ||
@@ -321,10 +358,22 @@ export function OrderModal({
         data._id;
 
       if (!orderId) {
-        throw new Error("Order created but ID missing");
+        toast({
+          title: "Order Created, But No ID",
+          description:
+            "Order was created but no order ID was returned. Please contact support.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
       }
 
-      // Removed order created toast for production
+      // Show success toast when order is created
+      toast({
+        title: "Order Created",
+        description: `Your order has been created successfully! Order ID: ${orderId}`,
+        variant: "default",
+      });
 
       const fullName =
         typeof trader?.name === "string" ? trader.name.trim() : "";
@@ -334,7 +383,7 @@ export function OrderModal({
       const sellerLastName = restName.join(" ");
 
       // Patch: Always save full payment method for BUY and SELL
-      let patchedPaymentDetails = initiatePayload?.paymentDetails;
+      let patchedPaymentDetails = initiatePayloadData?.paymentDetails;
       if (ad.type === "sell") {
         // SELL: use selectedPayment (user's own method)
         if (
@@ -365,115 +414,10 @@ export function OrderModal({
           };
         }
       }
-      // Debug: Log selectedPayment and patchedPaymentDetails
-      console.log("[DEBUG] selectedPayment:", selectedPayment);
-    try {
-      // ...existing code...
-      // Build paymentDetails for SELL
-      let paymentDetails = undefined;
-      if (ad.type === "sell" && selectedPayment) {
-        if (selectedPayment.type === "ALIPAY") {
-          paymentDetails = {
-            alipayAccountName: selectedPayment.alipayAccountName,
-            alipayEmail: selectedPayment.alipayEmail,
-            alipayQrImage: selectedPayment.alipayQrImage,
-            country: selectedPayment.country || "NG",
-            type: "ALIPAY",
-          };
-        } else {
-          // Assume bank account object
-          paymentDetails = {
-            bankName: selectedPayment.bankName,
-            accountNumber: selectedPayment.accountNumber,
-            accountName: selectedPayment.accountName,
-            bankCode: selectedPayment.bankCode,
-            country: selectedPayment.country || "NG",
-            type: "BANK",
-          };
-        }
-      }
 
-      // Always include paymentMethod and paymentDetails in payload for SELL
-      let paymentMethod = undefined;
-      if (ad.type === "sell") {
-        if (!selectedPayment) {
-          toast({
-            title: "Select Payment Method",
-            description: "Please select your payment method to receive payment.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-        if (typeof selectedPayment === "object") {
-          if (selectedPayment.type === "ALIPAY") {
-            paymentMethod = "ALIPAY";
-          } else if (selectedPayment._id) {
-            paymentMethod = selectedPayment._id;
-          } else {
-            toast({
-              title: "Invalid Payment Method",
-              description: "Selected payment method is missing an ID.",
-              variant: "destructive",
-            });
-            setIsLoading(false);
-            return;
-          }
-        } else if (typeof selectedPayment === "string") {
-          paymentMethod = selectedPayment;
-        } else {
-          toast({
-            title: "Invalid Payment Method",
-            description: "Please select a valid payment method.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-        if (!paymentMethod) {
-          toast({
-            title: "Payment Method Required",
-            description: "Please select a valid payment method.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-      }
-      const payload = {
-        adId: ad.id,
-        amountSource: Number(fiatAmount),
-        ...(ad.type === "sell"
-          ? {
-              paymentMethod,
-              paymentDetails: paymentDetails || (typeof selectedPayment === "object" ? { ...selectedPayment } : undefined),
-            }
-          : {}),
-      };
-      console.log("[STEP4] Payload to send:", payload);
-      if (ad.type === "sell" && !payload.paymentMethod) {
-        toast({
-          title: "Payment Method Missing (Failsafe)",
-          description: "Payload is missing paymentMethod. Please select a payment method and try again.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-      const response = await fetchWithAuth("/api/fstack/p2p", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || data.message || "Failed to create order");
-      }
+      // Debug: Log selectedPayment and patchedPaymentDetails
 
       // ...existing code for tradeContext and navigation...
-      // Removed debug log for production
       const tradeContext = {
         tradeId: orderId,
         createdAt: new Date().toISOString(),
@@ -495,13 +439,13 @@ export function OrderModal({
           country: ad.country,
         },
         initiate: {
-          reference: initiatePayload?.reference,
-          side: initiatePayload?.side,
-          amountFiat: initiatePayload?.amountFiat,
-          amountCrypto: initiatePayload?.amountCrypto,
-          platformFeeCrypto: initiatePayload?.platformFeeCrypto,
-          netCryptoAmount: initiatePayload?.netCryptoAmount,
-          marketRate: initiatePayload?.marketRate,
+          reference: initiatePayloadData?.reference,
+          side: initiatePayloadData?.side,
+          amountFiat: initiatePayloadData?.amountFiat,
+          amountCrypto: initiatePayloadData?.amountCrypto,
+          platformFeeCrypto: initiatePayloadData?.platformFeeCrypto,
+          netCryptoAmount: initiatePayloadData?.netCryptoAmount,
+          marketRate: initiatePayloadData?.marketRate,
           paymentDetails: paymentDetails,
         },
       };
@@ -515,10 +459,19 @@ export function OrderModal({
       onClose();
     } catch (error: any) {
       setError(error.message || "Failed to initiate trade. Please try again.");
+      let toastTitle = "Trade Failed";
+      let errorMsg =
+        error.message || "Failed to initiate trade. Please try again.";
+      if (errorMsg.toLowerCase().includes("liquidity")) {
+        toastTitle = "Insufficient Liquidity";
+      } else if (errorMsg.toLowerCase().includes("network")) {
+        toastTitle = "Network Error";
+      } else if (errorMsg.toLowerCase().includes("internal server error")) {
+        toastTitle = "Server Error";
+      }
       toast({
-        title: "Trade Failed",
-        description:
-          error.message || "Failed to initiate trade. Please try again.",
+        title: toastTitle,
+        description: errorMsg,
         variant: "destructive",
       });
     } finally {
@@ -528,29 +481,41 @@ export function OrderModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" aria-describedby="order-modal-description">
         <DialogHeader>
           <DialogTitle>
-            {ad.type === "buy"
-              ? `Buy ${ad.cryptoCurrency} with ${ad.fiatCurrency}`
-              : `Sell ${ad.cryptoCurrency} for ${ad.fiatCurrency}`}
+            {ad.type === "buy" ? "Buy" : "Sell"} {ad.cryptoCurrency}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Accessibility description for DialogContent */}
+        <div id="order-modal-description" className="sr-only">
+          Complete your P2P order by entering the amount, selecting a payment method, and confirming the transaction. Platform fee and seller instructions are shown below.
+        </div>
+
         <div className="space-y-4">
-          {/* Price Info */}
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Price</span>
-              <span className="font-bold text-lg">
-                {/* Responsive font size: base=sm, md+=lg */}
-                <span className="font-bold text-sm md:text-lg">
-                  {ad.cryptoCurrency === "CNGN"
-                    ? "₦"
-                    : ad.cryptoCurrency === "USDC"
-                      ? "$"
-                      : ""}
-                  {ad.price}/{ad.fiatCurrency}
-                </span>
+          {/* Trader Info */}
+          <div className="flex items-center gap-3 pb-4 border-b">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
+              {trader.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm truncate">{trader.name}</p>
+              <p className="text-xs text-gray-500">
+                {trader.completedTrades ?? 0} trades •{" "}
+                {trader.ratingPercentage ?? 0}%
+              </p>
+            </div>
+            <DollarSign className="w-5 h-5 text-blue-600" />
+          </div>
+
+          {/* Price and Limits */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>Price</span>
+              <span>
+                1 {ad.cryptoCurrency} = {getFiatSymbol(ad.fiatCurrency)}
+                {ad.price}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs text-gray-500">
@@ -575,7 +540,7 @@ export function OrderModal({
           {isSupportedCrypto ? (
             ad.type === "buy" ? (
               // --- BUY FLOW: Receiving Crypto, Sending Fiat ---
-              <>
+              <React.Fragment>
                 <div>
                   <Label htmlFor="crypto-amount">
                     You Receive ({ad.cryptoCurrency})
@@ -625,10 +590,10 @@ export function OrderModal({
                     />
                   </div>
                 </div>
-              </>
+              </React.Fragment>
             ) : (
               // --- SELL FLOW: Sending Crypto, Receiving Fiat ---
-              <>
+              <React.Fragment>
                 <div>
                   <Label htmlFor="crypto-amount">
                     You Send ({ad.cryptoCurrency})
@@ -678,7 +643,7 @@ export function OrderModal({
                     />
                   </div>
                 </div>
-              </>
+              </React.Fragment>
             )
           ) : (
             <div className="text-red-500 font-semibold text-center p-4">
@@ -705,11 +670,6 @@ export function OrderModal({
                   </div>
                 ) : (
                   <>
-                    {/* Debug: Show all payment methods in console */}
-                    {console.log(
-                      "[DEBUG] userPaymentMethods:",
-                      userPaymentMethods,
-                    )}
                     {userPaymentMethods.map((method) => {
                       const isAlipay = method.type === "ALIPAY";
                       return (
@@ -717,7 +677,7 @@ export function OrderModal({
                           key={isAlipay ? "ALIPAY" : String(method._id)}
                           type="button"
                           onClick={() => {
-                            console.log("[STEP1] Payment method button clicked", method);
+                            // console.log("[STEP1] Payment method button clicked", method);
                             setSelectedPayment(method);
                           }}
                           disabled={isLoading}
@@ -766,7 +726,7 @@ export function OrderModal({
                     key={`${detail.type}-${index}`}
                     type="button"
                     onClick={() => {
-                      console.log("[STEP1] Payment method button clicked (BUY)", detail.type);
+                      // console.log("[STEP1] Payment method button clicked (BUY)", detail.type);
                       setSelectedPayment(detail.type);
                     }}
                     disabled={isLoading}
@@ -792,7 +752,7 @@ export function OrderModal({
                     key={method}
                     type="button"
                     onClick={() => {
-                      console.log("[STEP1] Payment method button clicked (BUY fallback)", method);
+                      // console.log("[STEP1] Payment method button clicked (BUY fallback)", method);
                       setSelectedPayment(method);
                     }}
                     disabled={isLoading}
@@ -821,10 +781,34 @@ export function OrderModal({
           <div className="flex items-center text-xs bg-yellow-50 rounded-md p-2 mt-2 border border-yellow-200">
             <AlertCircle className="w-4 h-4 mr-2 text-yellow-600" />
             <span>
-              Seller's Instructions:{" "}
+              Seller's Instructions: {" "}
               <span className="font-medium">{ad.instructions || "-"}</span>
             </span>
           </div>
+
+          {/* Merchant Payment Details (BUY/SELL flow) */}
+          {(ad.paymentDetails || initiatePayload?.paymentDetails) && (
+            <div className="merchant-payment-details mt-4 p-3 border rounded-lg bg-gray-50">
+              <h3 className="font-semibold mb-2 text-sm text-gray-700">Merchant Payment Details</h3>
+              <ul className="space-y-1 text-xs text-gray-800">
+                {(ad.paymentDetails?.bankName || initiatePayload?.paymentDetails?.bankName) && (
+                  <li><strong>Bank Name:</strong> {ad.paymentDetails?.bankName || initiatePayload?.paymentDetails?.bankName}</li>
+                )}
+                {(ad.paymentDetails?.accountNumber || initiatePayload?.paymentDetails?.accountNumber) && (
+                  <li><strong>Account Number:</strong> {ad.paymentDetails?.accountNumber || initiatePayload?.paymentDetails?.accountNumber}</li>
+                )}
+                {(ad.paymentDetails?.accountName || initiatePayload?.paymentDetails?.accountName) && (
+                  <li><strong>Account Name:</strong> {ad.paymentDetails?.accountName || initiatePayload?.paymentDetails?.accountName}</li>
+                )}
+                {(ad.paymentDetails?.country || initiatePayload?.paymentDetails?.country) && (
+                  <li><strong>Country:</strong> {ad.paymentDetails?.country || initiatePayload?.paymentDetails?.country}</li>
+                )}
+                {(ad.paymentDetails?.type || initiatePayload?.paymentDetails?.type) && (
+                  <li><strong>Type:</strong> {ad.paymentDetails?.type || initiatePayload?.paymentDetails?.type}</li>
+                )}
+              </ul>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-between gap-2 mt-4">
@@ -838,7 +822,7 @@ export function OrderModal({
             </Button>
             <Button
               onClick={() => {
-                console.log("[STEP0] Confirm Order button clicked. selectedPayment:", selectedPayment);
+                // console.log("[STEP0] Confirm Order button clicked. selectedPayment:", selectedPayment);
                 toast({
                   title: "Confirm Order Clicked",
                   description: `selectedPayment: ${JSON.stringify(selectedPayment)}`,

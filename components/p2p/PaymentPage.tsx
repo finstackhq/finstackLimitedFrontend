@@ -106,14 +106,15 @@ export default function PaymentPage() {
   // ...existing code...
   const params = useParams();
   // tradeId declaration moved below, remove duplicate
-  // ...existing code...
-  // ...existing code...
   const [ctx, setCtx] = useState<StoredTradeContext | null>(null);
 
   // Debug log for Alipay payment details (moved below ctx declaration)
   useEffect(() => {
     if (ctx && ctx.initiate && ctx.initiate.paymentDetails) {
-      console.log("[DEBUG] Alipay paymentDetails:", ctx.initiate.paymentDetails);
+      console.log(
+        "[DEBUG] Alipay paymentDetails:",
+        ctx.initiate.paymentDetails,
+      );
     } else {
       console.log("[DEBUG] No Alipay paymentDetails found.", ctx);
     }
@@ -548,32 +549,50 @@ export default function PaymentPage() {
                       alt="Alipay QR"
                       className="w-48 h-48 object-contain"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = "https://placehold.co/200?text=QR+Error";
+                        (e.target as HTMLImageElement).src =
+                          "https://placehold.co/200?text=QR+Error";
                       }}
                     />
                     <Button
                       variant="outline"
                       size="sm"
                       className="mt-2"
-                      onClick={() => downloadQRCode(ctx.initiate?.paymentDetails?.alipayQrImage!)}
+                      onClick={() =>
+                        downloadQRCode(
+                          ctx.initiate?.paymentDetails?.alipayQrImage!,
+                        )
+                      }
                     >
                       Download QR
                     </Button>
                   </div>
                   <div className="text-center space-y-2 w-full max-w-[280px]">
                     <div className="bg-white px-4 py-2 rounded-lg border border-blue-100 shadow-sm text-left">
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Account Name</p>
-                      <p className="text-sm font-bold">{ctx.initiate?.paymentDetails?.alipayAccountName || ctx.sellerName}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">
+                        Account Name
+                      </p>
+                      <p className="text-sm font-bold">
+                        {ctx.initiate?.paymentDetails?.alipayAccountName ||
+                          ctx.sellerName}
+                      </p>
                     </div>
                     <div className="flex items-center justify-between bg-white px-4 py-2 rounded-lg border border-blue-100 shadow-sm">
                       <div className="text-left overflow-hidden">
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold">Alipay Email/ID</p>
-                        <p className="text-sm font-medium truncate">{ctx.initiate?.paymentDetails?.alipayEmail || "N/A"}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold">
+                          Alipay Email/ID
+                        </p>
+                        <p className="text-sm font-medium truncate">
+                          {ctx.initiate?.paymentDetails?.alipayEmail || "N/A"}
+                        </p>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleCopy(ctx.initiate?.paymentDetails?.alipayEmail || "")}
+                        onClick={() =>
+                          handleCopy(
+                            ctx.initiate?.paymentDetails?.alipayEmail || "",
+                          )
+                        }
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
