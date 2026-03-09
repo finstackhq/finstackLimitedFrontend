@@ -159,6 +159,22 @@ export function KYCForm() {
   const [checkingLiveliness, setCheckingLiveliness] = useState<boolean>(false);
 
   // No localStorage: status is managed in-session; backend enforces duplicates
+  // Ensure KYC popup logic works for new users
+  useEffect(() => {
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      // If user is logged in and kycStatus is not set, set it to 'none'
+      if (accessToken && localStorage.getItem("kycStatus") === null) {
+        localStorage.setItem("kycStatus", "none");
+      }
+      // Always set isKycVerified to 'false' for new users
+      if (accessToken && localStorage.getItem("isKycVerified") === null) {
+        localStorage.setItem("isKycVerified", "false");
+      }
+    } catch (e) {
+      console.error("Error initializing KYC localStorage for new user:", e);
+    }
+  }, []);
 
   const updateField = (field: keyof KYCFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -568,6 +584,11 @@ export function KYCForm() {
         status: "pending",
         submittedAt: new Date().toISOString(),
       });
+      // Update localStorage for popup logic
+      try {
+        localStorage.setItem("kycStatus", "pending");
+        localStorage.setItem("isKycVerified", "false");
+      } catch {}
       toast({
         title: "KYC Submitted Successfully",
         description:

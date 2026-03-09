@@ -220,8 +220,8 @@ export function AuthForm() {
             credentials: "include",
           });
           const data = await res.json();
-          console.log("[auth-form] register response status:", res.status);
-          console.log("[auth-form] register response body:", data);
+          // console.log("[auth-form] register response status:", res.status);
+          // console.log("[auth-form] register response body:", data);
           if (res.ok) {
             // Persist email for verify page and redirect
             try {
@@ -251,15 +251,14 @@ export function AuthForm() {
             credentials: "include", // Ensure refresh token cookie is set
           });
           const data = await res.json();
-          console.log("[auth-form] login response status:", res.status);
-          console.log("[auth-form] login response body:", data);
+          // console.log("[auth-form] login response status:", res.status);
+          // console.log("[auth-form] login response body:", data);
           if (res.ok) {
             try {
               // Persist user object for session (required by dashboard and delete logic)
               if (data?.user?.accessToken) {
                 localStorage.setItem("user", JSON.stringify(data.user));
               }
-              // Optionally, keep the other keys for backward compatibility
               if (data?.user?.accessToken) {
                 localStorage.setItem("accessToken", data.user.accessToken);
               }
@@ -269,14 +268,21 @@ export function AuthForm() {
               if (data?.user?.lastName) {
                 localStorage.setItem("userLastName", data.user.lastName);
               }
-              if (typeof data?.user?.kycVerified !== "undefined") {
-                localStorage.setItem(
-                  "isKycVerified",
-                  String(!!data.user.kycVerified),
-                );
-              }
-              if (data?.user?.kycStatus) {
-                localStorage.setItem("kycStatus", String(data.user.kycStatus));
+              // Fetch real KYC status from backend profile
+              const profileRes = await fetch("/api/fstack/profile", {
+                method: "GET",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+              });
+              if (profileRes.ok) {
+                const profile = await profileRes.json();
+                // You may need to adjust these keys based on backend response
+                if (typeof profile?.kycVerified !== "undefined") {
+                  localStorage.setItem("isKycVerified", String(!!profile.kycVerified));
+                }
+                if (profile?.kycStatus) {
+                  localStorage.setItem("kycStatus", String(profile.kycStatus));
+                }
               }
               if (
                 data?.user?.role === "merchant" &&
@@ -289,12 +295,10 @@ export function AuthForm() {
             } catch (e) {
               console.warn("[auth-form] failed to persist auth info:", e);
             }
-            // Show success toast
             toast({
               title: "Welcome back!",
               description: "You have successfully logged in.",
             });
-            // Refresh router state before navigation to ensure session is recognized
             router.refresh();
             router.push("/dashboard");
           } else {
@@ -574,29 +578,6 @@ export function AuthForm() {
                   ? "Sign In"
                   : "Create Account"}
             </Button>
-            {mode === "signup" && (
-              <p className="mt-4 text-xs text-center text-muted-foreground">
-                By registering, you accept our{' '}
-                <a
-                  href="/terms-of-use"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-bold underline hover:text-primary"
-                >
-                  Terms of use
-                </a>
-                {' '}and{' '}
-                <a
-                  href="/privacy-policy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-bold underline hover:text-primary"
-                >
-                  Privacy Policy
-                </a>
-                .
-              </p>
-            )}
           </form>
 
           {/* Additional Links */}
