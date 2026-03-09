@@ -157,46 +157,53 @@ export default function KYCPage() {
   };
   // Updated the rejection part to work with reasons
   const reject = async (id: string, rejectionReason: string) => {
+    // Toast import
+    const { toast } = require("@/hooks/use-toast");
     if (!rejectionReason?.trim()) {
-      alert("Please provide a reason for rejection.");
+      toast({
+        title: "Rejection Failed",
+        description: "Please provide a reason for rejection.",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
-      // const response = await fetch("/api/admin/kyc", {
-      //   method: "PUT",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({
-      //     id,
-      //     status: "REJECTED",
-      //     reason: rejectionReason,
-      //   }),
-      // });
-      // FRONTEND PAGE.TSX
       const response = await fetch("/api/admin/kyc", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id,
           status: "REJECTED",
-          rejectionReason: rejectionReason, // Changed from 'reason' to 'rejectionReason'
+          rejectionReason: rejectionReason,
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
         setRequests((prev) => prev.filter((r) => r.id !== data.data._id));
-        alert("KYC rejected successfully.");
+        toast({
+          title: "KYC Rejected",
+          description: "KYC rejected successfully.",
+        });
       } else if (response.status === 401) {
         router.push("/admin/login");
       } else {
         const errorData = await response.json();
         console.error("Reject failed:", errorData);
-        alert(`Failed to reject KYC: ${errorData.message || "Unknown error"}`);
+        toast({
+          title: "Rejection Failed",
+          description: `Failed to reject KYC: ${errorData.message || "Unknown error"}`,
+          variant: "destructive",
+        });
       }
     } catch (e) {
       console.error("Reject failed:", e);
-      alert("Failed to reject KYC due to network error.");
+      toast({
+        title: "Rejection Failed",
+        description: "Failed to reject KYC due to network error.",
+        variant: "destructive",
+      });
     }
   };
 

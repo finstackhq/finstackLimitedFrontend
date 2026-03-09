@@ -9,10 +9,10 @@ interface WelcomeBadgeProps {
 }
 
 export function WelcomeBadge({ firstName, kycStatus }: WelcomeBadgeProps) {
-  // Normalize status
-  const status = kycStatus?.toLowerCase()
-  const isVerified = status === "true" || status === "approved" || status === "verified"
-  const isPending = status === "pending" || status === "submitted" || status === "in_review"
+  // Normalize status: strict mapping
+  const normalizedStatus = (kycStatus || "").toLowerCase();
+  const isVerified = normalizedStatus === "verified" || normalizedStatus === "approved";
+  const isPending = normalizedStatus === "pending" || normalizedStatus === "submitted" || normalizedStatus === "in_review";
   
   return (
     <div className="flex flex-col gap-1">
