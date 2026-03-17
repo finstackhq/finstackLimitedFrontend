@@ -7,7 +7,6 @@ export async function GET(request: NextRequest) {
 
   try {
     if (!endpoint) {
-      console.error("[admin/users] FINSTACK_BACKEND_API_URL not set");
       return NextResponse.json(
         { error: "Server not configured" },
         { status: 500 },
@@ -15,11 +14,27 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search") || "";
-    const status = searchParams.get("status") || "";
+    const page = searchParams.get("page") || "1";
+    const limit = searchParams.get("limit") || "20";
+
+    // Forward pagination and known backend filters to keep backend pagination authoritative.
+    const upstreamParams = new URLSearchParams();
+    upstreamParams.set("page", page);
+    upstreamParams.set("limit", limit);
+
+    const role = searchParams.get("role");
+    const isVerified = searchParams.get("isVerified");
+    const status = searchParams.get("status");
+    const kycStatus = searchParams.get("kycStatus");
+    if (role) upstreamParams.set("role", role);
+    if (isVerified) upstreamParams.set("isVerified", isVerified);
+    if (status && status !== "all") upstreamParams.set("status", status);
+    if (kycStatus && kycStatus !== "all") {
+      upstreamParams.set("kycStatus", kycStatus);
+    }
 
     const token = request.cookies.get("access_token")?.value;
-    const res = await fetch(endpoint, {
+    const res = await fetch(`${endpoint}?${upstreamParams.toString()}`, {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -149,23 +164,31 @@ export async function GET(request: NextRequest) {
       howYouHeardAboutUs: u?.howYouHeardAboutUs || "—",
     }));
 
-    // Apply filters client-side
-    if (search) {
-      const q = search.toLowerCase();
-      users = users.filter(
-        (user: NormalizedUser) =>
-          user.name.toLowerCase().includes(q) ||
-          user.email.toLowerCase().includes(q),
-      );
-    }
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 20;
+    const totalUsers = Number(
+      upstream?.totalUsers ?? upstream?.pagination?.total ?? users.length,
+    );
+    const totalPages = Number(
+      upstream?.totalPages ??
+        upstream?.pagination?.totalPages ??
+        Math.max(1, Math.ceil(totalUsers / Math.max(1, limitNum))),
+    );
+    const currentPage = Number(
+      upstream?.currentPage ?? upstream?.page ?? upstream?.pagination?.currentPage ?? pageNum,
+    );
 
-    if (status) {
-      users = users.filter((user: NormalizedUser) => user.status === status);
-    }
-
-    return NextResponse.json(users, { status: res.status });
+    return NextResponse.json(
+      {
+        success: upstream?.success ?? true,
+        users,
+        totalUsers,
+        totalPages,
+        currentPage,
+      },
+      { status: res.status },
+    );
   } catch (error: any) {
-    console.error("[admin/users] GET error:", error?.message || error);
     return NextResponse.json(
       { error: error?.message || "Failed to fetch users" },
       { status: 500 },
@@ -185,8 +208,6 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Mock user action - replace with actual API calls
-    console.log(`${action} user ${id}`);
-
     return NextResponse.json({
       success: true,
       message: `User ${action}d successfully`,

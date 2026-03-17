@@ -36,6 +36,10 @@ interface KYCRecord {
   idType?: string;
   issuingCountry?: string;
   idNumber?: string;
+  // Prembly verification fields
+  third_party_status?: string;
+  third_party_code?: string;
+  third_party_message?: string;
 }
 
 interface KYCOverviewProps {
@@ -281,6 +285,26 @@ export function KYCOverview({ records, onApprove, onReject, onSuspend }: KYCOver
                       <p className="font-medium text-gray-900 text-sm">{selected.idNumber || '—'}</p>
                     </div>
                   </div>
+                  {/* Prembly Verification Section */}
+                  {(selected.third_party_status || selected.third_party_code || selected.third_party_message) && (
+                    <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                      <h5 className="text-xs font-semibold text-blue-700 mb-2">Prembly Verification</h5>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs uppercase text-gray-500 mb-1">Status</p>
+                          <p className="font-medium text-blue-900 text-sm">{selected.third_party_status || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase text-gray-500 mb-1">Code</p>
+                          <p className="font-medium text-blue-900 text-sm">{selected.third_party_code || '—'}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-xs uppercase text-gray-500 mb-1">Message</p>
+                          <p className="font-medium text-blue-900 text-sm">{selected.third_party_message || '—'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Contact Information */}
