@@ -19,8 +19,24 @@ import {
 } from "lucide-react";
 import { UserDetailsModal } from "./UserDetailsModal";
 
+// interface User {
+//   id: string;
+//   name: string;
+//   email: string;
+//   country: string;
+//   balance: number;
+//   currency: string;
+//   kycStatus: string;
+//   status: string;
+//   joinedAt: string;
+//   role?: string;
+//   balances?: any[];
+//   totalBalance?: number;
+//   howYouHeardAboutUs?: string;
+// }
 interface User {
   id: string;
+  _id: string;
   name: string;
   email: string;
   country: string;
@@ -34,7 +50,6 @@ interface User {
   totalBalance?: number;
   howYouHeardAboutUs?: string;
 }
-
 interface UsersTableProps {
   users: User[];
   onAction: (id: string, action: "suspend" | "activate" | "delete") => void;
@@ -157,8 +172,11 @@ export function UsersTable({ users, onAction, onRoleChange }: UsersTableProps) {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {users.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50">
+            {users.map((user: User, idx: number) => {
+              const rowKey = `${user._id || user.id || "user"}-${user.email || "no-email"}-${idx}`;
+
+              return (
+              <tr key={rowKey} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div>
                     <div className="text-sm font-medium text-gray-900">
@@ -237,7 +255,7 @@ export function UsersTable({ users, onAction, onRoleChange }: UsersTableProps) {
                   </DropdownMenu>
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>

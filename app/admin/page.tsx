@@ -95,7 +95,7 @@ export default function AdminDashboard() {
         const response = await fetch("/api/admin/dashboard");
         if (response.ok) {
           const dashboardData = await response.json();
-          console.log("Dashboard data:", dashboardData); // Debug log
+
           setData(dashboardData.data); // Use only the 'data' property
         }
       } catch (error) {

@@ -2,6 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Filter } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 // import { KYCRequestsTable } from '@/components/admin/KYCRequestsTable';
 import { KYCOverview } from "@/components/admin/KYCOverview";
 
@@ -20,19 +28,36 @@ interface KYCRequest {
   phone?: string;
   address?: string;
   documentType?: string;
-  howYouHeardAboutUs?: string;
 }
 
 export default function KYCPage() {
   const [requests, setRequests] = useState<KYCRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [totalRequests, setTotalRequests] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
-    const fetchRequests = async () => {
+    const fetchRequests = async (showLoader = false) => {
+      if (showLoader) setLoading(true);
       try {
-        const response = await fetch("/api/admin/kyc", { cache: "no-store" });
+        const queryParams = new URLSearchParams({
+          page: String(currentPage),
+          limit: String(limit),
+        });
+        if (statusFilter !== "all") {
+          queryParams.set("status", statusFilter);
+        }
+
+        const response = await fetch(
+          `/api/admin/kyc?${queryParams.toString()}`,
+          {
+            cache: "no-store",
+          },
+        );
         if (response.ok) {
           const data = await response.json();
           // Map backend records to UI shape with safe defaults
@@ -45,24 +70,18 @@ export default function KYCPage() {
               .replace(/^'+|'+$/g, "");
           };
 
-          const mapped = (
-            Array.isArray(data) ? data : data?.kycs || data?.data || []
-          ).map((r: any) => {
+          const records = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.kycs)
+              ? data.kycs
+              : Array.isArray(data?.data)
+                ? data.data
+                : [];
+
+          const mapped = records.map((r: any) => {
             const first = r?.firstname ?? r?.firstName ?? r?.user_id?.firstName;
             const last = r?.lastname ?? r?.lastName ?? r?.user_id?.lastName;
             const builtName = `${first || ""} ${last || ""}`.trim();
-
-            // Extract and normalize referral source
-            let referral = r?.howYouHeardAboutUs || r?.referralSource || r?.referral || r?.heardFrom || "Unknown";
-            referral = typeof referral === "string" ? referral.trim().toLowerCase() : "Unknown";
-            // Group similar sources
-            if (referral.includes("youtube")) referral = "YouTube";
-            else if (referral.includes("google")) referral = "Google";
-            else if (referral.includes("friend")) referral = "Friend";
-            else if (referral.includes("whatsapp")) referral = "WhatsApp";
-            else if (referral.includes("facebook")) referral = "Facebook";
-            else if (referral.includes("social media")) referral = "Social Media";
-
             return {
               id:
                 r?.id ||
@@ -111,33 +130,55 @@ export default function KYCPage() {
               idType: r?.idType || r?.id_type,
               issuingCountry: r?.issuingCountry || r?.country,
               idNumber: r?.idNumber || r?.id_number,
-              howYouHeardAboutUs: referral,
             };
           });
+
+          const resolvedTotalRequests = Number(
+            data?.totalCount ?? data?.totalRequests ?? data?.pagination?.total ?? mapped.length,
+          );
+          const resolvedTotalPages = Number(
+            data?.totalPages ??
+              data?.pagination?.totalPages ??
+              Math.max(1, Math.ceil(resolvedTotalRequests / Math.max(1, limit))),
+          );
+          const resolvedCurrentPage = Number(
+            data?.currentPage ?? data?.page ?? data?.pagination?.currentPage ?? currentPage,
+          );
+
           setRequests(mapped);
+          setTotalRequests(resolvedTotalRequests);
+          setTotalPages(resolvedTotalPages);
+
+          // Sync page from backend only when value is valid to avoid render loops.
+          if (
+            Number.isFinite(resolvedCurrentPage) &&
+            resolvedCurrentPage >= 1 &&
+            resolvedCurrentPage <= Math.max(1, resolvedTotalPages) &&
+            resolvedCurrentPage !== currentPage
+          ) {
+            setCurrentPage(resolvedCurrentPage);
+          }
         } else {
           if (response.status === 401) {
             // Auto-logout: redirect to admin login
             router.push("/admin/login");
             return;
           }
-          console.error(
-            "Failed to fetch KYC requests: status",
-            response.status,
-          );
+          setRequests([]);
+          setTotalRequests(0);
+          setTotalPages(1);
         }
-      } catch (error) {
-        console.error("Failed to fetch KYC requests:", error);
+      } catch {
+        setRequests([]);
+        setTotalRequests(0);
+        setTotalPages(1);
       } finally {
-        setLoading(false);
+        if (showLoader) setLoading(false);
       }
     };
 
-    fetchRequests();
-    // Optional: poll backend for updates every 15s
-    const interval = setInterval(fetchRequests, 15000);
-    return () => clearInterval(interval);
-  }, []);
+    fetchRequests(true);
+  }, [currentPage, limit, statusFilter, router]);
 
   const approve = async (id: string) => {
     try {
@@ -151,59 +192,50 @@ export default function KYCPage() {
       } else if (response.status === 401) {
         router.push("/admin/login");
       }
-    } catch (e) {
-      console.error("Approve failed", e);
+    } catch {
+      // noop
     }
   };
   // Updated the rejection part to work with reasons
   const reject = async (id: string, rejectionReason: string) => {
-    // Toast import
-    const { toast } = require("@/hooks/use-toast");
     if (!rejectionReason?.trim()) {
-      toast({
-        title: "Rejection Failed",
-        description: "Please provide a reason for rejection.",
-        variant: "destructive",
-      });
+      alert("Please provide a reason for rejection.");
       return;
     }
 
     try {
+      // const response = await fetch("/api/admin/kyc", {
+      //   method: "PUT",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({
+      //     id,
+      //     status: "REJECTED",
+      //     reason: rejectionReason,
+      //   }),
+      // });
+      // FRONTEND PAGE.TSX
       const response = await fetch("/api/admin/kyc", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id,
           status: "REJECTED",
-          rejectionReason: rejectionReason,
+          rejectionReason: rejectionReason, // Changed from 'reason' to 'rejectionReason'
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
         setRequests((prev) => prev.filter((r) => r.id !== data.data._id));
-        toast({
-          title: "KYC Rejected",
-          description: "KYC rejected successfully.",
-        });
+        alert("KYC rejected successfully.");
       } else if (response.status === 401) {
         router.push("/admin/login");
       } else {
         const errorData = await response.json();
-        console.error("Reject failed:", errorData);
-        toast({
-          title: "Rejection Failed",
-          description: `Failed to reject KYC: ${errorData.message || "Unknown error"}`,
-          variant: "destructive",
-        });
+        alert(`Failed to reject KYC: ${errorData.message || "Unknown error"}`);
       }
-    } catch (e) {
-      console.error("Reject failed:", e);
-      toast({
-        title: "Rejection Failed",
-        description: "Failed to reject KYC due to network error.",
-        variant: "destructive",
-      });
+    } catch {
+      alert("Failed to reject KYC due to network error.");
     }
   };
 
@@ -221,8 +253,8 @@ export default function KYCPage() {
       } else if (response.status === 401) {
         router.push("/admin/login");
       }
-    } catch (e) {
-      console.error("Suspend failed", e);
+    } catch {
+      // noop
     }
   };
 
@@ -235,54 +267,104 @@ export default function KYCPage() {
     );
   }
 
-
-  // Aggregate referral sources
-  const referralCounts: Record<string, number> = {};
-  requests.forEach((r) => {
-    const source = (r.howYouHeardAboutUs || "Unknown").trim();
-    referralCounts[source] = (referralCounts[source] || 0) + 1;
-  });
-
-  // Filter records based on status
-  const filteredRequests = statusFilter === "all"
-    ? requests
-    : requests.filter((r) => r.status === statusFilter);
-
   return (
     <div className="space-y-6">
-
-      {/* KYC Table & Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
-          KYC Requests
-        </h1>
-        <div className="flex items-center gap-2">
-          <label htmlFor="kyc-status-filter" className="text-xs md:text-sm text-gray-600 font-semibold mr-1">Status:</label>
-          <div className="relative">
-            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" d="M7 10l5 5 5-5"/></svg>
-            </span>
-            <select
-              id="kyc-status-filter"
-              className="pl-7 pr-6 py-2 rounded-full shadow-md border border-gray-200 bg-white text-xs md:text-sm font-medium text-gray-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-150 outline-none appearance-none hover:border-blue-300 hover:bg-blue-50"
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="suspended">Suspended</option>
-            </select>
+        <div>
+          <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+            KYC Requests
+          </h1>
+          <div className="text-xs md:text-sm text-gray-600 mt-1">
+            Showing {requests.length} of {totalRequests} total requests
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-gray-400 shrink-0" />
+          <Select
+            value={statusFilter}
+            onValueChange={(val) => {
+              setStatusFilter(val);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-44 bg-white">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />
+                  All Status
+                </span>
+              </SelectItem>
+              <SelectItem value="pending">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" />
+                  Pending
+                </span>
+              </SelectItem>
+              <SelectItem value="approved">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                  Approved
+                </span>
+              </SelectItem>
+              <SelectItem value="rejected">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+                  Rejected
+                </span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <KYCOverview
-        records={filteredRequests}
+        records={requests}
         onApprove={approve}
         onReject={reject}
         onSuspend={suspend}
       />
+
+      <div className="flex items-center justify-end gap-4 mt-4">
+        <select
+          className="mr-auto px-2 py-1 border rounded text-sm bg-white"
+          value={limit}
+          onChange={(e) => {
+            setLimit(Number(e.target.value));
+            setCurrentPage(1);
+          }}
+        >
+          {[10, 20, 50, 100].map((n) => (
+            <option key={n} value={n}>
+              {n} / page
+            </option>
+          ))}
+        </select>
+
+        <button
+          className="px-3 py-1 rounded border bg-white disabled:opacity-30"
+          onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+          disabled={currentPage === 1}
+        >
+          Previous
+        </button>
+
+        <span className="text-sm font-medium">
+          Page {currentPage} of {totalPages}
+        </span>
+
+        <button
+          className="px-3 py-1 rounded border bg-white disabled:opacity-30"
+          onClick={() =>
+            setCurrentPage((page) => Math.min(totalPages, page + 1))
+          }
+          disabled={currentPage === totalPages || totalPages === 0}
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }

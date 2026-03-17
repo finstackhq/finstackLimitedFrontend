@@ -3,18 +3,35 @@ import { NextRequest, NextResponse } from "next/server";
 // GET /api/admin/kyc -> proxy to backend getAllKycs
 export async function GET(request: NextRequest) {
   const baseUrl = process.env.FINSTACK_BACKEND_API_URL;
-  const endpoint = baseUrl ? `${baseUrl}admin/getAllKycs` : undefined;
+  const cleanBaseUrl = baseUrl?.endsWith("/")
+    ? baseUrl.slice(0, -1)
+    : baseUrl;
+  const endpoint = cleanBaseUrl ? `${cleanBaseUrl}/admin/getAllKycs` : undefined;
   try {
     if (!endpoint) {
-      console.error("[admin/kyc] FINSTACK_BACKEND_API_URL not set");
       return NextResponse.json(
         { error: "Server not configured" },
         { status: 500 },
       );
     }
 
+    const { searchParams } = new URL(request.url);
+    const upstreamParams = new URLSearchParams();
+
+    const page = searchParams.get("page");
+    const limit = searchParams.get("limit");
+    const status = searchParams.get("status");
+
+    if (page) upstreamParams.set("page", page);
+    if (limit) upstreamParams.set("limit", limit);
+    if (status && status !== "all") upstreamParams.set("status", status);
+
+    const upstreamUrl = upstreamParams.toString()
+      ? `${endpoint}?${upstreamParams.toString()}`
+      : endpoint;
+
     const token = request.cookies.get("access_token")?.value;
-    const res = await fetch(endpoint, {
+    const res = await fetch(upstreamUrl, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -24,7 +41,6 @@ export async function GET(request: NextRequest) {
     });
 
     const data = await res.json().catch(() => ({ message: "No JSON body" }));
-    console.log("[admin/kyc] getAllKycs status:", res.status);
     // If unauthorized, clear cookies so admin is logged out automatically
     if (res.status === 401) {
       const out = NextResponse.json(data, { status: 401 });
@@ -42,7 +58,6 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.json(data, { status: res.status });
   } catch (error: any) {
-    console.error("[admin/kyc] GET error:", error?.message || error);
     return NextResponse.json(
       { error: error?.message || "Failed to fetch KYC requests" },
       { status: 500 },
