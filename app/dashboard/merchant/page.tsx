@@ -881,7 +881,7 @@ export default function MerchantDashboard() {
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                  <span className="text-lg font-bold text-purple-600">₵</span>
+                  <span className="text-lg font-bold text-purple-600">₦</span>
                 </div>
                 <div>
                   <p className="font-medium">CNGN Wallet</p>
@@ -891,7 +891,7 @@ export default function MerchantDashboard() {
               <div className="text-right">
                 <p className="text-xl font-bold">
                   {showBalance
-                    ? `₵${walletBalance.CNGN.toLocaleString()}`
+                    ? `₦${walletBalance.CNGN.toLocaleString()}`
                     : "••••••"}
                 </p>
                 <button
