@@ -1,22 +1,34 @@
-'use client';
+"use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { ShieldCheck, Shield, ExternalLink, FileText } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ShieldCheck, Shield, ExternalLink, FileText } from "lucide-react";
 
 interface BecomeMerchantModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   kycVerified?: boolean;
-  onSubmitted?: (status: 'pending') => void;
+  onSubmitted?: (status: "pending") => void;
 }
 
-// Placeholder URL - replace with actual Google Doc link when provided
-const MERCHANT_APPLICATION_URL = "https://docs.google.com/forms/d/e/YOUR_FORM_ID/viewform";
+// Actual Google Form URL for merchant application
+const MERCHANT_APPLICATION_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSfhe9TUdL8unz_K-ZeHLDPbd5F_zolNV-rqgvxQLGvnUXCt5A/viewform?usp=sharing&ouid=114943677945373973584";
 
-export function BecomeMerchantModal({ open, onOpenChange, kycVerified = false }: BecomeMerchantModalProps) {
+export function BecomeMerchantModal({
+  open,
+  onOpenChange,
+  kycVerified = false,
+}: BecomeMerchantModalProps) {
   const handleApplyClick = () => {
-    window.open(MERCHANT_APPLICATION_URL, '_blank', 'noopener,noreferrer');
+    window.open(MERCHANT_APPLICATION_URL, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -27,7 +39,10 @@ export function BecomeMerchantModal({ open, onOpenChange, kycVerified = false }:
             <ShieldCheck className="w-5 h-5 text-green-600" />
             Become a Merchant
           </DialogTitle>
-          <DialogDescription>Apply to get merchant privileges: higher limits, instant posting, and more.</DialogDescription>
+          <DialogDescription>
+            Apply to get merchant privileges: higher limits, instant posting,
+            and more.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           {/* Eligibility Requirements */}
@@ -50,7 +65,10 @@ export function BecomeMerchantModal({ open, onOpenChange, kycVerified = false }:
           {!kycVerified && (
             <div className="p-3 rounded-md bg-yellow-50 border border-yellow-200 text-sm text-yellow-800">
               <p className="font-medium">⚠️ KYC Required</p>
-              <p className="text-yellow-700 mt-1">You must complete KYC verification before applying to become a merchant.</p>
+              <p className="text-yellow-700 mt-1">
+                You must complete KYC verification before applying to become a
+                merchant.
+              </p>
             </div>
           )}
 
@@ -59,18 +77,23 @@ export function BecomeMerchantModal({ open, onOpenChange, kycVerified = false }:
             <div className="flex items-start gap-3">
               <FileText className="w-5 h-5 text-gray-600 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="font-medium text-gray-900 mb-1">Application Process</p>
+                <p className="font-medium text-gray-900 mb-1">
+                  Application Process
+                </p>
                 <p className="text-sm text-gray-600">
-                  Click the button below to open the merchant application form. Fill out all required details and submit. 
-                  We will review your application within 24-48 hours.
+                  Click the button below to open the merchant application form.
+                  Fill out all required details and submit. We will review your
+                  application within 24-48 hours.
                 </p>
               </div>
             </div>
           </div>
         </div>
         <DialogFooter className="flex gap-2 mt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button 
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
             onClick={handleApplyClick}
             disabled={!kycVerified}
             className="bg-green-600 hover:bg-green-700 text-white"
