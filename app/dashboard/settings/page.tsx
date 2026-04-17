@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Camera, Bell, CreditCard, User, Upload, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,6 +17,8 @@ import { useToast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
   const { toast } = useToast()
+  const router = useRouter();
+  // Check for ?tab=payment in the URL to auto-switch
   const [activeTab, setActiveTab] = useState("profile")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -48,6 +51,17 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchProfile()
   }, [])
+
+  // Auto-switch to Payment tab if ?tab=payment is in the URL
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      const tabParam = url.searchParams.get("tab");
+      if (tabParam === "payment") {
+        setActiveTab("payment");
+      }
+    }
+  }, []);
 
   const fetchProfile = async () => {
     setLoading(true)
@@ -490,6 +504,14 @@ export default function SettingsPage() {
 
           {/* Payment Methods Tab */}
           <TabsContent value="payment" className="space-y-4 md:space-y-6">
+            {/* Helper message for users coming from deposit flow */}
+            {typeof window !== "undefined" && new URL(window.location.href).searchParams.get("tab") === "payment" && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                <span className="text-blue-700 text-sm">
+                  Add your bank account below. After adding, click <b>Set Primary</b> to use it for Naira deposits and refunds.
+                </span>
+              </div>
+            )}
             <Card className="p-4 md:p-6 border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-4 md:mb-6">
                 <h2 className="text-lg md:text-xl font-semibold text-gray-900">Payment Methods</h2>
