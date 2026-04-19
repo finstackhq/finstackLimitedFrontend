@@ -519,8 +519,9 @@ function OrderModal({
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>Price</span>
               <span>
-                1 {ad.cryptoCurrency} = {getFiatSymbol(ad.fiatCurrency)}
-                {ad.price}
+                {ad.cryptoCurrency === "CNGN"
+                  ? `1${getFiatSymbol(ad.fiatCurrency) || ad.fiatCurrency} = ${ad.price} CNGN`
+                  : `1 ${ad.cryptoCurrency} = ${(getFiatSymbol(ad.fiatCurrency) || ad.fiatCurrency)}${ad.price}`}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs text-gray-500">
