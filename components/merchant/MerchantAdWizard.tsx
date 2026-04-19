@@ -114,7 +114,8 @@ export function MerchantAdWizard() {
     return () => clearInterval(id);
   }, []);
 
-  const { methods: allPaymentMethods, loading: loadingMethods } = usePaymentMethods();
+  const { methods: allPaymentMethods, loading: loadingMethods } =
+    usePaymentMethods();
 
   // Removed old bank account fetching logic; now using usePaymentMethods
 
@@ -253,8 +254,6 @@ export function MerchantAdWizard() {
   };
 
   const publish = async () => {
-    console.log("Merchant Ad Published:", { ...ad, floatingDisplayPrice });
-
     try {
       // Convert wizard format to P2PAd format
       const [cryptoCurrency, fiatCurrency] = ad.pair.split("/");
@@ -677,7 +676,9 @@ export function MerchantAdWizard() {
                       Your Payment Methods
                     </p>
                     {loadingMethods ? (
-                      <p className="text-sm text-gray-400">Loading payment methods...</p>
+                      <p className="text-sm text-gray-400">
+                        Loading payment methods...
+                      </p>
                     ) : allPaymentMethods.length > 0 ? (
                       <div className="grid gap-3">
                         {allPaymentMethods.map((method) => {
@@ -685,10 +686,13 @@ export function MerchantAdWizard() {
                             method.type === "BANK"
                               ? `${method.bankName} - ${method.accountNumber} (${method.accountName})`
                               : `Alipay - ${method.alipayAccountName} (${method.alipayEmail})`;
-                          const isSelected = ad.paymentMethods.includes(displayStr);
+                          const isSelected =
+                            ad.paymentMethods.includes(displayStr);
                           return (
                             <label
-                              key={method._id || method.alipayEmail || method.type}
+                              key={
+                                method._id || method.alipayEmail || method.type
+                              }
                               className={cn(
                                 "flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-all",
                                 isSelected
@@ -713,13 +717,14 @@ export function MerchantAdWizard() {
                                     ? `${method.accountNumber} • ${method.accountName}`
                                     : `${method.alipayAccountName} • ${method.alipayEmail}`}
                                 </p>
-                                {method.type === "ALIPAY" && method.alipayQrImage && (
-                                  <img
-                                    src={method.alipayQrImage}
-                                    alt="Alipay QR"
-                                    className="w-16 h-16 object-contain mt-2 border rounded"
-                                  />
-                                )}
+                                {method.type === "ALIPAY" &&
+                                  method.alipayQrImage && (
+                                    <img
+                                      src={method.alipayQrImage}
+                                      alt="Alipay QR"
+                                      className="w-16 h-16 object-contain mt-2 border rounded"
+                                    />
+                                  )}
                               </div>
                             </label>
                           );

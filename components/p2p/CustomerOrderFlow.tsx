@@ -132,7 +132,6 @@ export function CustomerOrderFlow({
   };
 
   const handleDisputeClick = () => {
-    console.log("Opening dispute modal");
     setShowDisputeModal(true);
     // Temporary toast to verify click works (remove later if annoying)
     // toast({ title: "Opening Dispute Form..." });
@@ -777,7 +776,6 @@ export function CustomerOrderFlow({
       <DisputeModal
         open={showDisputeModal}
         onClose={() => {
-          console.log("Closing dispute modal");
           setShowDisputeModal(false);
         }}
         onSubmit={submitDispute}

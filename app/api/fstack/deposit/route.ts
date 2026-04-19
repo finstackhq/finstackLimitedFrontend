@@ -41,8 +41,6 @@
 //             data = {}
 //         }
 
-//         console.log('[fstack/deposit] GET status:', res.status, type === 'wallet' ? 'type: wallet' : `currency: ${currency}`)
-
 //         // Auto-logout on unauthorized
 //         if (res.status === 401) {
 //             const out = NextResponse.json(data, { status: 401 })
@@ -123,11 +121,7 @@ export async function GET(request: NextRequest) {
       data = await res.json();
     } catch {}
 
-    console.log(
-      "[fstack/deposit] GET",
-      res.status,
-      type === "wallet" ? "type:wallet" : `currency:${currency}`,
-    );
+    // Removed stray comma expressions and fixed syntax
 
     if (res.status === 401) return handleUnauthorized(data);
     return NextResponse.json(data, { status: res.status });
@@ -194,8 +188,6 @@ export async function POST(request: NextRequest) {
     try {
       data = await res.json();
     } catch {}
-
-    console.log("[fstack/deposit] POST /onramp/initiate status:", res.status);
 
     if (res.status === 401) return handleUnauthorized(data);
     return NextResponse.json(data, { status: res.status });

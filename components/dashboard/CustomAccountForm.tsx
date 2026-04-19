@@ -12,6 +12,7 @@ interface CustomAccountFormProps {
     bankName: string;
     accountNumber: string;
     accountName: string;
+    bankCode?: string;
     alipayQrFile?: File;
     alipayAccountName?: string;
     alipayEmail?: string;
@@ -27,6 +28,7 @@ export function CustomAccountForm({ onAccountAdded }: CustomAccountFormProps) {
   const [alipayAccountName, setAlipayAccountName] = useState("");
   const [alipayEmail, setAlipayEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bankCode, setBankCode] = useState("");
   const { toast } = useToast();
 
   // Updated validation
@@ -196,6 +198,7 @@ export function CustomAccountForm({ onAccountAdded }: CustomAccountFormProps) {
           bankName: walletName.trim(),
           accountNumber: accountNumber.trim(),
           accountName: accountName.trim(),
+          bankCode: bankCode.trim(),
         });
       }
 
@@ -212,6 +215,7 @@ export function CustomAccountForm({ onAccountAdded }: CustomAccountFormProps) {
       setAlipayQrFile(null);
       setAlipayAccountName("");
       setAlipayEmail("");
+      setBankCode("");
     } catch (error: any) {
       toast({
         title: "Error",
@@ -241,6 +245,19 @@ export function CustomAccountForm({ onAccountAdded }: CustomAccountFormProps) {
             className="pl-10 border-gray-200 text-sm h-10"
           />
         </div>
+        <Label
+          htmlFor="bankCode"
+          className="text-xs md:text-sm font-medium text-gray-700"
+        >
+          Bank Code (if available)
+        </Label>
+        <Input
+          id="bankCode"
+          placeholder="e.g. ZEIBNGLA"
+          value={bankCode}
+          onChange={(e) => setBankCode(e.target.value)}
+          className="border-gray-200 text-sm h-10"
+        />
       </div>
 
       <div className="space-y-2">

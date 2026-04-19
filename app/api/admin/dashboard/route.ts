@@ -32,7 +32,6 @@
 
 //     if (summaryRes.ok) {
 //       const summaryResponse = await summaryRes.json();
-//       console.log('[admin/dashboard] Summary data:', summaryResponse);
 
 //       if (summaryResponse.success && summaryResponse.data) {
 //         dashboardData = {
@@ -63,7 +62,6 @@
 
 //       if (volumeRes.ok) {
 //         const volumeData = await volumeRes.json();
-//         console.log('[admin/dashboard] Volume data:', volumeData);
 
 //         if (volumeData.success && volumeData.data?.totalVolume) {
 //           totalTransactionVolume = volumeData.data.totalVolume;
@@ -89,7 +87,6 @@
 
 //     if (transactionsRes.ok) {
 //       const transactionsResponse = await transactionsRes.json();
-//       console.log('[admin/dashboard] Transactions data:', transactionsResponse);
 
 //       // Handle the same data structure as admin/transactions route
 //       const list = Array.isArray(transactionsResponse?.transactions)

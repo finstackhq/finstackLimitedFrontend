@@ -108,33 +108,7 @@ export default function PaymentPage() {
   // tradeId declaration moved below, remove duplicate
   const [ctx, setCtx] = useState<StoredTradeContext | null>(null);
 
-  // Debug log for Alipay payment details (moved below ctx declaration)
-  useEffect(() => {
-    if (ctx && ctx.initiate && ctx.initiate.paymentDetails) {
-      console.log(
-        "[DEBUG] Alipay paymentDetails:",
-        ctx.initiate.paymentDetails,
-      );
-    } else {
-      console.log("[DEBUG] No Alipay paymentDetails found.", ctx);
-    }
-  }, [ctx]);
-  // Debug: Log ctx and paymentDetails to check Alipay QR presence
-  useEffect(() => {
-    console.log("PaymentPage ctx:", ctx);
-    if (ctx && ctx.initiate) {
-      if (ctx.initiate.paymentDetails) {
-        console.log(
-          "PaymentPage Alipay paymentDetails:",
-          ctx.initiate.paymentDetails,
-        );
-      } else {
-        console.log("PaymentPage: No paymentDetails found in ctx.initiate");
-      }
-    } else {
-      console.log("PaymentPage: ctx or ctx.initiate is missing");
-    }
-  }, [ctx]);
+  // Removed invalid useEffect blocks and stray comma expressions
   const tradeId =
     typeof params.id === "string"
       ? params.id
@@ -214,7 +188,6 @@ export default function PaymentPage() {
       const details =
         ctx.initiate?.paymentDetails || (ctx as any).paymentDetails;
       if (details) {
-        console.log("✅ Found Alipay Details:", details);
       } else {
         console.warn(
           "❌ No paymentDetails found in ctx.initiate OR ctx root. Entire ctx:",

@@ -33,7 +33,6 @@
 //         const response = await fetch("/api/admin/dashboard");
 //         if (response.ok) {
 //           const dashboardData = await response.json();
-//           console.log("Dashboard data:", dashboardData); // Debug log
 //           setData(dashboardData);
 //         }
 //       } catch (error) {

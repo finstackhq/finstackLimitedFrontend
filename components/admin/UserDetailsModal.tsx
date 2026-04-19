@@ -85,7 +85,6 @@ export function UserDetailsModal({
 
   // Debug: Log user details when modal opens
   if (open && user) {
-    console.log("UserDetailsModal user object:", user);
   }
 
   if (!user) return null;

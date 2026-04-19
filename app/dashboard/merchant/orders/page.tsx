@@ -80,20 +80,12 @@ export default function MerchantOrdersPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedOrder && selectedOrder.side === "SELL") {
-      console.log(
-        "[DEBUG] Fetching trade details for reference:",
-        selectedOrder.reference,
-      );
+    if (selectedOrder?.side === "SELL" && selectedOrder.reference) {
+      // Removed stray comma expressions
       fetch(`/api/fstack/trade/${selectedOrder.reference}`)
         .then((res) => res.json())
         .then((data) => {
-          console.log("[DEBUG] Full API response:", data);
           if (data.success && data.data?.paymentDetails) {
-            console.log(
-              "[DEBUG] Merchant paymentDetails:",
-              data.data.paymentDetails,
-            );
             setPaymentDetails(data.data.paymentDetails);
           } else {
             console.warn("[DEBUG] No paymentDetails found in API response.");
@@ -214,18 +206,20 @@ export default function MerchantOrdersPage() {
                         className="inline-block px-3 py-1 bg-blue-600 text-white rounded text-xs mb-2"
                         onClick={async () => {
                           try {
-                            const response = await fetch(paymentDetails.alipayQrImage);
+                            const response = await fetch(
+                              paymentDetails.alipayQrImage,
+                            );
                             const blob = await response.blob();
                             const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
+                            const a = document.createElement("a");
                             a.href = url;
-                            a.download = 'alipay-qr.png';
+                            a.download = "alipay-qr.png";
                             document.body.appendChild(a);
                             a.click();
                             a.remove();
                             window.URL.revokeObjectURL(url);
                           } catch (err) {
-                            alert('Failed to download QR image.');
+                            alert("Failed to download QR image.");
                           }
                         }}
                       >

@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Download, Share2, Check, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Download, Share2, Check, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 interface Transaction {
   id: string;
@@ -37,7 +37,11 @@ interface TransactionReceiptModalProps {
   onClose: () => void;
 }
 
-export function TransactionReceiptModal({ transaction, isOpen, onClose }: TransactionReceiptModalProps) {
+export function TransactionReceiptModal({
+  transaction,
+  isOpen,
+  onClose,
+}: TransactionReceiptModalProps) {
   const [isExporting, setIsExporting] = useState(false);
 
   if (!transaction) return null;
@@ -83,59 +87,54 @@ export function TransactionReceiptModal({ transaction, isOpen, onClose }: Transa
 
   const exportAsPDF = async () => {
     if (!transaction) {
-      console.error('No transaction data available');
+      console.error("No transaction data available");
       return;
     }
-    
-    console.log('Starting PDF export for transaction:', transaction.reference);
+
     setIsExporting(true);
-    
+
     try {
-      const element = document.getElementById('receipt-content');
+      const element = document.getElementById("receipt-content");
       if (!element) {
-        console.error('Receipt content element not found');
-        alert('Receipt content not found. Please try again.');
+        console.error("Receipt content element not found");
+        alert("Receipt content not found. Please try again.");
         return;
       }
 
-      console.log('Found receipt element, creating canvas...');
-      
       // Wait a bit for any images to load
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#ffffff',
+        backgroundColor: "#ffffff",
         width: element.scrollWidth,
         height: element.scrollHeight,
         logging: true,
       });
 
-      console.log('Canvas created successfully, generating PDF...');
-
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
       });
 
       const imgWidth = 210;
       const pageHeight = 295;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      
+
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+
       const fileName = `finstack-receipt-${transaction.reference}.pdf`;
       pdf.save(fileName);
-      
-      console.log('PDF export successful:', fileName);
-      alert('PDF downloaded successfully!');
+
+      alert("PDF downloaded successfully!");
     } catch (error) {
-      console.error('Error exporting PDF:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error("Error exporting PDF:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
       alert(`Failed to export PDF: ${errorMessage}`);
     } finally {
       setIsExporting(false);
@@ -144,54 +143,49 @@ export function TransactionReceiptModal({ transaction, isOpen, onClose }: Transa
 
   const exportAsImage = async () => {
     if (!transaction) {
-      console.error('No transaction data available');
+      console.error("No transaction data available");
       return;
     }
-    
-    console.log('Starting image export for transaction:', transaction.reference);
+
     setIsExporting(true);
-    
+
     try {
-      const element = document.getElementById('receipt-content');
+      const element = document.getElementById("receipt-content");
       if (!element) {
-        console.error('Receipt content element not found');
-        alert('Receipt content not found. Please try again.');
+        console.error("Receipt content element not found");
+        alert("Receipt content not found. Please try again.");
         return;
       }
 
-      console.log('Found receipt element, creating canvas...');
-      
       // Wait a bit for any images to load
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#ffffff',
+        backgroundColor: "#ffffff",
         width: element.scrollWidth,
         height: element.scrollHeight,
         logging: true,
       });
 
-      console.log('Canvas created successfully, generating image...');
-
       // Create download link
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       const fileName = `finstack-receipt-${transaction.reference}.png`;
       link.download = fileName;
-      link.href = canvas.toDataURL('image/png');
-      
+      link.href = canvas.toDataURL("image/png");
+
       // Append to body, click, and remove
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
-      console.log('Image export successful:', fileName);
-      alert('Image downloaded successfully!');
+
+      alert("Image downloaded successfully!");
     } catch (error) {
-      console.error('Error exporting image:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error("Error exporting image:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
       alert(`Failed to export image: ${errorMessage}`);
     } finally {
       setIsExporting(false);
@@ -207,18 +201,19 @@ export function TransactionReceiptModal({ transaction, isOpen, onClose }: Transa
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border-2 border-gray-100 p-1">
-                  <img 
+                  <img
                     src="https://otiktpyazqotihijbwhm.supabase.co/storage/v1/object/public/images/0c185682-fa1d-4cba-8553-43f6102c311c-logo.png"
-                    alt="Finstack logo" 
+                    alt="Finstack logo"
                     className="w-full h-full object-contain"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
+                      target.style.display = "none";
                       const parent = target.parentElement;
-                      if (parent && !parent.querySelector('.logo-fallback')) {
-                        const fallback = document.createElement('div');
-                        fallback.className = 'logo-fallback w-full h-full bg-gradient-to-br from-[#2F67FA] to-[#4a7bff] rounded-full flex items-center justify-center text-white font-bold text-xs';
-                        fallback.textContent = 'F';
+                      if (parent && !parent.querySelector(".logo-fallback")) {
+                        const fallback = document.createElement("div");
+                        fallback.className =
+                          "logo-fallback w-full h-full bg-gradient-to-br from-[#2F67FA] to-[#4a7bff] rounded-full flex items-center justify-center text-white font-bold text-xs";
+                        fallback.textContent = "F";
                         parent.appendChild(fallback);
                       }
                     }}
@@ -245,25 +240,28 @@ export function TransactionReceiptModal({ transaction, isOpen, onClose }: Transa
             {/* Logo and Branding */}
             <div className="text-center mb-3">
               <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mx-auto mb-1.5 border border-gray-200 p-1">
-                <img 
+                <img
                   src="https://otiktpyazqotihijbwhm.supabase.co/storage/v1/object/public/images/0c185682-fa1d-4cba-8553-43f6102c311c-logo.png"
-                  alt="Finstack logo" 
+                  alt="Finstack logo"
                   className="w-full h-full object-contain"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
+                    target.style.display = "none";
                     const parent = target.parentElement;
-                    if (parent && !parent.querySelector('.logo-fallback')) {
-                      const fallback = document.createElement('div');
-                      fallback.className = 'logo-fallback w-full h-full bg-gradient-to-br from-[#2F67FA] to-[#4a7bff] rounded-full flex items-center justify-center text-white font-bold text-xs';
-                      fallback.textContent = 'F';
+                    if (parent && !parent.querySelector(".logo-fallback")) {
+                      const fallback = document.createElement("div");
+                      fallback.className =
+                        "logo-fallback w-full h-full bg-gradient-to-br from-[#2F67FA] to-[#4a7bff] rounded-full flex items-center justify-center text-white font-bold text-xs";
+                      fallback.textContent = "F";
                       parent.appendChild(fallback);
                     }
                   }}
                 />
               </div>
               <h1 className="text-lg font-bold text-gray-900">Finstack</h1>
-              <p className="text-xs text-gray-600">Digital Financial Services</p>
+              <p className="text-xs text-gray-600">
+                Digital Financial Services
+              </p>
               <div className="w-full h-px bg-gradient-to-r from-transparent via-[#2F67FA] to-transparent mt-1.5"></div>
             </div>
 
@@ -271,10 +269,12 @@ export function TransactionReceiptModal({ transaction, isOpen, onClose }: Transa
             <div className="space-y-2">
               {/* Status */}
               <div className="text-center">
-                <div className={cn(
-                  "inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-medium",
-                  getStatusColor(transaction.status)
-                )}>
+                <div
+                  className={cn(
+                    "inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-medium",
+                    getStatusColor(transaction.status),
+                  )}
+                >
                   {getStatusIcon(transaction.status)}
                   <span>{transaction.status}</span>
                 </div>
@@ -290,19 +290,27 @@ export function TransactionReceiptModal({ transaction, isOpen, onClose }: Transa
                     maximumFractionDigits: 2,
                   })}
                 </p>
-                <p className="text-xs text-gray-500">{transaction.wallet} Wallet</p>
+                <p className="text-xs text-gray-500">
+                  {transaction.wallet} Wallet
+                </p>
               </div>
 
               {/* Transaction Info */}
               <div className="bg-gray-50 rounded-lg p-2.5 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Transaction Type</span>
-                  <span className="text-xs font-medium text-gray-900">{transaction.type}</span>
+                  <span className="text-xs text-gray-600">
+                    Transaction Type
+                  </span>
+                  <span className="text-xs font-medium text-gray-900">
+                    {transaction.type}
+                  </span>
                 </div>
 
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-600">Reference</span>
-                  <span className="text-xs font-mono font-medium text-gray-900">{transaction.reference}</span>
+                  <span className="text-xs font-mono font-medium text-gray-900">
+                    {transaction.reference}
+                  </span>
                 </div>
 
                 <div className="flex justify-between items-center">
@@ -319,90 +327,127 @@ export function TransactionReceiptModal({ transaction, isOpen, onClose }: Transa
 
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-600">Wallet</span>
-                  <span className="text-xs font-medium text-gray-900">{transaction.wallet}</span>
+                  <span className="text-xs font-medium text-gray-900">
+                    {transaction.wallet}
+                  </span>
                 </div>
 
                 {transaction.paymentMethod && (
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-600">Payment Method</span>
-                    <span className="text-xs font-medium text-gray-900">{transaction.paymentMethod}</span>
+                    <span className="text-xs text-gray-600">
+                      Payment Method
+                    </span>
+                    <span className="text-xs font-medium text-gray-900">
+                      {transaction.paymentMethod}
+                    </span>
                   </div>
                 )}
               </div>
 
               {/* P2P Party Information */}
-              {transaction.type === 'P2P' && (transaction.buyer || transaction.seller) && (
-                <div className="space-y-2">
-                  {/* Buyer Information */}
-                  {transaction.buyer && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-2.5">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center">
-                          <span className="text-white text-xs font-bold">B</span>
+              {transaction.type === "P2P" &&
+                (transaction.buyer || transaction.seller) && (
+                  <div className="space-y-2">
+                    {/* Buyer Information */}
+                    {transaction.buyer && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-2.5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">
+                              B
+                            </span>
+                          </div>
+                          <h4 className="text-xs font-semibold text-green-900">
+                            Buyer Details
+                          </h4>
                         </div>
-                        <h4 className="text-xs font-semibold text-green-900">Buyer Details</h4>
+                        <div className="space-y-1.5 pl-8">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-green-700">Name</span>
+                            <span className="text-xs font-medium text-green-900">
+                              {transaction.buyer.name}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-green-700">
+                              Email
+                            </span>
+                            <span className="text-xs font-medium text-green-900 truncate max-w-[180px]">
+                              {transaction.buyer.email}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-green-700">
+                              Amount
+                            </span>
+                            <span className="text-xs font-bold text-green-900">
+                              {getCurrencySymbol(transaction.wallet)}
+                              {transaction.buyer.amount.toLocaleString(
+                                undefined,
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                },
+                              )}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-1.5 pl-8">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-green-700">Name</span>
-                          <span className="text-xs font-medium text-green-900">{transaction.buyer.name}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-green-700">Email</span>
-                          <span className="text-xs font-medium text-green-900 truncate max-w-[180px]">{transaction.buyer.email}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-green-700">Amount</span>
-                          <span className="text-xs font-bold text-green-900">
-                            {getCurrencySymbol(transaction.wallet)}
-                            {transaction.buyer.amount.toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Seller Information */}
-                  {transaction.seller && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
-                          <span className="text-white text-xs font-bold">S</span>
+                    {/* Seller Information */}
+                    {transaction.seller && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">
+                              S
+                            </span>
+                          </div>
+                          <h4 className="text-xs font-semibold text-blue-900">
+                            Seller Details
+                          </h4>
                         </div>
-                        <h4 className="text-xs font-semibold text-blue-900">Seller Details</h4>
+                        <div className="space-y-1.5 pl-8">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-blue-700">Name</span>
+                            <span className="text-xs font-medium text-blue-900">
+                              {transaction.seller.name}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-blue-700">Email</span>
+                            <span className="text-xs font-medium text-blue-900 truncate max-w-[180px]">
+                              {transaction.seller.email}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-blue-700">
+                              Amount
+                            </span>
+                            <span className="text-xs font-bold text-blue-900">
+                              {getCurrencySymbol(transaction.wallet)}
+                              {transaction.seller.amount.toLocaleString(
+                                undefined,
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                },
+                              )}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-1.5 pl-8">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-blue-700">Name</span>
-                          <span className="text-xs font-medium text-blue-900">{transaction.seller.name}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-blue-700">Email</span>
-                          <span className="text-xs font-medium text-blue-900 truncate max-w-[180px]">{transaction.seller.email}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-blue-700">Amount</span>
-                          <span className="text-xs font-bold text-blue-900">
-                            {getCurrencySymbol(transaction.wallet)}
-                            {transaction.seller.amount.toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
 
               {/* Security Notice */}
               <div className="border-l-4 border-[#2F67FA] bg-blue-50 p-2 rounded-r-lg">
                 <p className="text-xs text-blue-800">
-                  <span className="font-medium">Security Notice:</span> This receipt is digitally generated and serves as proof of your transaction.
+                  <span className="font-medium">Security Notice:</span> This
+                  receipt is digitally generated and serves as proof of your
+                  transaction.
                 </p>
               </div>
 
@@ -423,18 +468,16 @@ export function TransactionReceiptModal({ transaction, isOpen, onClose }: Transa
             <div className="flex gap-2">
               <Button
                 onClick={() => {
-                  console.log('PDF export button clicked');
                   exportAsPDF();
                 }}
                 disabled={isExporting}
                 className="flex-1 bg-[#2F67FA] hover:bg-[#2F67FA]/90 text-white h-8 text-xs"
               >
                 <Download className="w-3 h-3 mr-1.5" />
-                {isExporting ? 'Exporting...' : 'Export PDF'}
+                {isExporting ? "Exporting..." : "Export PDF"}
               </Button>
               <Button
                 onClick={() => {
-                  console.log('Image export button clicked');
                   exportAsImage();
                 }}
                 disabled={isExporting}
@@ -442,7 +485,7 @@ export function TransactionReceiptModal({ transaction, isOpen, onClose }: Transa
                 className="flex-1 border-[#2F67FA] text-[#2F67FA] hover:bg-[#2F67FA]/10 h-8 text-xs"
               >
                 <Share2 className="w-3 h-3 mr-1.5" />
-                {isExporting ? 'Exporting...' : 'Export Image'}
+                {isExporting ? "Exporting..." : "Export Image"}
               </Button>
             </div>
           </div>

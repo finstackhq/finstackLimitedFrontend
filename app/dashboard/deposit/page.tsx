@@ -524,6 +524,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -607,7 +608,9 @@ export default function DepositPage() {
   const [ngnStablecoin, setNgnStablecoin] = useState<Stablecoin | null>(null);
   const [ngnAmount, setNgnAmount] = useState<string>("");
   const [amountError, setAmountError] = useState<string | null>(null);
-  const [onrampOrder, setOnrampOrder] = useState<OnrampOrderResponse | null>(null);
+  const [onrampOrder, setOnrampOrder] = useState<OnrampOrderResponse | null>(
+    null,
+  );
   const [hasPrimaryBank, setHasPrimaryBank] = useState<boolean | null>(null);
 
   // ── Shared UI state ──
@@ -719,7 +722,31 @@ export default function DepositPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        // Surface specific backend errors (e.g. "no primary bank account")
+        // Show toast if no primary bank account error
+        if (
+          data.error?.toLowerCase().includes("no primary bank account") ||
+          data.message?.toLowerCase().includes("no primary bank account")
+        ) {
+          toast({
+            title: "Primary bank account required",
+            description: (
+              <span>
+                To deposit Naira, you need a primary bank account set up for
+                refunds.{" "}
+                <a
+                  href="/dashboard/settings?tab=payment"
+                  className="underline font-medium text-blue-700"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Add one now →
+                </a>
+              </span>
+            ),
+            duration: 7000,
+            variant: "destructive",
+          });
+        }
         throw new Error(data.message || "Failed to initiate deposit");
       }
       setOnrampOrder(data.data || {});
@@ -1034,34 +1061,44 @@ export default function DepositPage() {
         {currentStep === 1 && depositMethod === "naira" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-semibold text-foreground mb-1">Deposit Details</h2>
-              <p className="text-gray-600 text-sm">Enter the amount and choose what you want to receive</p>
+              <h2 className="text-xl font-semibold text-foreground mb-1">
+                Deposit Details
+              </h2>
+              <p className="text-gray-600 text-sm">
+                Enter the amount and choose what you want to receive
+              </p>
             </div>
             {/* Amount input */}
             <div className="space-y-1">
-              <Label htmlFor="amount" className="text-sm font-medium">Amount (NGN)</Label>
+              <Label htmlFor="amount" className="text-sm font-medium">
+                Amount (NGN)
+              </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">₦</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">
+                  ₦
+                </span>
                 <Input
                   id="amount"
                   type="number"
                   placeholder="e.g. 50000"
                   value={ngnAmount}
-                  onChange={e => {
+                  onChange={(e) => {
                     setNgnAmount(e.target.value);
                     if (amountError) validateAmount(e.target.value);
                   }}
                   className={`pl-8 ${amountError ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                 />
               </div>
-              {amountError && <p className="text-xs text-red-500">{amountError}</p>}
+              {amountError && (
+                <p className="text-xs text-red-500">{amountError}</p>
+              )}
               <p className="text-xs text-gray-400">Minimum deposit: ₦1,000</p>
             </div>
             {/* Stablecoin selection */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Receive as</Label>
               <div className="grid grid-cols-2 gap-3">
-                {(["USDC", "CNGN"] as Stablecoin[]).map(coin => (
+                {(["USDC", "CNGN"] as Stablecoin[]).map((coin) => (
                   <button
                     key={coin}
                     onClick={() => setNgnStablecoin(coin)}
@@ -1071,9 +1108,17 @@ export default function DepositPage() {
                         : "border-gray-200 hover:border-[#2F67FA]/50"
                     }`}
                   >
-                    <span className={`text-lg font-bold ${ngnStablecoin === coin ? "text-[#2F67FA]" : "text-gray-600"}`}>{coin === "USDC" ? "$" : "₦"}</span>
-                    <p className="text-sm font-semibold text-foreground mt-1">{coin}</p>
-                    <p className="text-xs text-gray-400">{coin === "USDC" ? "USD Coin" : "Crypto Naira"}</p>
+                    <span
+                      className={`text-lg font-bold ${ngnStablecoin === coin ? "text-[#2F67FA]" : "text-gray-600"}`}
+                    >
+                      {coin === "USDC" ? "$" : "₦"}
+                    </span>
+                    <p className="text-sm font-semibold text-foreground mt-1">
+                      {coin}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {coin === "USDC" ? "USD Coin" : "Crypto Naira"}
+                    </p>
                   </button>
                 ))}
               </div>
@@ -1082,7 +1127,7 @@ export default function DepositPage() {
             {ngnStablecoin && ngnAmount && Number(ngnAmount) >= 1000 && (
               <div className="p-3 bg-[#2F67FA]/5 border border-[#2F67FA]/20 rounded-lg">
                 <p className="text-xs text-[#2F67FA] font-medium">
-                  You'll receive approximately {" "}
+                  You'll receive approximately{" "}
                   <span className="font-bold">
                     {ngnStablecoin === "USDC"
                       ? `$${(Number(ngnAmount) / 1620).toFixed(2)} USDC`
@@ -1100,12 +1145,22 @@ export default function DepositPage() {
                 className="w-full bg-[#2F67FA] hover:bg-[#2F67FA]/90 text-white"
               >
                 {loading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating order…</>
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating
+                    order…
+                  </>
                 ) : (
-                  <>Get Payment Details <ChevronRight className="w-4 h-4 ml-1" /></>
+                  <>
+                    Get Payment Details{" "}
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </>
                 )}
               </Button>
-              <Button onClick={handleBack} variant="outline" className="w-full flex items-center justify-center gap-2">
+              <Button
+                onClick={handleBack}
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2"
+              >
                 <ArrowLeft className="w-4 h-4" /> Back
               </Button>
             </div>
@@ -1120,24 +1175,24 @@ export default function DepositPage() {
                 <Banknote className="w-7 h-7 text-green-600" />
               </div>
               <h2 className="text-xl font-semibold text-foreground">
-                Transfer ₦{
-                  (onrampOrder.amountToTransfer
-                    ? Number(onrampOrder.amountToTransfer).toLocaleString()
-                    : Number(ngnAmount).toLocaleString())
-                }
+                Transfer ₦
+                {onrampOrder.amountToTransfer
+                  ? Number(onrampOrder.amountToTransfer).toLocaleString()
+                  : Number(ngnAmount).toLocaleString()}
               </h2>
               <p className="text-sm text-gray-500 mt-1">
-                Pay into this unique account to receive your {onrampOrder.stablecoin || ngnStablecoin}
+                Pay into this unique account to receive your{" "}
+                {onrampOrder.stablecoin || ngnStablecoin}
               </p>
             </div>
             {/* Summary pill */}
             <div className="flex items-center justify-center gap-2">
               <span className="px-3 py-1 bg-gray-100 rounded-full text-xs font-medium text-gray-600">
-                ₦{
-                  (onrampOrder.amountToTransfer
-                    ? Number(onrampOrder.amountToTransfer).toLocaleString()
-                    : Number(ngnAmount).toLocaleString())
-                } NGN
+                ₦
+                {onrampOrder.amountToTransfer
+                  ? Number(onrampOrder.amountToTransfer).toLocaleString()
+                  : Number(ngnAmount).toLocaleString()}{" "}
+                NGN
               </span>
               <span className="text-gray-400 text-xs">→</span>
               <span className="px-3 py-1 bg-[#2F67FA]/10 rounded-full text-xs font-semibold text-[#2F67FA]">
@@ -1145,31 +1200,68 @@ export default function DepositPage() {
               </span>
             </div>
             {/* Virtual account details (Paycrest V2 fallback) */}
-            {(onrampOrder.virtualAccount || onrampOrder.accountNumber) ? (
+            {onrampOrder.virtualAccount || onrampOrder.accountNumber ? (
               <div className="p-5 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
-                <InfoRow label="Bank Name" value={(onrampOrder.virtualAccount ? onrampOrder.virtualAccount.bankName : onrampOrder.bankName) || ""} />
-                <InfoRow label="Account Name" value={(onrampOrder.virtualAccount ? onrampOrder.virtualAccount.accountName : onrampOrder.accountName) || ""} />
+                <InfoRow
+                  label="Bank Name"
+                  value={
+                    (onrampOrder.virtualAccount
+                      ? onrampOrder.virtualAccount.bankName
+                      : onrampOrder.bankName) || ""
+                  }
+                />
+                <InfoRow
+                  label="Account Name"
+                  value={
+                    (onrampOrder.virtualAccount
+                      ? onrampOrder.virtualAccount.accountName
+                      : onrampOrder.accountName) || ""
+                  }
+                />
                 <div>
-                  <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Account Number</Label>
+                  <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Account Number
+                  </Label>
                   <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-gray-200 mt-1">
                     <span className="text-xl font-mono font-bold text-foreground tracking-widest flex-1">
-                      {(onrampOrder.virtualAccount?.accountNumber ?? onrampOrder.accountNumber) ?? ""}
+                      {onrampOrder.virtualAccount?.accountNumber ??
+                        onrampOrder.accountNumber ??
+                        ""}
                     </span>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => copyToClipboard((onrampOrder.virtualAccount?.accountNumber ?? onrampOrder.accountNumber) ?? "")}
+                      onClick={() =>
+                        copyToClipboard(
+                          onrampOrder.virtualAccount?.accountNumber ??
+                            onrampOrder.accountNumber ??
+                            "",
+                        )
+                      }
                       className="text-green-600 hover:bg-green-50 flex-shrink-0"
                     >
-                      {copiedText ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      {copiedText ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
                     </Button>
                   </div>
                 </div>
-                {(onrampOrder.virtualAccount?.expiresAt || onrampOrder.validUntil) && (
+                {(onrampOrder.virtualAccount?.expiresAt ||
+                  onrampOrder.validUntil) && (
                   <div className="flex items-center gap-2 text-xs text-amber-600">
                     <Clock className="w-3.5 h-3.5" />
                     <span>
-                      This account expires at {new Date((onrampOrder.virtualAccount?.expiresAt || onrampOrder.validUntil) || "").toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      This account expires at{" "}
+                      {new Date(
+                        onrampOrder.virtualAccount?.expiresAt ||
+                          onrampOrder.validUntil ||
+                          "",
+                      ).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                   </div>
                 )}
@@ -1178,10 +1270,14 @@ export default function DepositPage() {
               // Fallback: backend didn't return virtual account — show reference only
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                 <p className="text-sm text-amber-800 font-medium">
-                  Order created. Reference: <span className="font-mono font-bold">{onrampOrder.reference}</span>
+                  Order created. Reference:{" "}
+                  <span className="font-mono font-bold">
+                    {onrampOrder.reference}
+                  </span>
                 </p>
                 <p className="text-xs text-amber-700 mt-1">
-                  Please check your email or contact support for payment details.
+                  Please check your email or contact support for payment
+                  details.
                 </p>
               </div>
             )}
@@ -1190,18 +1286,28 @@ export default function DepositPage() {
               <div className="flex items-start gap-3">
                 <BadgeCheck className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-semibold text-blue-800 mb-1">How this works</h4>
+                  <h4 className="text-sm font-semibold text-blue-800 mb-1">
+                    How this works
+                  </h4>
                   <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
                     <li>
-                      Transfer exactly ₦{
-                        (onrampOrder.amountToTransfer
-                          ? Number(onrampOrder.amountToTransfer).toLocaleString()
-                          : Number(ngnAmount).toLocaleString())
-                      } to the account above
+                      Transfer exactly ₦
+                      {onrampOrder.amountToTransfer
+                        ? Number(onrampOrder.amountToTransfer).toLocaleString()
+                        : Number(ngnAmount).toLocaleString()}{" "}
+                      to the account above
                     </li>
-                    <li>Your {onrampOrder.stablecoin || ngnStablecoin} wallet will be credited automatically</li>
-                    <li>Use this account for this transaction only — it's unique to this order</li>
-                    <li>Processing usually takes a few minutes after payment</li>
+                    <li>
+                      Your {onrampOrder.stablecoin || ngnStablecoin} wallet will
+                      be credited automatically
+                    </li>
+                    <li>
+                      Use this account for this transaction only — it's unique
+                      to this order
+                    </li>
+                    <li>
+                      Processing usually takes a few minutes after payment
+                    </li>
                     <li>If payment is not made, no funds will be deducted</li>
                   </ul>
                 </div>
@@ -1211,14 +1317,23 @@ export default function DepositPage() {
             {onrampOrder.reference && (
               <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
                 <span className="text-xs text-gray-500">Order Reference</span>
-                <span className="text-xs font-mono font-semibold text-foreground">{onrampOrder.reference}</span>
+                <span className="text-xs font-mono font-semibold text-foreground">
+                  {onrampOrder.reference}
+                </span>
               </div>
             )}
             <div className="flex gap-3">
-              <Button onClick={handleBack} variant="outline" className="flex-1 flex items-center justify-center gap-2">
+              <Button
+                onClick={handleBack}
+                variant="outline"
+                className="flex-1 flex items-center justify-center gap-2"
+              >
                 <ArrowLeft className="w-4 h-4" /> Back
               </Button>
-              <Button asChild className="flex-1 bg-[#2F67FA] hover:bg-[#2F67FA]/90 text-white">
+              <Button
+                asChild
+                className="flex-1 bg-[#2F67FA] hover:bg-[#2F67FA]/90 text-white"
+              >
                 <a href="/dashboard">
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Check Balance
