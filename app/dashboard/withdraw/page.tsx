@@ -126,13 +126,13 @@ interface WithdrawalWallet {
   asset: string;
 }
 
-
-
 export default function WithdrawPage() {
   const { toast } = useToast();
 
   // State for withdrawal wallets
-  const [withdrawalWallets, setWithdrawalWallets] = useState<WithdrawalWallet[]>([]);
+  const [withdrawalWallets, setWithdrawalWallets] = useState<
+    WithdrawalWallet[]
+  >([]);
   const [loadingWallets, setLoadingWallets] = useState(false);
 
   // Fetch withdrawal wallets from backend
@@ -250,8 +250,6 @@ export default function WithdrawPage() {
 
         const data = await res.json();
 
-        console.log("[withdraw] Wallet balances API response:", data);
-
         if (res.ok && Array.isArray(data.data)) {
           // Find CNGN, NGN, USDC, USDT balances
 
@@ -289,8 +287,6 @@ export default function WithdrawPage() {
         const res = await fetch("/api/fstack/profile?type=bank-accounts");
 
         const data = await res.json();
-
-        console.log("[withdraw] Bank accounts response:", data);
 
         // Handle different response formats from backend
 
@@ -335,8 +331,6 @@ export default function WithdrawPage() {
           }
 
           setBankAccounts(accounts);
-
-          console.log("[withdraw] Loaded bank accounts:", accounts.length);
         }
       } catch (err) {
         console.error("Failed to fetch bank accounts:", err);
@@ -520,7 +514,6 @@ export default function WithdrawPage() {
     let body: any = {};
 
     try {
-
       const destination =
         selectedWallet === "NGN"
           ? bankAccounts.find((a) => a.id === selectedDestination)
@@ -782,33 +775,39 @@ export default function WithdrawPage() {
                     </button>
                   ))
                 )
+              ) : loadingWallets ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#2F67FA]" />
+                  <span className="ml-2 text-gray-600">Loading wallets...</span>
+                </div>
+              ) : withdrawalWallets.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="mb-2">No withdrawal wallets added yet.</p>
+                  <p className="text-sm">
+                    Add a wallet address to withdraw crypto.
+                  </p>
+                </div>
               ) : (
-                loadingWallets ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-[#2F67FA]" />
-                    <span className="ml-2 text-gray-600">Loading wallets...</span>
-                  </div>
-                ) : withdrawalWallets.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p className="mb-2">No withdrawal wallets added yet.</p>
-                    <p className="text-sm">Add a wallet address to withdraw crypto.</p>
-                  </div>
-                ) : (
-                  withdrawalWallets.map((wallet) => (
-                    <button
-                      key={wallet.id}
-                      onClick={() => {
-                        setSelectedDestination(wallet.id);
-                        setCurrentStep(3);
-                      }}
-                      className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-[#2F67FA] hover:bg-[#2F67FA]/5 transition-all duration-200 text-left"
-                    >
-                      <p className="font-semibold text-foreground mb-1">{wallet.name}</p>
-                      <p className="text-sm text-gray-600 font-mono">{wallet.address}</p>
-                      <p className="text-xs text-gray-400">{wallet.asset} • {wallet.network}</p>
-                    </button>
-                  ))
-                )
+                withdrawalWallets.map((wallet) => (
+                  <button
+                    key={wallet.id}
+                    onClick={() => {
+                      setSelectedDestination(wallet.id);
+                      setCurrentStep(3);
+                    }}
+                    className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-[#2F67FA] hover:bg-[#2F67FA]/5 transition-all duration-200 text-left"
+                  >
+                    <p className="font-semibold text-foreground mb-1">
+                      {wallet.name}
+                    </p>
+                    <p className="text-sm text-gray-600 font-mono">
+                      {wallet.address}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {wallet.asset} • {wallet.network}
+                    </p>
+                  </button>
+                ))
               )}
 
               {selectedWallet === "NGN" ? (

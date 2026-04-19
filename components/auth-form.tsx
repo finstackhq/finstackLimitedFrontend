@@ -220,8 +220,6 @@ export function AuthForm() {
             credentials: "include",
           });
           const data = await res.json();
-          // console.log("[auth-form] register response status:", res.status);
-          // console.log("[auth-form] register response body:", data);
           if (res.ok) {
             // Persist email for verify page and redirect
             try {
@@ -251,8 +249,6 @@ export function AuthForm() {
             credentials: "include", // Ensure refresh token cookie is set
           });
           const data = await res.json();
-          // console.log("[auth-form] login response status:", res.status);
-          // console.log("[auth-form] login response body:", data);
           if (res.ok) {
             try {
               // Persist user object for session (required by dashboard and delete logic)
@@ -278,7 +274,10 @@ export function AuthForm() {
                 const profile = await profileRes.json();
                 // You may need to adjust these keys based on backend response
                 if (typeof profile?.kycVerified !== "undefined") {
-                  localStorage.setItem("isKycVerified", String(!!profile.kycVerified));
+                  localStorage.setItem(
+                    "isKycVerified",
+                    String(!!profile.kycVerified),
+                  );
                 }
                 if (profile?.kycStatus) {
                   localStorage.setItem("kycStatus", String(profile.kycStatus));

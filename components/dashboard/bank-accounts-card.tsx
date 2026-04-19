@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 
 interface BankAccount {
@@ -235,11 +236,11 @@ export function BankAccountsCard() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Bank Account</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this bank account? This action
+              cannot be undone.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-gray-600">
-            Are you sure you want to delete this bank account? This action
-            cannot be undone.
-          </p>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={closeDeleteModal}>
               Cancel

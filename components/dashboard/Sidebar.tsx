@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   Wallet,
@@ -12,9 +12,9 @@ import {
   Settings,
   HelpCircle,
   LogOut,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-import { useToast } from "@/hooks/use-toast"
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const navItems = [
   { name: "Home", href: "/dashboard", icon: Home },
@@ -26,19 +26,25 @@ const navItems = [
   { name: "Transactions", href: "/dashboard/transactions", icon: Receipt },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
   { name: "Help", href: "/dashboard/help", icon: HelpCircle },
-]
+];
 
 export function Sidebar() {
-  const pathname = usePathname()
-  const router = useRouter()
-  const { toast } = useToast()
+  const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
 
   return (
     <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-[240px] bg-white border-r border-gray-100 z-40">
       <div className="h-16 flex items-center px-5 border-b border-gray-100 bg-white">
         <Link href="/dashboard" className="flex items-center gap-2">
           <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-white">
-            <img src="/logo.png" alt="Finstack logo" className="w-8 h-8 object-contain" style={{ background: 'white' }} loading="lazy" />
+            <img
+              src="/logo.png"
+              alt="Finstack logo"
+              className="w-8 h-8 object-contain"
+              style={{ background: "white" }}
+              loading="lazy"
+            />
           </span>
           <span className="text-xl font-semibold text-gray-900">Finstack</span>
         </Link>
@@ -46,15 +52,17 @@ export function Sidebar() {
 
       <nav className="flex-1 px-3 py-4 space-y-0.5">
         {navItems.map((item) => {
-          const Icon = item.icon
-          const isActive = pathname === item.href
+          const Icon = item.icon;
+          const isActive = pathname === item.href;
           return (
             <Link
               key={item.name}
               href={item.href}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative",
-                isActive ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                isActive
+                  ? "bg-blue-50 text-blue-600"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
               )}
             >
               {isActive && (
@@ -63,37 +71,36 @@ export function Sidebar() {
               <Icon className="w-5 h-5 shrink-0" />
               <span className="text-sm font-medium">{item.name}</span>
             </Link>
-          )
+          );
         })}
       </nav>
 
-  <div className="px-3 py-4 border-t border-gray-100">
-    <button
+      <div className="px-3 py-4 border-t border-gray-100">
+        <button
           onClick={async () => {
             try {
               // First hit the logout endpoint
-              const res = await fetch("/api/fstack/logout", { method: "POST" })
-              const data = await res.json().catch(() => ({}))
-              console.log("[sidebar] logout response:", data)
+              const res = await fetch("/api/fstack/logout", { method: "POST" });
+              const data = await res.json().catch(() => ({}));
             } catch (e) {
-              console.warn("[sidebar] logout proxy failed:", e)
+              console.warn("[sidebar] logout proxy failed:", e);
             } finally {
               // Always clear localStorage tokens after attempting logout
               try {
-                localStorage.removeItem('access_token')
-                localStorage.removeItem('accessToken')
-                localStorage.removeItem('merchant-status')
-                localStorage.removeItem('isKycVerified')
-                localStorage.removeItem('user')
-                localStorage.removeItem('userFirstName')
-                localStorage.removeItem('userLastName')
-                localStorage.removeItem('kycStatus')
-                localStorage.removeItem('role-change-logs')
+                localStorage.removeItem("access_token");
+                localStorage.removeItem("accessToken");
+                localStorage.removeItem("merchant-status");
+                localStorage.removeItem("isKycVerified");
+                localStorage.removeItem("user");
+                localStorage.removeItem("userFirstName");
+                localStorage.removeItem("userLastName");
+                localStorage.removeItem("kycStatus");
+                localStorage.removeItem("role-change-logs");
               } catch (e) {
-                console.warn("[sidebar] failed to clear localStorage:", e)
+                console.warn("[sidebar] failed to clear localStorage:", e);
               }
               // Redirect to login with flag for toast
-              router.push("/login?logged_out=true")
+              router.push("/login?logged_out=true");
             }
           }}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full transition-all duration-200 text-red-600 hover:bg-red-50 group"
@@ -103,5 +110,5 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
-  )
+  );
 }

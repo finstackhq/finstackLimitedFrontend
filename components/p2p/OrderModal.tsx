@@ -481,7 +481,10 @@ function OrderModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md" aria-describedby="order-modal-description">
+      <DialogContent
+        className="max-w-md"
+        aria-describedby="order-modal-description"
+      >
         <DialogHeader>
           <DialogTitle>
             {ad.type === "buy" ? "Buy" : "Sell"} {ad.cryptoCurrency}
@@ -490,7 +493,9 @@ function OrderModal({
 
         {/* Accessibility description for DialogContent */}
         <div id="order-modal-description" className="sr-only">
-          Complete your P2P order by entering the amount, selecting a payment method, and confirming the transaction. Platform fee and seller instructions are shown below.
+          Complete your P2P order by entering the amount, selecting a payment
+          method, and confirming the transaction. Platform fee and seller
+          instructions are shown below.
         </div>
 
         <div className="space-y-4">
@@ -677,7 +682,6 @@ function OrderModal({
                           key={isAlipay ? "ALIPAY" : String(method._id)}
                           type="button"
                           onClick={() => {
-                            // console.log("[STEP1] Payment method button clicked", method);
                             setSelectedPayment(method);
                           }}
                           disabled={isLoading}
@@ -726,7 +730,6 @@ function OrderModal({
                     key={`${detail.type}-${index}`}
                     type="button"
                     onClick={() => {
-                      // console.log("[STEP1] Payment method button clicked (BUY)", detail.type);
                       setSelectedPayment(detail.type);
                     }}
                     disabled={isLoading}
@@ -752,7 +755,6 @@ function OrderModal({
                     key={method}
                     type="button"
                     onClick={() => {
-                      // console.log("[STEP1] Payment method button clicked (BUY fallback)", method);
                       setSelectedPayment(method);
                     }}
                     disabled={isLoading}
@@ -781,7 +783,7 @@ function OrderModal({
           <div className="flex items-center text-xs bg-yellow-50 rounded-md p-2 mt-2 border border-yellow-200">
             <AlertCircle className="w-4 h-4 mr-2 text-yellow-600" />
             <span>
-              Seller's Instructions: {" "}
+              Seller's Instructions:{" "}
               <span className="font-medium">{ad.instructions || "-"}</span>
             </span>
           </div>
@@ -789,22 +791,49 @@ function OrderModal({
           {/* Merchant Payment Details (BUY/SELL flow) */}
           {(ad.paymentDetails || initiatePayload?.paymentDetails) && (
             <div className="merchant-payment-details mt-4 p-3 border rounded-lg bg-gray-50">
-              <h3 className="font-semibold mb-2 text-sm text-gray-700">Merchant Payment Details</h3>
+              <h3 className="font-semibold mb-2 text-sm text-gray-700">
+                Merchant Payment Details
+              </h3>
               <ul className="space-y-1 text-xs text-gray-800">
-                {(ad.paymentDetails?.bankName || initiatePayload?.paymentDetails?.bankName) && (
-                  <li><strong>Bank Name:</strong> {ad.paymentDetails?.bankName || initiatePayload?.paymentDetails?.bankName}</li>
+                {(ad.paymentDetails?.bankName ||
+                  initiatePayload?.paymentDetails?.bankName) && (
+                  <li>
+                    <strong>Bank Name:</strong>{" "}
+                    {ad.paymentDetails?.bankName ||
+                      initiatePayload?.paymentDetails?.bankName}
+                  </li>
                 )}
-                {(ad.paymentDetails?.accountNumber || initiatePayload?.paymentDetails?.accountNumber) && (
-                  <li><strong>Account Number:</strong> {ad.paymentDetails?.accountNumber || initiatePayload?.paymentDetails?.accountNumber}</li>
+                {(ad.paymentDetails?.accountNumber ||
+                  initiatePayload?.paymentDetails?.accountNumber) && (
+                  <li>
+                    <strong>Account Number:</strong>{" "}
+                    {ad.paymentDetails?.accountNumber ||
+                      initiatePayload?.paymentDetails?.accountNumber}
+                  </li>
                 )}
-                {(ad.paymentDetails?.accountName || initiatePayload?.paymentDetails?.accountName) && (
-                  <li><strong>Account Name:</strong> {ad.paymentDetails?.accountName || initiatePayload?.paymentDetails?.accountName}</li>
+                {(ad.paymentDetails?.accountName ||
+                  initiatePayload?.paymentDetails?.accountName) && (
+                  <li>
+                    <strong>Account Name:</strong>{" "}
+                    {ad.paymentDetails?.accountName ||
+                      initiatePayload?.paymentDetails?.accountName}
+                  </li>
                 )}
-                {(ad.paymentDetails?.country || initiatePayload?.paymentDetails?.country) && (
-                  <li><strong>Country:</strong> {ad.paymentDetails?.country || initiatePayload?.paymentDetails?.country}</li>
+                {(ad.paymentDetails?.country ||
+                  initiatePayload?.paymentDetails?.country) && (
+                  <li>
+                    <strong>Country:</strong>{" "}
+                    {ad.paymentDetails?.country ||
+                      initiatePayload?.paymentDetails?.country}
+                  </li>
                 )}
-                {(ad.paymentDetails?.type || initiatePayload?.paymentDetails?.type) && (
-                  <li><strong>Type:</strong> {ad.paymentDetails?.type || initiatePayload?.paymentDetails?.type}</li>
+                {(ad.paymentDetails?.type ||
+                  initiatePayload?.paymentDetails?.type) && (
+                  <li>
+                    <strong>Type:</strong>{" "}
+                    {ad.paymentDetails?.type ||
+                      initiatePayload?.paymentDetails?.type}
+                  </li>
                 )}
               </ul>
             </div>
@@ -822,7 +851,6 @@ function OrderModal({
             </Button>
             <Button
               onClick={() => {
-                // console.log("[STEP0] Confirm Order button clicked. selectedPayment:", selectedPayment);
                 toast({
                   title: "Confirm Order Clicked",
                   description: `selectedPayment: ${JSON.stringify(selectedPayment)}`,

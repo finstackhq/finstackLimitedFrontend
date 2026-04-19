@@ -212,7 +212,6 @@ export function MerchantOrderFlow({
       );
 
       const data = await res.json();
-      console.log("Merchant mark paid response:", res.status, data);
 
       // Relaxed check: if status is 2xx, consider it success even if data.success is missing
       if (res.ok) {

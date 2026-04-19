@@ -1,36 +1,44 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Camera, Bell, CreditCard, User, Upload, X, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { AddAccountDialog } from "@/components/dashboard/add-account-dialog"
-import { KYCForm } from "@/components/dashboard/KYCForm"
-import { CustomAccountForm } from "@/components/dashboard/CustomAccountForm"
-import { useToast } from "@/hooks/use-toast"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Camera,
+  Bell,
+  CreditCard,
+  User,
+  Upload,
+  X,
+  Loader2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AddAccountDialog } from "@/components/dashboard/add-account-dialog";
+import { KYCForm } from "@/components/dashboard/KYCForm";
+import { CustomAccountForm } from "@/components/dashboard/CustomAccountForm";
+import { useToast } from "@/hooks/use-toast";
 
 export default function SettingsPage() {
-  const { toast } = useToast()
+  const { toast } = useToast();
   const router = useRouter();
   // Check for ?tab=payment in the URL to auto-switch
-  const [activeTab, setActiveTab] = useState("profile")
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  
+  const [activeTab, setActiveTab] = useState("profile");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   // Profile data
   const [profile, setProfile] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phoneNumber: "",
-  })
-  
+  });
+
   const [notifications, setNotifications] = useState({
     email: true,
     sms: true,
@@ -39,18 +47,18 @@ export default function SettingsPage() {
     withdrawals: true,
     trades: true,
     marketing: false,
-  })
-  
-  const [paymentMethods, setPaymentMethods] = useState<any[]>([])
-  
+  });
+
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+
   // KYC verification status from profile API
   // Can be: false (not submitted), "pending" (under review), true (approved)
-  const [kycVerified, setKycVerified] = useState<boolean | string | null>(null)
+  const [kycVerified, setKycVerified] = useState<boolean | string | null>(null);
 
   // Fetch profile data
   useEffect(() => {
-    fetchProfile()
-  }, [])
+    fetchProfile();
+  }, []);
 
   // Auto-switch to Payment tab if ?tab=payment is in the URL
   useEffect(() => {
@@ -64,10 +72,10 @@ export default function SettingsPage() {
   }, []);
 
   const fetchProfile = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await fetch('/api/fstack/profile')
-      const data = await res.json()
+      const res = await fetch("/api/fstack/profile");
+      const data = await res.json();
 
       if (data.success && data.data) {
         setProfile({
@@ -75,38 +83,38 @@ export default function SettingsPage() {
           lastName: data.data.lastName || "",
           email: data.data.email || "",
           phoneNumber: data.data.phoneNumber || "",
-        })
+        });
         // Capture kycVerified from profile response
         // kycVerified can be: false (not submitted/rejected), "pending" (under review), true (approved)
-        const verified = data.data.kycVerified
-        setKycVerified(verified)
+        const verified = data.data.kycVerified;
+        setKycVerified(verified);
       }
     } catch (error) {
-      console.error('Failed to fetch profile:', error)
+      console.error("Failed to fetch profile:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load profile data',
-        variant: 'destructive'
-      })
+        title: "Error",
+        description: "Failed to load profile data",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchBankAccounts = async () => {
     try {
-      const res = await fetch('/api/fstack/profile?type=bank-accounts');
+      const res = await fetch("/api/fstack/profile?type=bank-accounts");
       const data = await res.json();
-      
+
       if (data.success && Array.isArray(data.data)) {
-         const mappedMethods = data.data.map((acc: any, index: number) => ({
-             id: acc._id || index + 1,
-             bank: acc.bankName,
-             accountNumber: acc.accountNumber,
-             accountName: acc.accountName,
-             primary: false // Backend might not tell us, default false or 1st logic ?
-         }));
-         setPaymentMethods(mappedMethods);
+        const mappedMethods = data.data.map((acc: any, index: number) => ({
+          id: acc._id || index + 1,
+          bank: acc.bankName,
+          accountNumber: acc.accountNumber,
+          accountName: acc.accountName,
+          primary: false, // Backend might not tell us, default false or 1st logic ?
+        }));
+        setPaymentMethods(mappedMethods);
       }
     } catch (e) {
       console.error("Failed to fetch bank accounts", e);
@@ -119,56 +127,66 @@ export default function SettingsPage() {
   }, []);
 
   const handleSaveProfile = async () => {
-    setSaving(true)
+    setSaving(true);
     try {
-      const res = await fetch('/api/fstack/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/fstack/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           firstName: profile.firstName,
           lastName: profile.lastName,
-          phoneNumber: profile.phoneNumber
-        })
-      })
+          phoneNumber: profile.phoneNumber,
+        }),
+      });
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || data.message || 'Failed to update profile')
+        throw new Error(
+          data.error || data.message || "Failed to update profile",
+        );
       }
 
       toast({
-        title: 'Profile Updated',
-        description: 'Your profile has been updated successfully'
-      })
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully",
+      });
     } catch (error: any) {
-      console.error('Failed to update profile:', error)
+      console.error("Failed to update profile:", error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to update profile',
-        variant: 'destructive'
-      })
+        title: "Error",
+        description: error.message || "Failed to update profile",
+        variant: "destructive",
+      });
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
-  const handleAddPayment = async (account: { bankName: string; accountNumber: string; accountName: string }) => {
+  const handleAddPayment = async (account: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    bankCode?: string;
+  }) => {
     try {
-      const res = await fetch('/api/fstack/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/fstack/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bankName: account.bankName,
           accountNumber: account.accountNumber,
-          accountName: account.accountName
-        })
-      })
+          accountName: account.accountName,
+          bankCode: account.bankCode || "",
+        }),
+      });
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || data.message || 'Failed to add bank account')
+        throw new Error(
+          data.error || data.message || "Failed to add bank account",
+        );
       }
 
       const newMethod = {
@@ -177,26 +195,55 @@ export default function SettingsPage() {
         accountNumber: account.accountNumber,
         accountName: account.accountName,
         primary: paymentMethods.length === 0,
-      }
-      setPaymentMethods([...paymentMethods, newMethod])
+      };
+      setPaymentMethods([...paymentMethods, newMethod]);
 
       toast({
-        title: 'Bank Account Added',
-        description: 'Your bank account has been added successfully'
-      })
+        title: "Bank Account Added",
+        description: "Your bank account has been added successfully",
+      });
     } catch (error: any) {
-      console.error('Failed to add bank account:', error)
+      console.error("Failed to add bank account:", error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to add bank account',
-        variant: 'destructive'
-      })
+        title: "Error",
+        description: error.message || "Failed to add bank account",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
-  const handleRemovePayment = (id: number) => {
-    setPaymentMethods(paymentMethods.filter((method) => method.id !== id))
-  }
+  const handleRemovePayment = async (id: string) => {
+    try {
+      const storedUser =
+        typeof window !== "undefined" ? localStorage.getItem("user") : null;
+      if (!storedUser) throw new Error("No session found");
+      let userData = JSON.parse(storedUser);
+      let token = userData.accessToken || userData.user?.accessToken;
+
+      const res = await fetch(
+        `https://finstacklimitedbackend.onrender.com/api/bank-account/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: "include",
+        },
+      );
+      const data = await res.json();
+      if (!res.ok || !data.success)
+        throw new Error(data.message || "Delete failed");
+      setPaymentMethods((prev) => prev.filter((method) => method.id !== id));
+      toast({ title: "Success", description: "Account deleted" });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSetPrimary = (id: number) => {
     setPaymentMethods(
@@ -204,19 +251,19 @@ export default function SettingsPage() {
         ...method,
         primary: method.id === id,
       })),
-    )
-  }
+    );
+  };
 
   const getInitials = () => {
-    return `${profile.firstName.charAt(0)}${profile.lastName.charAt(0)}`.toUpperCase()
-  }
+    return `${profile.firstName.charAt(0)}${profile.lastName.charAt(0)}`.toUpperCase();
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
-    )
+    );
   }
 
   return (
@@ -224,14 +271,24 @@ export default function SettingsPage() {
       <div className="mx-auto max-w-5xl">
         {/* Header */}
         <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-1 md:mb-2">Settings</h1>
-          <p className="text-sm md:text-base text-gray-600">Manage your account settings and preferences</p>
+          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-1 md:mb-2">
+            Settings
+          </h1>
+          <p className="text-sm md:text-base text-gray-600">
+            Manage your account settings and preferences
+          </p>
         </div>
 
         {/* Tabs */}
         {/* Dynamic grid columns based on whether KYC tab is shown */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
-          <TabsList className={`grid w-full h-auto gap-1 md:gap-2 bg-transparent p-0 ${kycVerified === true ? 'grid-cols-3' : 'grid-cols-4'}`}>
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-4 md:space-y-6"
+        >
+          <TabsList
+            className={`grid w-full h-auto gap-1 md:gap-2 bg-transparent p-0 ${kycVerified === true ? "grid-cols-3" : "grid-cols-4"}`}
+          >
             <TabsTrigger
               value="profile"
               className="data-[state=active]:bg-blue-600 data-[state=active]:text-white border border-gray-200 data-[state=active]:border-blue-600 text-xs md:text-sm px-2 py-2 md:px-4 md:py-2.5"
@@ -247,7 +304,7 @@ export default function SettingsPage() {
               >
                 <Upload className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
                 <span className="hidden md:inline">KYC</span>
-                {kycVerified === 'pending' && (
+                {kycVerified === "pending" && (
                   <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
                     Pending
                   </span>
@@ -273,15 +330,21 @@ export default function SettingsPage() {
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-4 md:space-y-6">
             <Card className="p-4 md:p-6 border-gray-200 shadow-sm">
-              <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4 md:mb-6">Profile Information</h2>
+              <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4 md:mb-6">
+                Profile Information
+              </h2>
 
               {/* Profile Photo */}
               <div className="mb-4 md:mb-6">
-                <Label className="text-xs md:text-sm font-medium text-gray-700 mb-2 block">Profile Photo</Label>
+                <Label className="text-xs md:text-sm font-medium text-gray-700 mb-2 block">
+                  Profile Photo
+                </Label>
                 <div className="flex items-center gap-3 md:gap-4">
                   <Avatar className="h-16 w-16 md:h-20 md:w-20">
                     <AvatarImage src="/placeholder-user.jpg" />
-                    <AvatarFallback className="bg-blue-100 text-blue-600 text-lg md:text-xl">{getInitials()}</AvatarFallback>
+                    <AvatarFallback className="bg-blue-100 text-blue-600 text-lg md:text-xl">
+                      {getInitials()}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
                     <Button
@@ -292,7 +355,9 @@ export default function SettingsPage() {
                       <Camera className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
                       Change Photo
                     </Button>
-                    <p className="text-xs text-gray-500">JPG, PNG or GIF. Max 2MB.</p>
+                    <p className="text-xs text-gray-500">
+                      JPG, PNG or GIF. Max 2MB.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -309,7 +374,9 @@ export default function SettingsPage() {
                   <Input
                     id="firstName"
                     value={profile.firstName}
-                    onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, firstName: e.target.value })
+                    }
                     className="border-gray-200 text-sm md:text-base h-9 md:h-10"
                   />
                 </div>
@@ -323,12 +390,17 @@ export default function SettingsPage() {
                   <Input
                     id="lastName"
                     value={profile.lastName}
-                    onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, lastName: e.target.value })
+                    }
                     className="border-gray-200 text-sm md:text-base h-9 md:h-10"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email" className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+                  <Label
+                    htmlFor="email"
+                    className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block"
+                  >
                     Email Address
                   </Label>
                   <Input
@@ -338,23 +410,30 @@ export default function SettingsPage() {
                     disabled
                     className="border-gray-200 text-sm md:text-base h-9 md:h-10 bg-gray-50 cursor-not-allowed"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Email cannot be changed
+                  </p>
                 </div>
                 <div>
-                  <Label htmlFor="phone" className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">
+                  <Label
+                    htmlFor="phone"
+                    className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block"
+                  >
                     Phone Number
                   </Label>
                   <Input
                     id="phone"
                     value={profile.phoneNumber || ""}
-                    onChange={(e) => setProfile({ ...profile, phoneNumber: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, phoneNumber: e.target.value })
+                    }
                     className="border-gray-200 text-sm md:text-base h-9 md:h-10"
                   />
                 </div>
               </div>
 
               <div className="mt-4 md:mt-6 flex justify-end">
-                <Button 
+                <Button
                   onClick={handleSaveProfile}
                   disabled={saving}
                   className="bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm h-9 md:h-10"
@@ -365,7 +444,7 @@ export default function SettingsPage() {
                       Saving...
                     </>
                   ) : (
-                    'Save Changes'
+                    "Save Changes"
                   )}
                 </Button>
               </div>
@@ -374,21 +453,25 @@ export default function SettingsPage() {
 
           {/* KYC Tab */}
           <TabsContent value="kyc" className="space-y-4 md:space-y-6">
-            {kycVerified === 'pending' ? (
+            {kycVerified === "pending" ? (
               /* KYC Under Review - Pending State */
               <Card className="p-6 md:p-8 border-gray-200 shadow-sm">
                 <div className="text-center py-8">
                   <div className="w-20 h-20 mx-auto mb-6 bg-yellow-100 rounded-full flex items-center justify-center">
                     <Loader2 className="w-10 h-10 text-yellow-600 animate-spin" />
                   </div>
-                  <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-3">KYC Under Review</h2>
+                  <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-3">
+                    KYC Under Review
+                  </h2>
                   <p className="text-sm md:text-base text-gray-600 max-w-md mx-auto mb-6">
-                    Your KYC application has been submitted and is currently being reviewed by our team. 
-                    This process typically takes 1-3 business days.
+                    Your KYC application has been submitted and is currently
+                    being reviewed by our team. This process typically takes 1-3
+                    business days.
                   </p>
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-md mx-auto">
                     <p className="text-sm text-yellow-800">
-                      <strong>Note:</strong> You will receive an email notification once your verification is complete.
+                      <strong>Note:</strong> You will receive an email
+                      notification once your verification is complete.
                     </p>
                   </div>
                 </div>
@@ -397,8 +480,13 @@ export default function SettingsPage() {
               /* KYC Application Form - Not Submitted State (kycVerified === false) */
               <>
                 <div className="mb-4">
-                  <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-1">KYC Verification</h2>
-                  <p className="text-xs md:text-sm text-gray-600">Complete all steps to verify your identity and unlock full platform features</p>
+                  <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-1">
+                    KYC Verification
+                  </h2>
+                  <p className="text-xs md:text-sm text-gray-600">
+                    Complete all steps to verify your identity and unlock full
+                    platform features
+                  </p>
                 </div>
                 <KYCForm />
               </>
@@ -408,40 +496,62 @@ export default function SettingsPage() {
           {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-4 md:space-y-6">
             <Card className="p-4 md:p-6 border-gray-200 shadow-sm">
-              <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4 md:mb-6">Notification Preferences</h2>
+              <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4 md:mb-6">
+                Notification Preferences
+              </h2>
 
               {/* Channels */}
               <div className="mb-6 md:mb-8">
-                <h3 className="text-xs md:text-sm font-medium text-gray-900 mb-3 md:mb-4">Notification Channels</h3>
+                <h3 className="text-xs md:text-sm font-medium text-gray-900 mb-3 md:mb-4">
+                  Notification Channels
+                </h3>
                 <div className="space-y-3 md:space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900 text-xs md:text-sm">Email Notifications</p>
-                      <p className="text-xs md:text-sm text-gray-600">Receive notifications via email</p>
+                      <p className="font-medium text-gray-900 text-xs md:text-sm">
+                        Email Notifications
+                      </p>
+                      <p className="text-xs md:text-sm text-gray-600">
+                        Receive notifications via email
+                      </p>
                     </div>
                     <Switch
                       checked={notifications.email}
-                      onCheckedChange={(checked) => setNotifications({ ...notifications, email: checked })}
+                      onCheckedChange={(checked) =>
+                        setNotifications({ ...notifications, email: checked })
+                      }
                     />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900 text-xs md:text-sm">SMS Notifications</p>
-                      <p className="text-xs md:text-sm text-gray-600">Receive notifications via SMS</p>
+                      <p className="font-medium text-gray-900 text-xs md:text-sm">
+                        SMS Notifications
+                      </p>
+                      <p className="text-xs md:text-sm text-gray-600">
+                        Receive notifications via SMS
+                      </p>
                     </div>
                     <Switch
                       checked={notifications.sms}
-                      onCheckedChange={(checked) => setNotifications({ ...notifications, sms: checked })}
+                      onCheckedChange={(checked) =>
+                        setNotifications({ ...notifications, sms: checked })
+                      }
                     />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900 text-xs md:text-sm">Push Notifications</p>
-                      <p className="text-xs md:text-sm text-gray-600">Receive push notifications on your device</p>
+                      <p className="font-medium text-gray-900 text-xs md:text-sm">
+                        Push Notifications
+                      </p>
+                      <p className="text-xs md:text-sm text-gray-600">
+                        Receive push notifications on your device
+                      </p>
                     </div>
                     <Switch
                       checked={notifications.push}
-                      onCheckedChange={(checked) => setNotifications({ ...notifications, push: checked })}
+                      onCheckedChange={(checked) =>
+                        setNotifications({ ...notifications, push: checked })
+                      }
                     />
                   </div>
                 </div>
@@ -449,46 +559,81 @@ export default function SettingsPage() {
 
               {/* Activity Types */}
               <div>
-                <h3 className="text-xs md:text-sm font-medium text-gray-900 mb-3 md:mb-4">Activity Notifications</h3>
+                <h3 className="text-xs md:text-sm font-medium text-gray-900 mb-3 md:mb-4">
+                  Activity Notifications
+                </h3>
                 <div className="space-y-3 md:space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900 text-xs md:text-sm">Deposits</p>
-                      <p className="text-xs md:text-sm text-gray-600">Get notified when deposits are received</p>
+                      <p className="font-medium text-gray-900 text-xs md:text-sm">
+                        Deposits
+                      </p>
+                      <p className="text-xs md:text-sm text-gray-600">
+                        Get notified when deposits are received
+                      </p>
                     </div>
                     <Switch
                       checked={notifications.deposits}
-                      onCheckedChange={(checked) => setNotifications({ ...notifications, deposits: checked })}
+                      onCheckedChange={(checked) =>
+                        setNotifications({
+                          ...notifications,
+                          deposits: checked,
+                        })
+                      }
                     />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900 text-xs md:text-sm">Withdrawals</p>
-                      <p className="text-xs md:text-sm text-gray-600">Get notified about withdrawal status</p>
+                      <p className="font-medium text-gray-900 text-xs md:text-sm">
+                        Withdrawals
+                      </p>
+                      <p className="text-xs md:text-sm text-gray-600">
+                        Get notified about withdrawal status
+                      </p>
                     </div>
                     <Switch
                       checked={notifications.withdrawals}
-                      onCheckedChange={(checked) => setNotifications({ ...notifications, withdrawals: checked })}
+                      onCheckedChange={(checked) =>
+                        setNotifications({
+                          ...notifications,
+                          withdrawals: checked,
+                        })
+                      }
                     />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900 text-xs md:text-sm">P2P Trades</p>
-                      <p className="text-xs md:text-sm text-gray-600">Get notified about P2P trade updates</p>
+                      <p className="font-medium text-gray-900 text-xs md:text-sm">
+                        P2P Trades
+                      </p>
+                      <p className="text-xs md:text-sm text-gray-600">
+                        Get notified about P2P trade updates
+                      </p>
                     </div>
                     <Switch
                       checked={notifications.trades}
-                      onCheckedChange={(checked) => setNotifications({ ...notifications, trades: checked })}
+                      onCheckedChange={(checked) =>
+                        setNotifications({ ...notifications, trades: checked })
+                      }
                     />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900 text-xs md:text-sm">Marketing & Updates</p>
-                      <p className="text-xs md:text-sm text-gray-600">Receive news and promotional offers</p>
+                      <p className="font-medium text-gray-900 text-xs md:text-sm">
+                        Marketing & Updates
+                      </p>
+                      <p className="text-xs md:text-sm text-gray-600">
+                        Receive news and promotional offers
+                      </p>
                     </div>
                     <Switch
                       checked={notifications.marketing}
-                      onCheckedChange={(checked) => setNotifications({ ...notifications, marketing: checked })}
+                      onCheckedChange={(checked) =>
+                        setNotifications({
+                          ...notifications,
+                          marketing: checked,
+                        })
+                      }
                     />
                   </div>
                 </div>
@@ -505,16 +650,21 @@ export default function SettingsPage() {
           {/* Payment Methods Tab */}
           <TabsContent value="payment" className="space-y-4 md:space-y-6">
             {/* Helper message for users coming from deposit flow */}
-            {typeof window !== "undefined" && new URL(window.location.href).searchParams.get("tab") === "payment" && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
-                <span className="text-blue-700 text-sm">
-                  Add your bank account below. After adding, click <b>Set Primary</b> to use it for Naira deposits and refunds.
-                </span>
-              </div>
-            )}
+            {typeof window !== "undefined" &&
+              new URL(window.location.href).searchParams.get("tab") ===
+                "payment" && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                  <span className="text-blue-700 text-sm">
+                    Add your bank account below. After adding, click{" "}
+                    <b>Set Primary</b> to use it for Naira deposits and refunds.
+                  </span>
+                </div>
+              )}
             <Card className="p-4 md:p-6 border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-4 md:mb-6">
-                <h2 className="text-lg md:text-xl font-semibold text-gray-900">Payment Methods</h2>
+                <h2 className="text-lg md:text-xl font-semibold text-gray-900">
+                  Payment Methods
+                </h2>
                 <AddAccountDialog onAccountAdded={handleAddPayment}>
                   <Button className="bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm h-9 md:h-10">
                     Add Bank Account
@@ -524,7 +674,9 @@ export default function SettingsPage() {
 
               <div className="space-y-3 md:space-y-4">
                 {paymentMethods.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">No payment methods added yet</p>
+                  <p className="text-center text-gray-500 py-8">
+                    No payment methods added yet
+                  </p>
                 ) : (
                   paymentMethods.map((method) => (
                     <div
@@ -537,9 +689,15 @@ export default function SettingsPage() {
                             <CreditCard className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900 text-xs md:text-sm">{method.bank}</p>
-                            <p className="text-xs md:text-sm text-gray-600">{method.accountNumber}</p>
-                            <p className="text-xs md:text-sm text-gray-600">{method.accountName}</p>
+                            <p className="font-medium text-gray-900 text-xs md:text-sm">
+                              {method.bank}
+                            </p>
+                            <p className="text-xs md:text-sm text-gray-600">
+                              {method.accountNumber}
+                            </p>
+                            <p className="text-xs md:text-sm text-gray-600">
+                              {method.accountName}
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -576,9 +734,12 @@ export default function SettingsPage() {
             {/* Custom Account Section for Non-Nigerians */}
             <Card className="p-4 md:p-6 border-gray-200 shadow-sm">
               <div className="mb-4 md:mb-6">
-                <h2 className="text-lg md:text-xl font-semibold text-gray-900">Custom Account</h2>
+                <h2 className="text-lg md:text-xl font-semibold text-gray-900">
+                  Custom Account
+                </h2>
                 <p className="text-xs md:text-sm text-gray-600 mt-1">
-                  For users outside Nigeria - add your bank, mobile money, or wallet details manually
+                  For users outside Nigeria - add your bank, mobile money, or
+                  wallet details manually
                 </p>
               </div>
 
@@ -588,5 +749,5 @@ export default function SettingsPage() {
         </Tabs>
       </div>
     </div>
-  )
+  );
 }

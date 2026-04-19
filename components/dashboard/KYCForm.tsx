@@ -716,7 +716,6 @@ export function KYCForm() {
         credentials: "include",
       });
       const data = await res.json().catch(() => ({}));
-      console.log("[kycLiveliness] response:", data);
       if (!res.ok)
         throw new Error((data as any)?.message || "Liveliness failed");
       const ref =
