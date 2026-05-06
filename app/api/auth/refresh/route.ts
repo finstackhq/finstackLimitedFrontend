@@ -3,7 +3,7 @@
 
 // export async function POST(req: NextRequest) {
 //   // Forward the request body to your backend
-//   const backendRes = await fetch("https://finstacklimitedbackend.onrender.com/api/auth/refresh", {
+//   const backendRes = await fetch("https://api.usefinstack.co/api/auth/refresh", {
 //     method: "POST",
 //     headers: {
 //       "Content-Type": "application/json",
@@ -36,7 +36,7 @@ import { NextRequest } from "next/server";
 export async function POST(req: NextRequest) {
   // Forward the request body to your backend
   const backendRes = await fetch(
-    "https://finstacklimitedbackend.onrender.com/api/auth/refresh-token",
+    "https://api.usefinstack.co/api/auth/refresh-token",
     {
       method: "POST",
       headers: {
