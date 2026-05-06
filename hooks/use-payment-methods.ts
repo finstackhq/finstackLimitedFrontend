@@ -19,9 +19,7 @@ export function usePaymentMethods() {
 
   useEffect(() => {
     setLoading(true);
-    fetchWithAuth(
-      "https://finstacklimitedbackend.onrender.com/api/payment-methods",
-    )
+    fetchWithAuth("https://api.usefinstack.co/api/payment-methods")
       .then(async (res) => {
         const data = await res.json();
         if (data.success && data.data) {
