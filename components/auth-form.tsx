@@ -1,7 +1,5 @@
 "use client";
 
-// const API_BASE = "/api/fstack";
-// --- Auth Utilities for Token Refresh ---
 async function refreshAccessToken() {
   const res = await fetch("/api/auth/refresh-token", {
     method: "POST",
@@ -81,6 +79,16 @@ export function AuthForm() {
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<FormMode>("login");
 
+  // Form fields state
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [referralSource, setReferralSource] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   // Check for logout param
   React.useEffect(() => {
     if (searchParams.get("logged_out") === "true") {
@@ -88,25 +96,11 @@ export function AuthForm() {
       setTimeout(() => {
         toast({
           title: "Logged out",
-          description: "You have successfully logged out.",
+          description: "You have been logged out.",
         });
-      }, 100);
-
-      // Clean up URL without refresh
-      router.replace("/login");
+      }, 500);
     }
-  }, [searchParams, toast, router]);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Form state
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [referralSource, setReferralSource] = useState("");
-
+  }, [searchParams, toast]);
   // Validation errors
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -470,6 +464,19 @@ export function AuthForm() {
               </div>
               {passwordError && (
                 <p className="text-sm text-destructive">{passwordError}</p>
+              )}
+
+              {mode === "signup" && (
+                <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700">
+                  <strong>Password must contain:</strong>
+                  <ul className="list-disc pl-5 mt-1">
+                    <li>At least 8 characters</li>
+                    <li>At least one uppercase letter (A-Z)</li>
+                    <li>At least one lowercase letter (a-z)</li>
+                    <li>At least one number (0-9)</li>
+                    <li>At least one special character (@$!%*?&#)</li>
+                  </ul>
+                </div>
               )}
 
               {mode === "signup" && password && passwordStrength && (
