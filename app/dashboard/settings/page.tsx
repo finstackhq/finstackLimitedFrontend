@@ -221,7 +221,7 @@ export default function SettingsPage() {
       let token = userData.accessToken || userData.user?.accessToken;
 
       const res = await fetch(
-        `https://finstacklimitedbackend.onrender.com/api/bank-account/${id}`,
+        `https://api.usefinstack.co/api/bank-account/${id}`,
         {
           method: "DELETE",
           headers: {

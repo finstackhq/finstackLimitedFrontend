@@ -38,7 +38,7 @@ export async function POST(
       );
     }
 
-    // Backend endpoint: https://finstacklimitedbackend.onrender.com/api/trade/{id}/cancel
+    // Backend endpoint: https://api.usefinstack.co/api/trade/{id}/cancel
     const apiUrl = `${baseUrl}trade/${tradeId}/cancel`;
 
     const response = await fetch(apiUrl, {

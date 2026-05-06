@@ -106,7 +106,7 @@ export function CustomAccountForm({ onAccountAdded }: CustomAccountFormProps) {
   //         token = userData.accessToken || userData.user?.accessToken || "";
   //       }
 
-  //       const res = await fetch("https://finstacklimitedbackend.onrender.com/api/upload-alipay-qr", {
+  //       const res = await fetch("https://api.usefinstack.co/api/upload-alipay-qr", {
   //         method: "POST",
   //         headers: {
   //           Authorization: `Bearer ${token}`,
@@ -177,7 +177,7 @@ export function CustomAccountForm({ onAccountAdded }: CustomAccountFormProps) {
         formData.append("alipayEmail", alipayEmail.trim());
 
         const alipayRes = await fetch(
-          "https://finstacklimitedbackend.onrender.com/api/upload-alipay-qr",
+          "https://api.usefinstack.co/api/upload-alipay-qr",
           {
             method: "POST",
             headers: { Authorization: `Bearer ${token}` },
