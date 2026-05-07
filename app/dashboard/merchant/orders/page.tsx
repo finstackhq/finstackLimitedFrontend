@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { MerchantOrderFlow } from "@/components/p2p/MerchantOrderFlow";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,10 +37,12 @@ interface Order {
 }
 
 export default function MerchantOrdersPage() {
+  const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   // Fetch orders from backend
   useEffect(() => {
@@ -141,11 +144,11 @@ export default function MerchantOrdersPage() {
         {selectedOrder.side === "SELL" && (
           <Card className="p-6 mb-4">
             <h3 className="text-lg font-semibold mb-3">User Payment Details</h3>
-            {/* Removed debug JSON display of paymentDetails */}
+
             {!paymentDetails && (
               <div className="text-sm text-red-500">
-                No payment details found for this order. (Check console for
-                debug info)
+                No payment details found for this order. (Please refresh the
+                page)
               </div>
             )}
             {paymentDetails && paymentDetails.type === "BANK" && (
@@ -200,7 +203,9 @@ export default function MerchantOrdersPage() {
                       <img
                         src={paymentDetails.alipayQrImage}
                         alt="Alipay QR"
-                        className="h-32 w-32 object-contain rounded border mb-2"
+                        className="h-56 w-56 object-contain rounded border mb-2 cursor-zoom-in transition-transform duration-200 hover:scale-105"
+                        onClick={() => setShowQrModal(true)}
+                        style={{ boxShadow: "0 0 0 2px #2563eb33" }}
                       />
                       <button
                         className="inline-block px-3 py-1 bg-blue-600 text-white rounded text-xs mb-2"
@@ -219,12 +224,44 @@ export default function MerchantOrdersPage() {
                             a.remove();
                             window.URL.revokeObjectURL(url);
                           } catch (err) {
-                            alert("Failed to download QR image.");
+                            toast({
+                              title: "Download failed",
+                              description: "Failed to download QR image.",
+                              variant: "destructive",
+                            });
                           }
                         }}
                       >
                         Download QR
                       </button>
+                      {/* Modal for enlarged QR */}
+                      {showQrModal && (
+                        <div
+                          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70"
+                          onClick={() => setShowQrModal(false)}
+                        >
+                          <div
+                            className="bg-white rounded-lg p-6 flex flex-col items-center relative"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <img
+                              src={paymentDetails.alipayQrImage}
+                              alt="Alipay QR Large"
+                              className="h-96 w-96 object-contain rounded border mb-4"
+                            />
+                            <button
+                              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
+                              onClick={() => setShowQrModal(false)}
+                              aria-label="Close"
+                            >
+                              &times;
+                            </button>
+                            <div className="text-xs text-gray-500">
+                              Tap outside to close
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                   <div className="w-full flex flex-col gap-2 mt-2">
