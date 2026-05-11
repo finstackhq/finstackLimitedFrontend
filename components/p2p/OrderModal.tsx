@@ -419,6 +419,7 @@ function OrderModal({
 
       // ...existing code for tradeContext and navigation...
       const tradeContext = {
+
         tradeId: orderId,
         createdAt: new Date().toISOString(),
         sellerFirstName: sellerFirstName || undefined,
@@ -446,7 +447,8 @@ function OrderModal({
           platformFeeCrypto: initiatePayloadData?.platformFeeCrypto,
           netCryptoAmount: initiatePayloadData?.netCryptoAmount,
           marketRate: initiatePayloadData?.marketRate,
-          paymentDetails: paymentDetails,
+          // Always use the backend's paymentDetails if present, fallback to local
+          paymentDetails: initiatePayloadData?.paymentDetails || paymentDetails,
         },
       };
 
