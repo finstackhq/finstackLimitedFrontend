@@ -83,20 +83,26 @@ export default function MerchantOrdersPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedOrder?.side === "SELL" && selectedOrder.reference) {
-      // Removed stray comma expressions
+    // Fetch payment details for both flows:
+    // - Merchant buying (side === 'SELL')
+    // - Merchant selling (side === 'BUY' and status === 'PAYMENT_CONFIRMED_BY_BUYER')
+    if (
+      selectedOrder?.reference &&
+      (
+        selectedOrder.side === "SELL" ||
+        (selectedOrder.side === "BUY" && selectedOrder.status === "PAYMENT_CONFIRMED_BY_BUYER")
+      )
+    ) {
       fetch(`/api/fstack/trade/${selectedOrder.reference}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.success && data.data?.paymentDetails) {
             setPaymentDetails(data.data.paymentDetails);
           } else {
-            console.warn("[DEBUG] No paymentDetails found in API response.");
             setPaymentDetails(null);
           }
         })
         .catch((err) => {
-          console.error("[DEBUG] Error fetching trade details:", err);
           setPaymentDetails(null);
         });
     } else {
@@ -141,14 +147,12 @@ export default function MerchantOrdersPage() {
           <ArrowLeft className="w-4 h-4" />
           Back to Orders
         </Button>
-        {selectedOrder.side === "SELL" && (
+        {(selectedOrder.side === "SELL" || (selectedOrder.side === "BUY" && selectedOrder.status === "PAYMENT_CONFIRMED_BY_BUYER")) && (
           <Card className="p-6 mb-4">
             <h3 className="text-lg font-semibold mb-3">User Payment Details</h3>
-
             {!paymentDetails && (
               <div className="text-sm text-red-500">
-                No payment details found for this order. (Please refresh the
-                page)
+                No payment details found for this order. (Please refresh the page)
               </div>
             )}
             {paymentDetails && paymentDetails.type === "BANK" && (
@@ -159,30 +163,22 @@ export default function MerchantOrdersPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Account Number</span>
-                  <span className="font-medium font-mono">
-                    {paymentDetails.accountNumber}
-                  </span>
+                  <span className="font-medium font-mono">{paymentDetails.accountNumber}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Account Name</span>
-                  <span className="font-medium">
-                    {paymentDetails.accountName}
-                  </span>
+                  <span className="font-medium">{paymentDetails.accountName}</span>
                 </div>
                 {paymentDetails.bankCode && (
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Bank Code</span>
-                    <span className="font-medium">
-                      {paymentDetails.bankCode}
-                    </span>
+                    <span className="font-medium">{paymentDetails.bankCode}</span>
                   </div>
                 )}
                 {paymentDetails.country && (
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Country</span>
-                    <span className="font-medium">
-                      {paymentDetails.country}
-                    </span>
+                    <span className="font-medium">{paymentDetails.country}</span>
                   </div>
                 )}
               </div>
@@ -190,13 +186,9 @@ export default function MerchantOrdersPage() {
             {paymentDetails && paymentDetails.type === "ALIPAY" && (
               <div className="space-y-4">
                 <div className="border rounded-lg p-4 flex flex-col items-center bg-gray-50">
-                  <div className="mb-2 font-semibold text-blue-700">
-                    Alipay QR Code
-                  </div>
+                  <div className="mb-2 font-semibold text-blue-700">Alipay QR Code</div>
                   {!paymentDetails.alipayQrImage && (
-                    <div className="text-xs text-red-500">
-                      No Alipay QR code image provided.
-                    </div>
+                    <div className="text-xs text-red-500">No Alipay QR code image provided.</div>
                   )}
                   {paymentDetails.alipayQrImage && (
                     <>
@@ -211,9 +203,7 @@ export default function MerchantOrdersPage() {
                         className="inline-block px-3 py-1 bg-blue-600 text-white rounded text-xs mb-2"
                         onClick={async () => {
                           try {
-                            const response = await fetch(
-                              paymentDetails.alipayQrImage,
-                            );
+                            const response = await fetch(paymentDetails.alipayQrImage);
                             const blob = await response.blob();
                             const url = window.URL.createObjectURL(blob);
                             const a = document.createElement("a");
@@ -256,9 +246,7 @@ export default function MerchantOrdersPage() {
                             >
                               &times;
                             </button>
-                            <div className="text-xs text-gray-500">
-                              Tap outside to close
-                            </div>
+                            <div className="text-xs text-gray-500">Tap outside to close</div>
                           </div>
                         </div>
                       )}
@@ -266,9 +254,7 @@ export default function MerchantOrdersPage() {
                   )}
                   <div className="w-full flex flex-col gap-2 mt-2">
                     <div>
-                      <span className="block text-xs text-gray-500">
-                        Account Name
-                      </span>
+                      <span className="block text-xs text-gray-500">Account Name</span>
                       <input
                         className="w-full border rounded px-2 py-1 text-sm bg-gray-100"
                         value={paymentDetails.alipayAccountName || ""}
@@ -276,9 +262,7 @@ export default function MerchantOrdersPage() {
                       />
                     </div>
                     <div>
-                      <span className="block text-xs text-gray-500">
-                        Alipay Email
-                      </span>
+                      <span className="block text-xs text-gray-500">Alipay Email</span>
                       <input
                         className="w-full border rounded px-2 py-1 text-sm bg-gray-100"
                         value={paymentDetails.alipayEmail || ""}
@@ -288,24 +272,19 @@ export default function MerchantOrdersPage() {
                   </div>
                   {paymentDetails.country && (
                     <div className="mt-2 text-xs text-gray-500">
-                      Country:{" "}
-                      <span className="font-medium text-gray-700">
-                        {paymentDetails.country}
-                      </span>
+                      Country: <span className="font-medium text-gray-700">{paymentDetails.country}</span>
                     </div>
                   )}
                 </div>
               </div>
             )}
-            {paymentDetails &&
-              paymentDetails.type !== "BANK" &&
-              paymentDetails.type !== "ALIPAY" && (
-                <div className="text-sm text-gray-500">
-                  Unrecognized payment details type. Raw details:
-                  <br />
-                  <pre>{JSON.stringify(paymentDetails, null, 2)}</pre>
-                </div>
-              )}
+            {paymentDetails && paymentDetails.type !== "BANK" && paymentDetails.type !== "ALIPAY" && (
+              <div className="text-sm text-gray-500">
+                Unrecognized payment details type. Raw details:
+                <br />
+                <pre>{JSON.stringify(paymentDetails, null, 2)}</pre>
+              </div>
+            )}
           </Card>
         )}
         <MerchantOrderFlow

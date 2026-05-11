@@ -65,7 +65,7 @@ export function BankAccountsCard() {
   const handleDeleteAccount = async (id: string) => {
     const performDelete = async (token: string) => {
       return await fetchWithAuth(
-        `https://finstacklimitedbackend.onrender.com/api/bank-account/${id}`,
+        `https://api.usefinstack.co/api/bank-account/${id}`,
         {
           method: "DELETE",
           headers: {
@@ -89,7 +89,7 @@ export function BankAccountsCard() {
       // If session expired (401), try to refresh
       if (res.status === 401) {
         const refreshRes = await fetchWithAuth(
-          "https://finstacklimitedbackend.onrender.com/api/auth/refresh",
+          "https://api.usefinstack.co/api/auth/refresh",
           {
             method: "POST",
             credentials: "include",

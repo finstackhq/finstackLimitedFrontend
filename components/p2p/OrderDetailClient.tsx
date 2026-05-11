@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,12 @@ export function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   const [order, setOrder] = useState<P2POrder | null>(null);
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [showRating, setShowRating] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Load order from localStorage or mock
   useEffect(() => {
@@ -130,6 +137,9 @@ export function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     });
   };
 
+  if (!mounted) {
+    return <div className="max-w-4xl mx-auto px-4 py-8 text-center text-gray-400">Loading...</div>;
+  }
   if (!order) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -144,7 +154,8 @@ export function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   }
 
   const merchant = getMerchant(order.merchantId);
-  const isCurrentUserBuyer = order.buyerId === 'current-user';
+  // Only compute after mounted and order are available
+  const isCurrentUserBuyer = mounted && order && order.buyerId === 'current-user';
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -155,17 +166,63 @@ export function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   const statusConfig: Record<OrderStatus, { label: string; color: string; icon: any }> = {
     pending_payment: { label: 'Pending Payment', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
     awaiting_release: { label: 'Awaiting Release', color: 'bg-blue-100 text-blue-700', icon: Clock },
+    awaiting_merchant_confirmation: { label: 'Awaiting Merchant', color: 'bg-blue-100 text-blue-700', icon: Clock },
+    paid: { label: 'Paid', color: 'bg-blue-100 text-blue-700', icon: Clock },
     PAYMENT_CONFIRMED_BY_BUYER: { label: 'Payment Confirmed', color: 'bg-blue-100 text-blue-700', icon: Clock },
     completed: { label: 'Completed', color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
     cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700', icon: XCircle },
     disputed: { label: 'Disputed', color: 'bg-orange-100 text-orange-700', icon: AlertTriangle }
   };
 
-  const status = statusConfig[order.status];
+  // Defensive status config lookup
+  const status = statusConfig[order.status] || { label: order.status, color: 'bg-gray-100 text-gray-700', icon: Clock };
   const StatusIcon = status.icon;
+
+  // Alipay QR logic
+  const alipayQrImage = order.paymentMethod === 'Alipay' ? order.paymentMethodDetails?.qrCodeImage : undefined;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+            {/* Alipay QR Image Section */}
+            {alipayQrImage && (
+              <div className="flex flex-col items-center justify-center py-4">
+                <div className="mb-2 text-center font-medium">Alipay QR Code</div>
+                <div className="cursor-pointer" onClick={() => setShowQrModal(true)}>
+                  <Image
+                    src={alipayQrImage as string}
+                    alt="Alipay QR"
+                    width={220}
+                    height={220}
+                    className="rounded-lg border shadow-lg object-contain bg-white"
+                    style={{ maxWidth: 260, maxHeight: 260 }}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">Click to enlarge</div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal for enlarged QR */}
+            {showQrModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60" onClick={() => setShowQrModal(false)}>
+                <div className="bg-white rounded-lg p-4 shadow-xl relative" onClick={e => e.stopPropagation()}>
+                  <Image
+                    src={alipayQrImage as string}
+                    alt="Alipay QR Large"
+                    width={400}
+                    height={400}
+                    className="rounded-lg object-contain"
+                    style={{ maxWidth: 420, maxHeight: 420 }}
+                  />
+                  <button
+                    className="absolute top-2 right-2 text-gray-600 hover:text-black text-xl"
+                    onClick={() => setShowQrModal(false)}
+                    aria-label="Close"
+                  >
+                    &times;
+                  </button>
+                </div>
+              </div>
+            )}
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard/p2p')}>
@@ -252,7 +309,7 @@ export function OrderDetailClient({ orderId }: OrderDetailClientProps) {
             )}
             <div className="flex justify-between">
               <span className="text-gray-600">Order Time</span>
-              <span className="font-medium">{order.createdAt.toLocaleString()}</span>
+              <span className="font-medium">{order.createdAt instanceof Date ? order.createdAt.toLocaleString() : ''}</span>
             </div>
           </div>
         </Card>
