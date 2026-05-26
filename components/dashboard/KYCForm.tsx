@@ -1,5 +1,5 @@
 "use client";
-
+import { compressImage } from "@/lib/compressImage"; // adjust path if different
 import { useState, useEffect } from "react";
 import { fetchWithAuth } from "@/components/auth-form";
 import { Button } from "@/components/ui/button";
@@ -180,21 +180,43 @@ export function KYCForm() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSelfieChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // const handleSelfieChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (!file) return;
+
+  //   // Validate file size (max 5MB)
+  //   if (file.size > 5 * 1024 * 1024) {
+  //     toast({
+  //       title: "File too large",
+  //       description: "Please upload an image smaller than 5MB",
+  //       variant: "destructive",
+  //     });
+  //     return;
+  //   }
+
+  //   // Validate file type
+  //   if (!file.type.startsWith("image/")) {
+  //     toast({
+  //       title: "Invalid file type",
+  //       description: "Please upload an image file",
+  //       variant: "destructive",
+  //     });
+  //     return;
+  //   }
+
+  //   // Create preview
+  //   const reader = new FileReader();
+  //   reader.onloadend = () => {
+  //     setSelfiePreview(reader.result as string);
+  //     updateField("selfie", file);
+  //   };
+  //   reader.readAsDataURL(file);
+  // };
+
+  const handleSelfieChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload an image smaller than 5MB",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Invalid file type",
@@ -204,26 +226,56 @@ export function KYCForm() {
       return;
     }
 
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setSelfiePreview(reader.result as string);
-      updateField("selfie", file);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleIdFrontChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
+    try {
+      const compressed = await compressImage(file, 1);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelfiePreview(reader.result as string);
+        updateField("selfie", compressed);
+      };
+      reader.readAsDataURL(compressed);
+    } catch {
       toast({
-        title: "File too large",
-        description: "Max 5MB",
+        title: "Error processing image",
+        description: "Please try a different photo",
         variant: "destructive",
       });
-      return;
     }
+  };
+
+  // const handleIdFrontChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (!file) return;
+  //   if (file.size > 5 * 1024 * 1024) {
+  //     toast({
+  //       title: "File too large",
+  //       description: "Max 5MB",
+  //       variant: "destructive",
+  //     });
+  //     return;
+  //   }
+  //   if (!file.type.startsWith("image/")) {
+  //     toast({
+  //       title: "Invalid file type",
+  //       description: "Upload an image",
+  //       variant: "destructive",
+  //     });
+  //     return;
+  //   }
+  //   const reader = new FileReader();
+  //   reader.onloadend = () => {
+  //     setIdFrontPreview(reader.result as string);
+  //     updateField("idFront", file);
+  //   };
+  //   reader.readAsDataURL(file);
+  // };
+
+  const handleIdFrontChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Invalid file type",
@@ -232,25 +284,55 @@ export function KYCForm() {
       });
       return;
     }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setIdFrontPreview(reader.result as string);
-      updateField("idFront", file);
-    };
-    reader.readAsDataURL(file);
-  };
 
-  const handleIdBackChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
+    try {
+      const compressed = await compressImage(file, 1);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setIdFrontPreview(reader.result as string);
+        updateField("idFront", compressed);
+      };
+      reader.readAsDataURL(compressed);
+    } catch {
       toast({
-        title: "File too large",
-        description: "Max 5MB",
+        title: "Error processing image",
+        description: "Please try a different photo",
         variant: "destructive",
       });
-      return;
     }
+  };
+
+  // const handleIdBackChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (!file) return;
+  //   if (file.size > 5 * 1024 * 1024) {
+  //     toast({
+  //       title: "File too large",
+  //       description: "Max 5MB",
+  //       variant: "destructive",
+  //     });
+  //     return;
+  //   }
+  //   if (!file.type.startsWith("image/")) {
+  //     toast({
+  //       title: "Invalid file type",
+  //       description: "Upload an image",
+  //       variant: "destructive",
+  //     });
+  //     return;
+  //   }
+  //   const reader = new FileReader();
+  //   reader.onloadend = () => {
+  //     setIdBackPreview(reader.result as string);
+  //     updateField("idBack", file);
+  //   };
+  //   reader.readAsDataURL(file);
+  // };
+
+  const handleIdBackChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Invalid file type",
@@ -259,14 +341,23 @@ export function KYCForm() {
       });
       return;
     }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setIdBackPreview(reader.result as string);
-      updateField("idBack", file);
-    };
-    reader.readAsDataURL(file);
-  };
 
+    try {
+      const compressed = await compressImage(file, 1);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setIdBackPreview(reader.result as string);
+        updateField("idBack", compressed);
+      };
+      reader.readAsDataURL(compressed);
+    } catch {
+      toast({
+        title: "Error processing image",
+        description: "Please try a different photo",
+        variant: "destructive",
+      });
+    }
+  };
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
@@ -605,10 +696,12 @@ export function KYCForm() {
       setSelfieCloudUrl("");
       setLivelinessProviderReference("");
       setLivelinessConfidence(null);
-    } catch (error) {
+    } catch (error: any) {
+      const message = error?.message || "Unknown error";
+      console.error("[KYC Submit Error]", error);
       toast({
         title: "Submission Failed",
-        description: "Please try again later",
+        description: message,
         variant: "destructive",
       });
     } finally {
