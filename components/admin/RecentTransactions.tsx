@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { Badge } from '@/components/ui/badge';
+import { Badge } from "@/components/ui/badge";
 
 interface Transaction {
   id: string;
@@ -17,51 +17,76 @@ interface RecentTransactionsProps {
 }
 
 export function RecentTransactions({ transactions }: RecentTransactionsProps) {
+  // const formatCurrency = (amount: number, currency: string) => {
+  //   try {
+  //     return new Intl.NumberFormat('en-US', {
+  //       style: 'currency',
+  //       currency: currency,
+  //       minimumFractionDigits: 2,
+  //     }).format(amount);
+  //   } catch (e) {
+  //     // Fallback for non-ISO currencies like CNGN
+  //     if (currency === 'CNGN') {
+  //       return amount.toLocaleString('en-NG', { minimumFractionDigits: 2 }) + ' CNGN';
+  //     }
+  //     // Fallback for other unknown currencies
+  //     return amount.toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' ' + currency;
+  //   }
+  // };
   const formatCurrency = (amount: number, currency: string) => {
+    const code = (currency || "USD").toUpperCase();
+    const safeAmount = Number.isFinite(amount) ? amount : Number(amount) || 0;
+
+    // CNGN and NGN are both Naira
+    if (code === "CNGN" || code === "NGN") {
+      return `₦${safeAmount.toLocaleString("en-NG", { minimumFractionDigits: 2 })}`;
+    }
+
+    // USDC shows $
+    if (code === "USDC") {
+      return `$${safeAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+    }
+
     try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: currency,
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: code,
         minimumFractionDigits: 2,
-      }).format(amount);
-    } catch (e) {
-      // Fallback for non-ISO currencies like CNGN
-      if (currency === 'CNGN') {
-        return amount.toLocaleString('en-NG', { minimumFractionDigits: 2 }) + ' CNGN';
-      }
-      // Fallback for other unknown currencies
-      return amount.toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' ' + currency;
+      }).format(safeAmount);
+    } catch {
+      return `${safeAmount.toFixed(2)} ${code}`;
     }
   };
-
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "failed":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
       <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
+        <h3 className="text-lg font-semibold text-gray-900">
+          Recent Transactions
+        </h3>
       </div>
-      
+
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50">
@@ -114,7 +139,7 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
           </tbody>
         </table>
       </div>
-      
+
       {transactions.length === 0 && (
         <div className="px-6 py-8 text-center text-gray-500">
           No recent transactions found.
