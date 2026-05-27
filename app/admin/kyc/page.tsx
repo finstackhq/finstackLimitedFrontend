@@ -97,8 +97,9 @@ export default function KYCPage() {
                 r?.documents || r?.documentUrls || r?.documentImages || [],
               documentType:
                 r?.documentType || r?.idType || r?.id_type || "ID Document",
-              submittedAt:
-                r?.submittedAt || r?.createdAt || new Date().toISOString(),
+
+              submittedAt: r?.createdAt || r?.submittedAt || null,
+              // submittedAt: r?.submittedAt || r?.createdAt || new Date().toISOString(),
               status: (r?.status || "pending").toLowerCase(),
               phone: r?.phone || r?.phoneNumber || r?.phone_number,
               address: r?.address,
@@ -134,15 +135,24 @@ export default function KYCPage() {
           });
 
           const resolvedTotalRequests = Number(
-            data?.totalCount ?? data?.totalRequests ?? data?.pagination?.total ?? mapped.length,
+            data?.totalCount ??
+              data?.totalRequests ??
+              data?.pagination?.total ??
+              mapped.length,
           );
           const resolvedTotalPages = Number(
             data?.totalPages ??
               data?.pagination?.totalPages ??
-              Math.max(1, Math.ceil(resolvedTotalRequests / Math.max(1, limit))),
+              Math.max(
+                1,
+                Math.ceil(resolvedTotalRequests / Math.max(1, limit)),
+              ),
           );
           const resolvedCurrentPage = Number(
-            data?.currentPage ?? data?.page ?? data?.pagination?.currentPage ?? currentPage,
+            data?.currentPage ??
+              data?.page ??
+              data?.pagination?.currentPage ??
+              currentPage,
           );
 
           setRequests(mapped);
