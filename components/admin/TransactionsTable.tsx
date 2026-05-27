@@ -1,10 +1,15 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 interface Transaction {
   id: string;
@@ -23,7 +28,8 @@ interface TransactionsTableProps {
 }
 
 export function TransactionsTable({ transactions }: TransactionsTableProps) {
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleTransactionClick = (transaction: Transaction) => {
@@ -35,53 +41,76 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
     setIsModalOpen(false);
     setSelectedTransaction(null);
   };
+  // const formatCurrency = (amount: number, currency: string) => {
+  //   const code = (currency || 'USD').toUpperCase();
+  //   try {
+  //     return new Intl.NumberFormat('en-US', {
+  //       style: 'currency',
+  //       currency: code,
+  //       minimumFractionDigits: 2,
+  //     }).format(Number.isFinite(amount) ? amount : Number(amount) || 0);
+  //   } catch {
+  //     const safeAmount = Number.isFinite(amount) ? amount.toFixed(2) : (Number(amount) || 0).toFixed(2);
+  //     return `${safeAmount} ${code}`;
+  //   }
+  // };
   const formatCurrency = (amount: number, currency: string) => {
-    const code = (currency || 'USD').toUpperCase();
+    const code = (currency || "USD").toUpperCase();
+    const safeAmount = Number.isFinite(amount) ? amount : Number(amount) || 0;
+
+    // CNGN and NGN are both Naira
+    if (code === "CNGN" || code === "NGN") {
+      return `₦${safeAmount.toLocaleString("en-NG", { minimumFractionDigits: 2 })}`;
+    }
+
+    // USDC shows $
+    if (code === "USDC") {
+      return `$${safeAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+    }
+
     try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
         currency: code,
         minimumFractionDigits: 2,
-      }).format(Number.isFinite(amount) ? amount : Number(amount) || 0);
+      }).format(safeAmount);
     } catch {
-      const safeAmount = Number.isFinite(amount) ? amount.toFixed(2) : (Number(amount) || 0).toFixed(2);
-      return `${safeAmount} ${code}`;
+      return `${safeAmount.toFixed(2)} ${code}`;
     }
   };
-
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "failed":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type.toLowerCase()) {
-      case 'deposit':
-        return 'bg-blue-100 text-blue-800';
-      case 'withdrawal':
-        return 'bg-orange-100 text-orange-800';
-      case 'p2p transfer':
-        return 'bg-purple-100 text-purple-800';
+      case "deposit":
+        return "bg-blue-100 text-blue-800";
+      case "withdrawal":
+        return "bg-orange-100 text-orange-800";
+      case "p2p transfer":
+        return "bg-purple-100 text-purple-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -90,7 +119,9 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="px-6 py-8 text-center text-gray-500">
           <p className="text-lg font-medium mb-2">No transactions found</p>
-          <p className="text-sm">Try adjusting your search or filter criteria.</p>
+          <p className="text-sm">
+            Try adjusting your search or filter criteria.
+          </p>
         </div>
       </div>
     );
@@ -110,14 +141,18 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{transaction.user}</p>
-                    <p className="text-xs text-gray-500">{transaction.userEmail}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {transaction.user}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {transaction.userEmail}
+                    </p>
                   </div>
                   <Badge className={getStatusColor(transaction.status)}>
                     {transaction.status}
                   </Badge>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-gray-500">Amount</p>
@@ -129,7 +164,7 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
                     {transaction.type}
                   </Badge>
                 </div>
-                
+
                 <div className="flex items-center justify-between text-xs text-gray-500">
                   <span>{formatDate(transaction.date)}</span>
                   <span className="font-mono">{transaction.reference}</span>
@@ -170,18 +205,24 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {transactions.map((transaction) => (
-              <tr 
-                key={transaction.id} 
+              <tr
+                key={transaction.id}
                 className="hover:bg-gray-50 cursor-pointer transition-colors"
                 onClick={() => handleTransactionClick(transaction)}
               >
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{transaction.id}</div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {transaction.id}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div>
-                    <div className="text-sm font-medium text-gray-900">{transaction.user}</div>
-                    <div className="text-sm text-gray-500">{transaction.userEmail}</div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {transaction.user}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {transaction.userEmail}
+                    </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -226,30 +267,46 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
               </Button>
             </div>
           </DialogHeader>
-          
+
           {selectedTransaction && (
             <div className="space-y-6">
               {/* Transaction Overview */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold mb-3">Transaction Overview</h3>
+                <h3 className="text-lg font-semibold mb-3">
+                  Transaction Overview
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Transaction ID</label>
-                    <p className="text-sm font-mono">{selectedTransaction.id}</p>
+                    <label className="text-sm font-medium text-gray-600">
+                      Transaction ID
+                    </label>
+                    <p className="text-sm font-mono">
+                      {selectedTransaction.id}
+                    </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Reference</label>
-                    <p className="text-sm font-mono">{selectedTransaction.reference}</p>
+                    <label className="text-sm font-medium text-gray-600">
+                      Reference
+                    </label>
+                    <p className="text-sm font-mono">
+                      {selectedTransaction.reference}
+                    </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Type</label>
+                    <label className="text-sm font-medium text-gray-600">
+                      Type
+                    </label>
                     <Badge className={getTypeColor(selectedTransaction.type)}>
                       {selectedTransaction.type}
                     </Badge>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Status</label>
-                    <Badge className={getStatusColor(selectedTransaction.status)}>
+                    <label className="text-sm font-medium text-gray-600">
+                      Status
+                    </label>
+                    <Badge
+                      className={getStatusColor(selectedTransaction.status)}
+                    >
                       {selectedTransaction.status}
                     </Badge>
                   </div>
@@ -261,13 +318,20 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
                 <h3 className="text-lg font-semibold mb-3">Amount Details</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Amount</label>
+                    <label className="text-sm font-medium text-gray-600">
+                      Amount
+                    </label>
                     <p className="text-xl font-bold text-gray-900">
-                      {formatCurrency(selectedTransaction.amount, selectedTransaction.currency)}
+                      {formatCurrency(
+                        selectedTransaction.amount,
+                        selectedTransaction.currency,
+                      )}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Currency</label>
+                    <label className="text-sm font-medium text-gray-600">
+                      Currency
+                    </label>
                     <p className="text-sm">{selectedTransaction.currency}</p>
                   </div>
                 </div>
@@ -278,11 +342,15 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
                 <h3 className="text-lg font-semibold mb-3">User Information</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-600">User Name</label>
+                    <label className="text-sm font-medium text-gray-600">
+                      User Name
+                    </label>
                     <p className="text-sm">{selectedTransaction.user}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Email</label>
+                    <label className="text-sm font-medium text-gray-600">
+                      Email
+                    </label>
                     <p className="text-sm">{selectedTransaction.userEmail}</p>
                   </div>
                 </div>
@@ -292,8 +360,12 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-3">Timestamp</h3>
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Date & Time</label>
-                  <p className="text-sm">{formatDate(selectedTransaction.date)}</p>
+                  <label className="text-sm font-medium text-gray-600">
+                    Date & Time
+                  </label>
+                  <p className="text-sm">
+                    {formatDate(selectedTransaction.date)}
+                  </p>
                 </div>
               </div>
             </div>
