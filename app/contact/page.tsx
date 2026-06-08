@@ -79,7 +79,7 @@ export default function ContactPage() {
                     href="https://chat.whatsapp.com/IQgkct1WZa00XsyGacfs0Q?s=cl&p=a&mlu=4"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-4 inline-block text-primary font-medium hover:underline break-words"
+                    className="mt-4 block w-full max-w-full overflow-x-auto text-primary font-medium hover:underline break-all"
                   >
                     https://chat.whatsapp.com/IQgkct1WZa00XsyGacfs0Q?s=cl&p=a&mlu=4
                   </a>
