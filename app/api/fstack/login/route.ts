@@ -41,8 +41,12 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error: any) {
+    console.error("Login backend request failed:", error);
     return NextResponse.json(
-      { error: error?.message || "Internal server error" },
+      {
+        error:
+          "We are temporarily unable to connect to the login service. Please try again in a few minutes.",
+      },
       { status: 500 },
     );
   }

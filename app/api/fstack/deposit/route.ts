@@ -72,7 +72,44 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ─── POST /api/fstack/deposit (Paycrest onramp) — commented out, persistent virtual account only ──
-// export async function POST(request: NextRequest) {
-//   ...Paycrest onramp logic removed...
-// }
+// ADDED 13/07
+// ─── POST /api/fstack/deposit (Paycrest onramp) ─────────────────────────────
+//   Proxies to POST /onramp/initiate — creates a one-time Paycrest payment
+//   order for fiat → stablecoin deposits.
+
+export async function POST(request: NextRequest) {
+  try {
+    const baseUrl = process.env.FINSTACK_BACKEND_API_URL;
+    if (!baseUrl) {
+      console.error("[fstack/deposit] FINSTACK_BACKEND_API_URL not set");
+      return NextResponse.json(
+        { error: "Server not configured" },
+        { status: 500 },
+      );
+    }
+
+    const token = getToken(request);
+    const body = await request.json();
+
+    const res = await fetch(`${baseUrl}onramp/initiate`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+
+    let data: unknown = {};
+    try {
+      data = await res.json();
+    } catch {}
+
+    if (res.status === 401) return handleUnauthorized(data);
+    return NextResponse.json(data, { status: res.status });
+  } catch (error: any) {
+    console.error("[fstack/deposit] POST error:", error?.message || error);
+    return NextResponse.json(
+      { error: error?.message || "Failed to initiate deposit" },
+      { status: 500 },
+    );
+  }
+}
