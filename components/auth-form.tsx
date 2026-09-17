@@ -298,7 +298,9 @@ export function AuthForm() {
             setFormError(data?.message || data?.error || "Login failed");
           }
         } catch (err: any) {
-          setFormError(err.message || "Login failed");
+          setFormError(
+            "We are temporarily unable to connect to the login service. Please try again in a few minutes.",
+          );
         }
       }
     }
