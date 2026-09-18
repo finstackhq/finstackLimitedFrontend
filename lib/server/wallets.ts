@@ -1,32 +1,18 @@
 import { cookies } from "next/headers"
 import type { Wallet } from "@/lib/mock-api"
 
-// Extended wallet info that includes bank details for NGN
-interface WalletWithBankDetails extends Wallet {
-  bankName?: string
-  accountName?: string
-}
-
-export async function getWallets(): Promise<WalletWithBankDetails[]> {
+export async function getWallets(): Promise<Wallet[]> {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('access_token')?.value || ''
     const base = process.env.FINSTACK_BACKEND_API_URL
 
     if (!base) {
-      const supported: Array<Wallet['type']> = ['NGN', 'USDT', 'USDC', 'CNGN']
-      return supported.map((type, idx) => ({
-        id: String(idx + 1),
-        type,
-        balance: 0,
-        accountNumber: type === 'NGN' ? '' : undefined,
-        walletAddress: type !== 'NGN' ? '' : undefined,
-      }))
+      return []
     }
 
     // Fetch both endpoints in parallel
     const [balancesRes, walletDetailsRes] = await Promise.all([
-      // Fetch balances from user-balances endpoint
       fetch(`${base}wallet/user-balances`, {
         method: 'GET',
         headers: {
@@ -36,7 +22,6 @@ export async function getWallets(): Promise<WalletWithBankDetails[]> {
         },
         cache: 'no-store',
       }),
-      // Fetch NGN account details from getWallet endpoint
       fetch(`${base}getWallet`, {
         method: 'GET',
         headers: {
@@ -55,65 +40,57 @@ export async function getWallets(): Promise<WalletWithBankDetails[]> {
     } catch { }
     const balancesList: any[] = Array.isArray(balancesPayload?.data) ? balancesPayload.data : []
 
-    // Parse wallet details (for NGN account info)
+    // Parse wallet details
     let walletDetailsPayload: any = {}
     try {
       walletDetailsPayload = await walletDetailsRes.json()
     } catch { }
     const walletDetailsList: any[] = Array.isArray(walletDetailsPayload?.wallets)
       ? walletDetailsPayload.wallets
-      : (Array.isArray(walletDetailsPayload?.data) ? walletDetailsPayload.data : [])
+      : (Array.isArray(walletDetailsPayload?.data?.wallets)
+        ? walletDetailsPayload.data.wallets
+        : (Array.isArray(walletDetailsPayload?.data) ? walletDetailsPayload.data : []))
 
-    // Find NGN wallet details from getWallet response
-    const ngnWalletDetails = walletDetailsList.find((w: any) =>
-      w?.currency === 'NGN' || w?.type === 'NGN'
-    )
-
-    // Normalize currencies and map to UI Wallet type
+    // Build balance lookup by currency
     const byCurrency = new Map<string, any>()
     for (const item of balancesList) {
-      const raw = typeof item?.currency === 'string' ? item.currency.trim() : ''
-      const code = raw.toUpperCase() // e.g., cNGN -> CNGN
-      byCurrency.set(code, item)
+      const code = typeof item?.currency === 'string' ? item.currency.trim().toUpperCase() : ''
+      if (code) byCurrency.set(code, item)
     }
 
-    const supported: Array<Wallet['type']> = ['NGN', 'USDT', 'USDC', 'CNGN']
-    const wallets: WalletWithBankDetails[] = supported.map((type, idx) => {
-      const entry = byCurrency.get(type)
-      const total = Number(entry?.balance?.total) || Number(entry?.balance?.available) || 0
-      const address = entry?.walletAddress || entry?.address || ''
+    // Map all wallets from the database and deduplicate by currency.
+    const ORDER = ['NGN', 'USDC', 'CNGN']
+    const walletMap = new Map<string, Wallet>()
 
-      // For NGN, merge bank details from getWallet response
-      if (type === 'NGN') {
-        return {
-          id: String(idx + 1),
-          type,
-          balance: total,
-          accountNumber: ngnWalletDetails?.accountNumber || entry?.accountNumber || '',
-          bankName: ngnWalletDetails?.bankName || '',
-          accountName: ngnWalletDetails?.accountName || '',
-        }
-      }
+    for (const item of walletDetailsList) {
+      if (typeof item?.currency !== 'string') continue
+      const type = item.currency.trim().toUpperCase() as Wallet['type']
+      const balanceEntry = byCurrency.get(type)
+      const balance = type === 'NGN'
+        ? Number(item.balance) || 0
+        : Number(balanceEntry?.balance?.total) || Number(balanceEntry?.balance?.available) || Number(item.balance) || 0
 
-      return {
-        id: String(idx + 1),
+      walletMap.set(type, {
+        id: String(item._id || `${type}-${item.externalWalletId}`),
         type,
-        balance: total,
-        walletAddress: address,
-      }
-    })
+        balance,
+        accountNumber: item.accountNumber || undefined,
+        accountName: item.accountName || undefined,
+        bankName: item.bankName || undefined,
+        externalWalletId: item.externalWalletId || undefined,
+        provider: item.provider || undefined,
+        status: item.status || undefined,
+        usage: item.usage || undefined,
+        walletAddress: item.walletAddress || undefined,
+        walletType: item.walletType || undefined,
+      })
+    }
 
-    return wallets
+    return ORDER
+      .filter((type) => walletMap.has(type))
+      .map((type) => walletMap.get(type)!)
   } catch (err) {
     console.error('[getWallets] Error:', err)
-    // No mock fallback: return supported wallets with zero balances
-    const supported: Array<Wallet['type']> = ['NGN', 'USDT', 'USDC', 'CNGN']
-    return supported.map((type, idx) => ({
-      id: String(idx + 1),
-      type,
-      balance: 0,
-      accountNumber: type === 'NGN' ? '' : undefined,
-      walletAddress: type !== 'NGN' ? '' : undefined,
-    }))
+    return []
   }
 }
