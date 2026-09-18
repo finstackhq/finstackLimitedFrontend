@@ -14,6 +14,13 @@ export interface Wallet {
   balance: number
   accountNumber?: string
   walletAddress?: string
+  accountName?: string
+  bankName?: string
+  externalWalletId?: string
+  provider?: string
+  status?: string
+  usage?: string
+  walletType?: string
 }
 
 export interface Transaction {

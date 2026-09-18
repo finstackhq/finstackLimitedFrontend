@@ -333,7 +333,7 @@
 //             {/* No primary bank warning — shown proactively */}
 //             {hasPrimaryBank === false && (
 //               <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-//                 <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+//                 <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
 //                 <div>
 //                   <p className="text-sm font-medium text-amber-800">
 //                     Primary bank account required
@@ -466,7 +466,7 @@
 //                     variant="ghost"
 //                     size="sm"
 //                     onClick={() => copyToClipboard(cryptoAddress)}
-//                     className="text-[#2F67FA] hover:bg-[#2F67FA]/10 flex-shrink-0"
+//                     className="text-[#2F67FA] hover:bg-[#2F67FA]/10 shrink-0"
 //                   >
 //                     {copiedText ? (
 //                       <Check className="w-4 h-4" />
@@ -715,7 +715,7 @@
 //                             "",
 //                         )
 //                       }
-//                       className="text-green-600 hover:bg-green-50 flex-shrink-0"
+//                       className="text-green-600 hover:bg-green-50 shrink-0"
 //                     >
 //                       {copiedText ? (
 //                         <Check className="w-4 h-4" />
@@ -761,7 +761,7 @@
 //             {/* Important notes */}
 //             <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
 //               <div className="flex items-start gap-3">
-//                 <BadgeCheck className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+//                 <BadgeCheck className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
 //                 <div>
 //                   <h4 className="text-sm font-semibold text-blue-800 mb-1">
 //                     How this works
@@ -840,7 +840,7 @@
 // function ErrorBox({ message }: { message: string }) {
 //   return (
 //     <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-//       <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+//       <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
 //       <p className="text-sm text-red-700">{message}</p>
 //     </div>
 //   );
@@ -850,7 +850,7 @@
 //   return (
 //     <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
 //       <div className="flex items-start gap-3">
-//         <div className="w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+//         <div className="w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center shrink-0 mt-0.5">
 //           <span className="text-white text-xs font-bold">!</span>
 //         </div>
 //         <div>
@@ -1237,7 +1237,7 @@
 //                     </span>
 //                     <button
 //                       onClick={() => copyToClipboard(cryptoAddress, "address")}
-//                       className="flex-shrink-0 p-1.5 rounded-lg hover:bg-[#2F67FA]/10 text-[#2F67FA] transition-colors"
+//                       className="shrink-0 p-1.5 rounded-lg hover:bg-[#2F67FA]/10 text-[#2F67FA] transition-colors"
 //                     >
 //                       {copiedField === "address" ? (
 //                         <Check className="w-4 h-4 text-green-600" />
@@ -1321,7 +1321,7 @@
 //             {/* Virtual account card — mirrors the crypto card layout */}
 //             <div className="rounded-2xl border border-gray-200 overflow-hidden">
 //               {/* Card header */}
-//               <div className="bg-gradient-to-r from-green-600 to-green-500 px-5 py-4 flex items-center gap-3">
+//               <div className="bg-linear-to-r from-green-600 to-green-500 px-5 py-4 flex items-center gap-3">
 //                 <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
 //                   <Building2 className="w-5 h-5 text-white" />
 //                 </div>
@@ -1362,7 +1362,7 @@
 //                           "accountNumber",
 //                         )
 //                       }
-//                       className="flex-shrink-0 p-1.5 rounded-lg hover:bg-green-50 text-green-600 transition-colors"
+//                       className="shrink-0 p-1.5 rounded-lg hover:bg-green-50 text-green-600 transition-colors"
 //                     >
 //                       {copiedField === "accountNumber" ? (
 //                         <Check className="w-5 h-5" />
@@ -1465,7 +1465,7 @@
 // function ErrorBox({ message }: { message: string }) {
 //   return (
 //     <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-//       <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+//       <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
 //       <p className="text-sm text-red-700">{message}</p>
 //     </div>
 //   );
@@ -1475,7 +1475,7 @@
 //   return (
 //     <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
 //       <div className="flex items-start gap-3">
-//         <div className="w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+//         <div className="w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center shrink-0 mt-0.5">
 //           <span className="text-white text-xs font-bold">!</span>
 //         </div>
 //         <div>
@@ -1604,7 +1604,7 @@
 // //               {onrampOrder.virtualAccount?.accountNumber ?? onrampOrder.accountNumber ?? ""}
 // //             </span>
 // //             <Button variant="ghost" size="sm" onClick={() => copyToClipboard(onrampOrder.virtualAccount?.accountNumber ?? onrampOrder.accountNumber ?? "", "accountNumber")}
-// //               className="text-green-600 hover:bg-green-50 flex-shrink-0">
+// //               className="text-green-600 hover:bg-green-50 shrink-0">
 // //               {copiedField === "accountNumber" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
 // //             </Button>
 // //           </div>
@@ -1679,7 +1679,7 @@
 // // ── hasPrimaryBank warning (Paycrest required a primary bank for refunds) ───────
 // // {hasPrimaryBank === false && (
 // //   <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-// //     <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+// //     <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
 // //     <div>
 // //       <p className="text-sm font-medium text-amber-800">Primary bank account required</p>
 // //       <p className="text-xs text-amber-700 mt-0.5">
@@ -2017,7 +2017,7 @@ export default function DepositPage() {
             {/* No primary bank warning — shown proactively since Paycrest requires one */}
             {hasPrimaryBank === false && (
               <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-amber-800">
                     Primary bank account required
@@ -2168,7 +2168,7 @@ export default function DepositPage() {
                     </span>
                     <button
                       onClick={() => copyToClipboard(cryptoAddress, "address")}
-                      className="flex-shrink-0 p-1.5 rounded-lg hover:bg-[#2F67FA]/10 text-[#2F67FA] transition-colors"
+                      className="shrink-0 p-1.5 rounded-lg hover:bg-[#2F67FA]/10 text-[#2F67FA] transition-colors"
                     >
                       {copiedField === "address" ? (
                         <Check className="w-4 h-4 text-green-600" />
@@ -2383,7 +2383,7 @@ export default function DepositPage() {
 
             {onrampOrder.accountNumber ? (
               <div className="rounded-2xl border border-gray-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-green-600 to-green-500 px-5 py-4 flex items-center gap-3">
+                <div className="bg-linear-to-r from-green-600 to-green-500 px-5 py-4 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
                     <Building2 className="w-5 h-5 text-white" />
                   </div>
@@ -2417,7 +2417,7 @@ export default function DepositPage() {
                             "accountNumber",
                           )
                         }
-                        className="flex-shrink-0 p-1.5 rounded-lg hover:bg-green-50 text-green-600 transition-colors"
+                        className="shrink-0 p-1.5 rounded-lg hover:bg-green-50 text-green-600 transition-colors"
                       >
                         {copiedField === "accountNumber" ? (
                           <Check className="w-5 h-5" />
@@ -2537,7 +2537,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function ErrorBox({ message }: { message: string }) {
   return (
     <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-      <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+      <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
       <p className="text-sm text-red-700">{message}</p>
     </div>
   );
@@ -2547,7 +2547,7 @@ function WarningBox({ children }: { children: React.ReactNode }) {
   return (
     <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
       <div className="flex items-start gap-3">
-        <div className="w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <div className="w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center shrink-0 mt-0.5">
           <span className="text-white text-xs font-bold">!</span>
         </div>
         <div>
