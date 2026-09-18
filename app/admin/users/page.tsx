@@ -120,6 +120,7 @@ export default function UsersPage() {
           currency: "NGN",
           role: u.role,
           balances: u.balances || [],
+          howYouHeardAboutUs: u.howYouHeardAboutUs,
         }));
         setUsers(mappedUsers);
         setFilteredUsers(mappedUsers);

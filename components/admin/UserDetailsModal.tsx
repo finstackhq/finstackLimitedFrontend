@@ -209,7 +209,7 @@ export function UserDetailsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] lg:max-w-5xl max-h-[90vh] overflow-y-auto p-0">
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-[#2F67FA] to-blue-600 text-white p-6">
+        <div className="bg-linear-to-r from-[#2F67FA] to-blue-600 text-white p-6">
           <DialogHeader>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
@@ -267,7 +267,7 @@ export function UserDetailsModal({
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
                   <UserIcon className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
@@ -295,7 +295,7 @@ export function UserDetailsModal({
               </div>
 
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
                   <Mail className="w-5 h-5 text-purple-600" />
                 </div>
                 <div>
@@ -308,7 +308,7 @@ export function UserDetailsModal({
 
               {user.phone && (
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
                     <Phone className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
@@ -321,7 +321,7 @@ export function UserDetailsModal({
               )}
 
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
                   <MapPin className="w-5 h-5 text-orange-600" />
                 </div>
                 <div>
@@ -333,7 +333,7 @@ export function UserDetailsModal({
               </div>
 
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-pink-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-pink-100 flex items-center justify-center shrink-0">
                   <Shield className="w-5 h-5 text-pink-600" />
                 </div>
                 <div>
@@ -345,7 +345,7 @@ export function UserDetailsModal({
               </div>
 
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
                   <Calendar className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div>
@@ -359,7 +359,7 @@ export function UserDetailsModal({
               </div>
 
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center shrink-0">
                   <TrendingUp className="w-5 h-5 text-yellow-600" />
                 </div>
                 <div>
@@ -380,7 +380,7 @@ export function UserDetailsModal({
           {/* Account Status & Activity */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Wallet Balance */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-5 border border-green-200">
+            <div className="bg-linear-to-br from-green-50 to-emerald-50 rounded-lg p-5 border border-green-200">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-900">
                   Wallet Balance
@@ -399,7 +399,7 @@ export function UserDetailsModal({
             </div>
 
             {/* Activity Stats */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-5 border border-blue-200">
+            <div className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-lg p-5 border border-blue-200">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-900">
                   Activity
@@ -653,7 +653,7 @@ export function UserDetailsModal({
 
             {/* Warning Notice */}
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-amber-900 mb-1">
                   Important Notice
@@ -679,7 +679,7 @@ export function UserDetailsModal({
                 variant="outline"
               >
                 <div className="flex items-start gap-3 w-full">
-                  <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
                     <Shield className="w-5 h-5 text-red-600" />
                   </div>
                   <div className="flex-1">
@@ -704,7 +704,7 @@ export function UserDetailsModal({
                 variant="outline"
               >
                 <div className="flex items-start gap-3 w-full">
-                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
                     <Shield className="w-5 h-5 text-purple-600" />
                   </div>
                   <div className="flex-1">
@@ -728,7 +728,7 @@ export function UserDetailsModal({
                 variant="outline"
               >
                 <div className="flex items-start gap-3 w-full">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
                     <UserIcon className="w-5 h-5 text-blue-600" />
                   </div>
                   <div className="flex-1">

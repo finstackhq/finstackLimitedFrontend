@@ -11,16 +11,14 @@ export default async function WalletsPage() {
           My Wallets
         </h1>
         <p className="text-sm md:text-base text-gray-600">
-          Manage your NGN, USDT, USDC, and CNGN wallets
+          Manage your wallet balances and provider-generated account details
         </p>
       </div>
 
       <div className="flex flex-col sm:grid sm:grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-        {wallets
-          .filter((wallet) => wallet.type !== "NGN")
-          .map((wallet) => (
-            <WalletCard key={wallet.type} wallet={wallet} />
-          ))}
+        {wallets.map((wallet) => (
+          <WalletCard key={wallet.id} wallet={wallet} />
+        ))}
       </div>
     </div>
   );

@@ -7,14 +7,8 @@ import { Copy, Check, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import Link from "next/link";
 import type { Wallet } from "@/lib/mock-api";
 
-// Extended wallet type that includes bank details
-interface WalletWithBankDetails extends Wallet {
-  bankName?: string;
-  accountName?: string;
-}
-
 interface WalletCardProps {
-  wallet: WalletWithBankDetails;
+  wallet: Wallet;
 }
 
 export function WalletCard({ wallet }: WalletCardProps) {
@@ -26,8 +20,8 @@ export function WalletCard({ wallet }: WalletCardProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const accountInfo =
-    wallet.type === "NGN" ? wallet.accountNumber : wallet.walletAddress;
+  const accountInfo = wallet.walletAddress || wallet.accountNumber;
+  const isProviderWallet = Boolean(wallet.provider || wallet.externalWalletId);
 
   return (
     <Card className="w-full max-w-md mx-auto p-3 md:p-5 shadow-lg border-gray-200 hover:shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
@@ -36,17 +30,19 @@ export function WalletCard({ wallet }: WalletCardProps) {
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h3 className="text-sm md:text-base lg:text-lg font-semibold text-foreground truncate">
-              {wallet.type} Wallet
+              {wallet.type} {isProviderWallet ? "Account" : "Wallet"}
             </h3>
             <p className="text-xs md:text-sm text-gray-600">
-              {wallet.type === "NGN"
+              {isProviderWallet
+                ? `${wallet.usage || "User"} account${wallet.provider ? ` · ${wallet.provider}` : ""}`
+                : wallet.type === "NGN"
                 ? "Naira Wallet"
                 : wallet.type === "CNGN"
                   ? "Crypto Naira Wallet"
                   : "Crypto Wallet"}
             </p>
           </div>
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#2F67FA]/10 flex items-center justify-center flex-shrink-0 ml-2">
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#2F67FA]/10 flex items-center justify-center shrink-0 ml-2">
             <span className="text-sm md:text-lg font-bold text-[#2F67FA]">
               {wallet.type === "NGN" ? "₦" : wallet.type === "CNGN" ? "₦" : "$"}
             </span>
@@ -69,8 +65,7 @@ export function WalletCard({ wallet }: WalletCardProps) {
 
         {/* Account Info - Enhanced for NGN with bank details */}
         <div className="space-y-1.5">
-          {/* For NGN, show bank name and account name if available */}
-          {wallet.type === "NGN" && wallet.bankName && (
+          {wallet.bankName && (
             <div className="mb-2">
               <p className="text-xs md:text-sm font-medium text-gray-600">
                 Bank Name
@@ -80,7 +75,7 @@ export function WalletCard({ wallet }: WalletCardProps) {
               </p>
             </div>
           )}
-          {wallet.type === "NGN" && wallet.accountName && (
+          {wallet.accountName && (
             <div className="mb-2">
               <p className="text-xs md:text-sm font-medium text-gray-600">
                 Account Name
@@ -92,15 +87,18 @@ export function WalletCard({ wallet }: WalletCardProps) {
           )}
 
           <p className="text-xs md:text-sm font-medium text-gray-600">
-            {wallet.type === "NGN" ? "Account Number" : "Wallet Address"}
+            {wallet.walletAddress ? "Wallet Address" : "Account Number"}
           </p>
           <div className="flex items-center gap-1.5 p-2 bg-gray-50 rounded-lg border border-gray-200">
             <p className="text-xs md:text-sm font-mono text-foreground flex-1 truncate min-w-0">
-              {accountInfo}
+              {accountInfo || "Not available"}
             </p>
             <button
-              onClick={() => handleCopy(accountInfo || "")}
-              className="p-1 md:p-1.5 hover:bg-white rounded-md transition-colors group flex-shrink-0"
+              type="button"
+              disabled={!accountInfo}
+              aria-label={`Copy ${wallet.walletAddress ? "wallet address" : "account number"}`}
+              onClick={() => accountInfo && handleCopy(accountInfo)}
+              className="p-1 md:p-1.5 hover:bg-white rounded-md transition-colors group shrink-0"
             >
               {copied ? (
                 <Check className="w-3 h-3 md:w-4 md:h-4 text-green-600" />
@@ -109,6 +107,14 @@ export function WalletCard({ wallet }: WalletCardProps) {
               )}
             </button>
           </div>
+          {(wallet.provider || wallet.status || wallet.walletType || wallet.externalWalletId) && (
+            <div className="flex flex-wrap gap-2 pt-1 text-[10px] md:text-xs text-gray-500">
+              {wallet.provider && <span>Provider: {wallet.provider}</span>}
+              {wallet.walletType && <span>Type: {wallet.walletType}</span>}
+              {wallet.status && <span>Status: {wallet.status}</span>}
+              {wallet.externalWalletId && <span className="font-mono">External ID: {wallet.externalWalletId}</span>}
+            </div>
+          )}
         </div>
 
         {/* Actions */}
