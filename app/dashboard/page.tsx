@@ -66,19 +66,43 @@ const BankAccountsCard = dynamic(
 
 import { KYCPopup } from "@/components/kyc-popup";
 
+// How often the dashboard quietly re-fetches balances while the tab is open
+const REFRESH_INTERVAL_MS = 30_000;
+
 export default function DashboardPage() {
   const [wallets, setWallets] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
+  // UPDATED: besides the first load, the dashboard now refreshes balances
+  //  - every 30 seconds
+  //  - whenever the user comes back to this browser tab
   useEffect(() => {
     setMounted(true);
     fetchDashboardData();
+
+    // Skip the timed refresh while the tab is hidden. The listener below
+    // refreshes as soon as the user comes back to the tab.
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === "visible") fetchDashboardData(true);
+    }, REFRESH_INTERVAL_MS);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") fetchDashboardData(true);
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
+  // UPDATED: `silent = true` skips the full-page spinner, so background
+  // refreshes update the numbers without the screen flashing.
+  const fetchDashboardData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       // Fetch wallets
       const walletsRes = await fetchWithAuth(
@@ -87,6 +111,12 @@ export default function DashboardPage() {
           cache: "no-store",
         },
       );
+      // If the request failed, stop here and keep whatever is on screen.
+      // Without this, an error response would look like "no wallets" and
+      // every balance would flash to 0.
+      if (!walletsRes.ok) {
+        throw new Error(`Balances request failed with status ${walletsRes.status}`);
+      }
       const walletsData = await walletsRes.json();
 
       // Normalize wallet data to match UI expectations (copied from lib/server/wallets.ts)
@@ -105,24 +135,31 @@ export default function DashboardPage() {
       }
 
       const supported = ["NGN", "USDT", "USDC", "CNGN"];
-      const normalizedWallets = supported.map((type, idx) => {
-        const entry = byCurrency.get(type);
-        const total =
-          Number(entry?.balance?.total) ||
-          Number(entry?.balance?.available) ||
-          0;
-        const address = entry?.walletAddress || entry?.address || "";
-        return {
-          id: String(idx + 1),
-          type,
-          balance: total,
-          accountNumber:
-            type === "NGN" ? entry?.accountNumber || "" : undefined,
-          walletAddress: type !== "NGN" ? address : undefined,
-        };
-      });
+      setWallets((previous) =>
+        supported.map((type, idx) => {
+          const entry = byCurrency.get(type);
+          const before = previous.find((w) => w.type === type);
 
-      setWallets(normalizedWallets);
+          // The backend marks a wallet it could not read with `error: true`
+          // and a zero balance. That zero is not real, so keep the balance
+          // that is already on screen instead of overwriting it.
+          if (entry?.error && before) return before;
+
+          const total =
+            Number(entry?.balance?.total) ||
+            Number(entry?.balance?.available) ||
+            0;
+          const address = entry?.walletAddress || entry?.address || "";
+          return {
+            id: String(idx + 1),
+            type,
+            balance: total,
+            accountNumber:
+              type === "NGN" ? entry?.accountNumber || "" : undefined,
+            walletAddress: type !== "NGN" ? address : undefined,
+          };
+        }),
+      );
 
       // Fetch recent transactions (limit to 5)
       const txnRes = await fetchWithAuth("/api/fstack/transactions?limit=5");

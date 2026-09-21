@@ -23,13 +23,17 @@ export function WalletBalanceCard({ wallets }: WalletBalanceCardProps) {
   const cngnWallet = wallets.find((w) => w.type === "CNGN");
 
   // --- SIMPLE BALANCE DISPLAY LOGIC ---
+  // UPDATED: the NGN total is now NGN wallet + CNGN wallet (both are naira,
+  // 1:1). Before, it only showed the CNGN balance.
+  // The USD total still shows USDC only. Adding naira balances to it needs an
+  // exchange rate, which has not been decided yet.
   useEffect(() => {
     if (selectedCurrency === "NGN") {
-      setTotalBalance(cngnWallet?.balance ?? 0);
+      setTotalBalance((ngnWallet?.balance ?? 0) + (cngnWallet?.balance ?? 0));
     } else if (selectedCurrency === "USD") {
       setTotalBalance(usdcWallet?.balance ?? 0);
     }
-  }, [selectedCurrency, cngnWallet, usdcWallet]);
+  }, [selectedCurrency, ngnWallet, cngnWallet, usdcWallet]);
 
   const getCurrencySymbol = () => {
     switch (selectedCurrency) {
@@ -87,6 +91,8 @@ export function WalletBalanceCard({ wallets }: WalletBalanceCardProps) {
                 "••••••"
               )}
             </p>
+            {/* NOTE: this "+12.5% vs last month" badge is hardcoded, not real
+                data. Remove it or compute it from real history. */}
             <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/20 backdrop-blur-sm">
               <TrendingUp className="w-3 h-3 text-green-300" />
               <span className="text-xs font-medium text-green-300">+12.5%</span>
@@ -113,7 +119,25 @@ export function WalletBalanceCard({ wallets }: WalletBalanceCardProps) {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 md:gap-4 pt-4 border-t border-white/10">
+        {/* UPDATED: 3 columns on larger screens (was 2) to fit the NGN card */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 pt-4 border-t border-white/10">
+          {/* NEW: NGN wallet card */}
+          <div className="p-3 md:p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <span className="text-xs font-bold text-green-300">₦</span>
+              </div>
+              <p className="text-[10px] md:text-xs text-blue-100 font-medium">
+                NGN Wallet
+              </p>
+            </div>
+            <p className="text-base md:text-lg lg:text-xl font-bold text-white">
+              {showBalance
+                ? `₦${ngnWallet?.balance.toLocaleString() || "0"}`
+                : "••••••"}
+            </p>
+          </div>
+
           <div className="p-3 md:p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center">
