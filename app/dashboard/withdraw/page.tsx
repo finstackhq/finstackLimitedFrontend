@@ -1,7 +1,11 @@
 "use client";
 
-// Static mapping of supported banks and their institution codes
-
+// Static mapping of supported banks and their institution codes.
+// IMPORTANT: this is the PAYCREST bank list, used only by the existing
+// CNGN -> Paycrest flow below. The new Nomba NGN flow never uses this list
+// — it fetches its own bank codes from /api/fstack/withdraw/nomba-banks,
+// because Nomba's bank codes ("058") are a different format from these
+// ("GTBINGLA") and are not interchangeable.
 const SUPPORTED_BANKS = [
   { name: "Access Bank", code: "ABNGNGLA" },
 
@@ -126,6 +130,12 @@ interface WithdrawalWallet {
   asset: string;
 }
 
+// Nomba's own bank list shape, from GET /api/fstack/withdraw/nomba-banks
+interface NombaBank {
+  name: string;
+  code: string;
+}
+
 export default function WithdrawPage() {
   const { toast } = useToast();
 
@@ -159,9 +169,12 @@ export default function WithdrawPage() {
 
   const [currentStep, setCurrentStep] = useState(1);
 
-  const [selectedWallet, setSelectedWallet] = useState<"NGN" | "USDT" | null>(
-    null,
-  );
+  // UPDATED: added "NGN_NOMBA" as a third, separate option. "NGN" here still
+  // means the existing CNGN -> Paycrest flow — unchanged, kept for backward
+  // compatibility with however it's referenced elsewhere in the app.
+  const [selectedWallet, setSelectedWallet] = useState<
+    "NGN" | "USDT" | "NGN_NOMBA" | null
+  >(null);
 
   const [amount, setAmount] = useState("");
 
@@ -175,71 +188,57 @@ export default function WithdrawPage() {
 
   const [withdrawalData, setWithdrawalData] = useState<any>(null);
 
-  // Bank accounts state
+  // Bank accounts state (used by the existing CNGN -> Paycrest flow only)
 
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
 
   const [loadingAccounts, setLoadingAccounts] = useState(false);
 
-  // Wallet balances state
+  // NEW: state for the Nomba NGN flow. Kept completely separate from
+  // bankAccounts above — Nomba needs its own bank codes and this flow does
+  // not save destinations for reuse (matching the docs' resolve-per-transfer
+  // model).
+  const [nombaBanks, setNombaBanks] = useState<NombaBank[]>([]);
+  const [loadingNombaBanks, setLoadingNombaBanks] = useState(true);
+  const [nombaBankCode, setNombaBankCode] = useState("");
+  const [nombaAccountNumber, setNombaAccountNumber] = useState("");
+  const [nombaAccountName, setNombaAccountName] = useState("");
 
+  useEffect(() => {
+    const fetchNombaBanks = async () => {
+      setLoadingNombaBanks(true);
+      try {
+        const res = await fetch("/api/fstack/withdraw/nomba-banks");
+        const data = await res.json();
+        if (res.ok && data.success && Array.isArray(data.banks)) {
+          setNombaBanks(data.banks);
+        } else {
+          setNombaBanks([]);
+        }
+      } catch (err) {
+        setNombaBanks([]);
+        console.error("Failed to fetch Nomba bank list:", err);
+      } finally {
+        setLoadingNombaBanks(false);
+      }
+    };
+    fetchNombaBanks();
+  }, []);
+
+  // Wallet balances state
+  // UPDATED: NGN_NOMBA is now tracked separately from NGN (CNGN). Before,
+  // the CNGN balance was shown under the single "NGN" key, which would have
+  // been wrong for the new Nomba option — that must show the REAL Nomba
+  // ledger balance, not the CNGN balance.
   const [walletBalances, setWalletBalances] = useState<{
     NGN: number;
 
     USDT: number;
-  }>({ NGN: 0, USDT: 0 });
+
+    NGN_NOMBA: number;
+  }>({ NGN: 0, USDT: 0, NGN_NOMBA: 0 });
 
   const [loadingBalances, setLoadingBalances] = useState(true);
-
-  // Fetch wallet balances on mount
-
-  // useEffect(() => {
-
-  //   const fetchBalances = async () => {
-
-  //     setLoadingBalances(true);
-
-  //     try {
-
-  //       const res = await fetch("/api/fstack/wallet/user-balances");
-
-  //       const data = await res.json();
-
-  //       // Example response: { success: true, data: [ { currency: "NGN", ... }, { currency: "USDC", ... }, { currency: "CNGN", ... } ] }
-
-  //       if (res.ok && data.success && Array.isArray(data.data)) {
-
-  //         // Find CNGN and USDC balances
-
-  //         const cngn = data.data.find((w: any) => w.currency === "CNGN");
-
-  //         const usdc = data.data.find((w: any) => w.currency === "USDC");
-
-  //         setWalletBalances({
-
-  //           NGN: cngn?.balance?.available ?? 0,
-
-  //           USDT: usdc?.balance?.available ?? 0,
-
-  //         });
-
-  //       }
-
-  //     } catch (err) {
-
-  //       console.error("Failed to fetch wallet balances:", err);
-
-  //     } finally {
-
-  //       setLoadingBalances(false);
-
-  //     }
-
-  //   };
-
-  //   fetchBalances();
-
-  // }, []);
 
   useEffect(() => {
     const fetchBalances = async () => {
@@ -262,9 +261,15 @@ export default function WithdrawPage() {
           const usdt = data.data.find((w: any) => w.currency === "USDT");
 
           setWalletBalances({
+            // NGN (this card) stays exactly as before: CNGN first, falling
+            // back to the NGN entry only if CNGN is missing.
             NGN: cngn?.balance?.available ?? ngn?.balance?.available ?? 0,
 
             USDT: usdc?.balance?.available ?? usdt?.balance?.available ?? 0,
+
+            // NEW: the real Nomba NGN ledger balance, always from the NGN
+            // entry specifically — never falls back to CNGN.
+            NGN_NOMBA: ngn?.balance?.available ?? 0,
           });
         }
       } catch (err) {
@@ -438,22 +443,33 @@ export default function WithdrawPage() {
     }
   };
 
+  // UPDATED: branches to the Nomba OTP endpoint for the new option. The
+  // CNGN and USDT branches are byte-for-byte unchanged.
   const handleInitiateWithdrawal = async () => {
     if (!selectedWallet || !amount) return;
 
     setLoading(true);
 
     try {
-      const res = await fetch("/api/fstack/withdraw/initiate", {
+      const isNombaFlow = selectedWallet === "NGN_NOMBA";
+
+      const endpoint = isNombaFlow
+        ? "/api/fstack/withdraw/nomba-initiate"
+        : "/api/fstack/withdraw/initiate";
+
+      const body = isNombaFlow
+        ? { amount: parseFloat(amount) }
+        : {
+            walletCurrency: selectedWallet === "NGN" ? "CNGN" : "USDC",
+            amount: parseFloat(amount),
+          };
+
+      const res = await fetch(endpoint, {
         method: "POST",
 
         headers: { "Content-Type": "application/json" },
 
-        body: JSON.stringify({
-          walletCurrency: selectedWallet === "NGN" ? "CNGN" : "USDC",
-
-          amount: parseFloat(amount),
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
@@ -490,6 +506,8 @@ export default function WithdrawPage() {
     }
   };
 
+  // UPDATED: branches to the Nomba completion endpoint. The CNGN and USDT
+  // branches are byte-for-byte unchanged.
   const handleCompleteWithdrawal = async () => {
     const otpCode = otp.join("");
 
@@ -505,7 +523,12 @@ export default function WithdrawPage() {
       return;
     }
 
-    if (!selectedWallet || !selectedDestination) return;
+    if (!selectedWallet) return;
+
+    // The Nomba flow doesn't use selectedDestination (it has its own
+    // bank/account-number/account-name fields), so only require it for the
+    // other two flows.
+    if (selectedWallet !== "NGN_NOMBA" && !selectedDestination) return;
 
     setLoading(true);
 
@@ -514,36 +537,47 @@ export default function WithdrawPage() {
     let body: any = {};
 
     try {
-      const destination =
-        selectedWallet === "NGN"
-          ? bankAccounts.find((a) => a.id === selectedDestination)
-          : withdrawalWallets.find((w) => w.id === selectedDestination);
-
-      if (!destination) throw new Error("Destination not found");
-
-      if (selectedWallet === "NGN") {
-        // Fiat withdrawal
-        endpoint = "/api/fstack/withdraw/fiat-complete";
-        const account = destination as BankAccount;
+      if (selectedWallet === "NGN_NOMBA") {
+        endpoint = "/api/fstack/withdraw/nomba-complete";
         body = {
-          walletCurrency: "CNGN",
-          fiatCurrency: "NGN",
           amount: parseFloat(amount),
           otpCode,
-          destinationAccountNumber: account.accountNumber,
-          institutionCode: account.bankCode,
-          accountName: account.accountName,
+          destinationAccountNumber: nombaAccountNumber,
+          institutionCode: nombaBankCode,
+          accountName: nombaAccountName,
         };
       } else {
-        // Crypto withdrawal
-        endpoint = "/api/fstack/withdraw/crypto-complete";
-        const wallet = destination as WithdrawalWallet;
-        body = {
-          walletCurrency: wallet.asset || "USDC",
-          amount: parseFloat(amount),
-          otpCode,
-          externalCryptoAddress: wallet.address,
-        };
+        const destination =
+          selectedWallet === "NGN"
+            ? bankAccounts.find((a) => a.id === selectedDestination)
+            : withdrawalWallets.find((w) => w.id === selectedDestination);
+
+        if (!destination) throw new Error("Destination not found");
+
+        if (selectedWallet === "NGN") {
+          // Fiat withdrawal (CNGN -> Paycrest) — unchanged
+          endpoint = "/api/fstack/withdraw/fiat-complete";
+          const account = destination as BankAccount;
+          body = {
+            walletCurrency: "CNGN",
+            fiatCurrency: "NGN",
+            amount: parseFloat(amount),
+            otpCode,
+            destinationAccountNumber: account.accountNumber,
+            institutionCode: account.bankCode,
+            accountName: account.accountName,
+          };
+        } else {
+          // Crypto withdrawal — unchanged
+          endpoint = "/api/fstack/withdraw/crypto-complete";
+          const wallet = destination as WithdrawalWallet;
+          body = {
+            walletCurrency: wallet.asset || "USDC",
+            amount: parseFloat(amount),
+            otpCode,
+            externalCryptoAddress: wallet.address,
+          };
+        }
       }
 
       const res = await fetch(endpoint, {
@@ -565,7 +599,10 @@ export default function WithdrawPage() {
       toast({
         title: "Withdrawal Successful",
 
-        description: "Your withdrawal has been processed successfully",
+        description:
+          selectedWallet === "NGN_NOMBA"
+            ? "You'll be notified by email once it settles."
+            : "Your withdrawal has been processed successfully",
       });
 
       setCurrentStep(5);
@@ -606,9 +643,22 @@ export default function WithdrawPage() {
     }
   };
 
-  const fee = selectedWallet === "NGN" ? 50 : 1;
+  // UPDATED: NGN_NOMBA is naira too, same fee/symbol treatment as NGN.
+  const isNairaFlow = selectedWallet === "NGN" || selectedWallet === "NGN_NOMBA";
+  const fee = isNairaFlow ? 50 : 1;
 
   const totalAmount = amount ? Number.parseFloat(amount) + fee : 0;
+
+  // Can the user move past Step 2 for the Nomba flow? Needs a bank, an
+  // account number of a sensible length, and a typed account name.
+  // NOTE: there is currently no account-lookup endpoint on the backend for
+  // Nomba (unlike some payment apps that verify the name before you send).
+  // This matches how the existing CNGN flow's "Add Bank Account" dialog
+  // already works — the user types the name themselves. Worth adding a
+  // real lookup later given this moves real money; ask if you'd like that
+  // built (it needs one new backend endpoint + provider function first).
+  const canContinueNombaDestination =
+    !!nombaBankCode && nombaAccountNumber.length >= 10 && nombaAccountName.trim().length > 2;
 
   return (
     <div className="space-y-6">
@@ -639,7 +689,8 @@ export default function WithdrawPage() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
+            {/* UPDATED: grid now fits 3 cards on larger screens instead of 2 */}
+            <div className="grid md:grid-cols-3 gap-4">
               <button
                 onClick={() => {
                   setSelectedWallet("NGN");
@@ -669,6 +720,40 @@ export default function WithdrawPage() {
                     <span className="text-gray-400">Loading...</span>
                   ) : (
                     `₦${walletBalances.NGN.toLocaleString()}`
+                  )}
+                </p>
+              </button>
+
+              {/* NEW: real Nomba NGN withdrawal (bank transfer via Nomba) */}
+              <button
+                onClick={() => {
+                  setSelectedWallet("NGN_NOMBA");
+
+                  setCurrentStep(2);
+                }}
+                className="p-6 border-2 border-gray-200 rounded-lg hover:border-[#2F67FA] hover:bg-[#2F67FA]/5 transition-all duration-200 text-left group"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center group-hover:bg-green-600 transition-colors">
+                    <span className="text-xl font-bold text-green-600 group-hover:text-white">
+                      ₦
+                    </span>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold text-foreground mb-1">
+                  Naira (Bank Transfer)
+                </h3>
+
+                <p className="text-sm text-gray-600 mb-2">
+                  Withdraw straight to your bank account
+                </p>
+
+                <p className="text-lg font-semibold text-foreground">
+                  {loadingBalances ? (
+                    <span className="text-gray-400">Loading...</span>
+                  ) : (
+                    `₦${walletBalances.NGN_NOMBA.toLocaleString()}`
                   )}
                 </p>
               </button>
@@ -722,7 +807,95 @@ export default function WithdrawPage() {
 
         {/* Step 2: Select Destination */}
 
-        {currentStep === 2 && selectedWallet && (
+        {currentStep === 2 && selectedWallet === "NGN_NOMBA" && (
+          // NEW: destination step for the Nomba flow. Its own bank picker
+          // (sourced from Nomba's own bank list, never SUPPORTED_BANKS) and
+          // its own account number / account name fields — nothing here is
+          // shared with the CNGN bankAccounts list below.
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                Recipient Bank Account
+              </h2>
+              <p className="text-gray-600">Where should we send the money?</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="nomba-bank">Bank</Label>
+                <select
+                  id="nomba-bank"
+                  className="w-full border rounded-md h-10 px-3 text-sm"
+                  value={nombaBankCode}
+                  onChange={(e) => setNombaBankCode(e.target.value)}
+                  disabled={loadingNombaBanks}
+                >
+                  <option value="">
+                    {loadingNombaBanks ? "Loading banks..." : "Select a bank"}
+                  </option>
+                  {nombaBanks.map((b) => (
+                    <option key={b.code} value={b.code}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+                {!loadingNombaBanks && nombaBanks.length === 0 && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Could not load the bank list. Please try again shortly.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="nomba-account-number">Account Number</Label>
+                <Input
+                  id="nomba-account-number"
+                  value={nombaAccountNumber}
+                  onChange={(e) =>
+                    setNombaAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 10))
+                  }
+                  placeholder="0123456789"
+                  inputMode="numeric"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="nomba-account-name">Account Name</Label>
+                <Input
+                  id="nomba-account-name"
+                  value={nombaAccountName}
+                  onChange={(e) => setNombaAccountName(e.target.value)}
+                  placeholder="As it appears on the bank account"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Double-check this matches the account exactly — an incorrect
+                  name can cause the transfer to fail or be rejected by the
+                  bank.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setCurrentStep(1)}
+                variant="outline"
+                className="flex-1 flex items-center justify-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </Button>
+              <Button
+                onClick={() => setCurrentStep(3)}
+                disabled={!canContinueNombaDestination}
+                className="flex-1 bg-[#2F67FA] hover:bg-[#2F67FA]/90 text-white"
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {currentStep === 2 && selectedWallet && selectedWallet !== "NGN_NOMBA" && (
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-semibold text-foreground mb-2">
@@ -855,7 +1028,9 @@ export default function WithdrawPage() {
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="amount">Amount ({selectedWallet})</Label>
+                <Label htmlFor="amount">
+                  Amount ({isNairaFlow ? "NGN" : selectedWallet})
+                </Label>
 
                 <Input
                   id="amount"
@@ -874,7 +1049,7 @@ export default function WithdrawPage() {
                       <span className="text-gray-600">Amount</span>
 
                       <span className="font-medium text-foreground">
-                        {selectedWallet === "NGN" ? "₦" : "$"}
+                        {isNairaFlow ? "₦" : "$"}
 
                         {Number.parseFloat(amount).toFixed(2)}
                       </span>
@@ -884,7 +1059,7 @@ export default function WithdrawPage() {
                       <span className="text-gray-600">Transaction Fee</span>
 
                       <span className="font-medium text-foreground">
-                        {selectedWallet === "NGN" ? "₦" : "$"}
+                        {isNairaFlow ? "₦" : "$"}
 
                         {fee.toFixed(2)}
                       </span>
@@ -896,24 +1071,29 @@ export default function WithdrawPage() {
                       </span>
 
                       <span className="font-semibold text-foreground">
-                        {selectedWallet === "NGN" ? "₦" : "$"}
+                        {isNairaFlow ? "₦" : "$"}
 
                         {totalAmount.toFixed(2)}
                       </span>
                     </div>
                   </div>
 
-                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-600 mb-1">
-                      You will receive
-                    </p>
+                  {/* The NGN <-> USD conversion preview only makes sense for
+                      the existing CNGN/USDT flows, which cross currencies.
+                      The Nomba flow pays out NGN as NGN, so it's skipped. */}
+                  {selectedWallet !== "NGN_NOMBA" && (
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <p className="text-sm text-gray-600 mb-1">
+                        You will receive
+                      </p>
 
-                    <p className="text-lg font-semibold text-foreground">
-                      {selectedWallet === "NGN"
-                        ? `$${convertCurrency(Number.parseFloat(amount), "NGN", "USD").toFixed(2)}`
-                        : `₦${convertCurrency(Number.parseFloat(amount), "USDT", "NGN").toFixed(2)}`}
-                    </p>
-                  </div>
+                      <p className="text-lg font-semibold text-foreground">
+                        {selectedWallet === "NGN"
+                          ? `$${convertCurrency(Number.parseFloat(amount), "NGN", "USD").toFixed(2)}`
+                          : `₦${convertCurrency(Number.parseFloat(amount), "USDT", "NGN").toFixed(2)}`}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1026,7 +1206,7 @@ export default function WithdrawPage() {
               </h2>
 
               <p className="text-gray-600">
-                Your withdrawal of {selectedWallet === "NGN" ? "₦" : "$"}
+                Your withdrawal of {isNairaFlow ? "₦" : "$"}
                 {amount} is being processed.
               </p>
             </div>
