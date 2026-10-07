@@ -11,13 +11,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Server not configured' }, { status: 500 });
     }
 
-    const token = request.cookies.get('access_token')?.value;
+    const token =
+      request.headers.get('Authorization') ||
+      (request.cookies.get('access_token')?.value
+        ? `Bearer ${request.cookies.get('access_token')?.value}`
+        : undefined);
     const res = await fetch(endpoint, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(token ? { Authorization: token } : {}),
       },
       cache: 'no-store',
     });

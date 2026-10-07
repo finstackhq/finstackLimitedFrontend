@@ -17,12 +17,10 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
-  Copy,
   QrCode, // Added for UI
   XCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { fetchWithAuth } from "@/components/auth-form";
 import { useRouter, useParams } from "next/navigation";
 import { TradeCancelScreen } from "./TradeCancelScreen";
 import { TradeDisputeScreen } from "./TradeDisputeScreen";
@@ -57,14 +55,16 @@ type StoredTradeContext = {
     amountCrypto?: number;
     platformFeeCrypto?: number;
     netCryptoAmount?: number;
+    expiresAt?: string;
     marketRate?: number;
     listingRate?: number;
     // Updated to match your API response
     paymentDetails?: {
+      type?: string;
       alipayAccountName?: string;
-      alipayEmail?: string;
       alipayQrImage?: string;
       country?: string;
+      [key: string]: any;
     };
   };
   status?:
@@ -76,6 +76,7 @@ type StoredTradeContext = {
     | "disputed"
     | string;
   cancelledAt?: string;
+  expiresAt?: string;
   cancelledBy?: "buyer" | "merchant" | "system";
   cancelReason?: string;
   completedAt?: string;
@@ -130,8 +131,127 @@ export default function PaymentPage() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [canDispute, setCanDispute] = useState(false);
+  const [tradeLoaded, setTradeLoaded] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+
+  const fetchOnce = (url: string, options: RequestInit = {}) => {
+    const token = localStorage.getItem("accessToken");
+    return fetch(url, {
+      ...options,
+      credentials: "include",
+      headers: {
+        ...(options.headers || {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  };
+
+  const refreshTrade = async (current: StoredTradeContext | null = ctx) => {
+    if (!current) return null;
+    const hasNgnWallet = async () => {
+      try {
+        const walletResponse = await fetchOnce(
+          "/api/fstack/wallet/user-balances",
+        );
+        const walletResult = await walletResponse.json();
+        return (
+          walletResponse.ok &&
+          Array.isArray(walletResult.data) &&
+          walletResult.data.some(
+            (wallet: any) =>
+              wallet.currency === "NGN" && wallet.provider === "NOMBA",
+          )
+        );
+      } catch {
+        return false;
+      }
+    };
+
+    if (current.ad?.cryptoCurrency === "NGN" && !(await hasNgnWallet())) {
+      setCtx(null);
+      router.replace("/dashboard/p2p");
+      return null;
+    }
+
+    const reference = current.initiate?.reference || tradeId;
+    const response = await fetchOnce(
+      `/api/fstack/p2p/trade/${encodeURIComponent(reference)}`,
+    );
+    const result = await response.json();
+    if (response.status === 403) {
+      toast({
+        title: "Trade unavailable",
+        description:
+          result.message || result.error || "This trade is not yours to view.",
+        variant: "destructive",
+      });
+      setCtx(null);
+      router.replace("/dashboard/p2p/orders");
+      return null;
+    }
+    if (!response.ok) {
+      throw new Error(
+        result.message || result.error || "Unable to refresh this trade",
+      );
+    }
+
+    const trade = result.data || result.trade || result;
+    if (!trade || typeof trade.status !== "string") {
+      throw new Error("Trade response did not include a status");
+    }
+    const isNgnTrade =
+      current.ad?.cryptoCurrency === "NGN" ||
+      [trade.currencySource, trade.currencyTarget, trade.asset].includes("NGN");
+    if (isNgnTrade && current.ad?.cryptoCurrency !== "NGN") {
+      if (!(await hasNgnWallet())) {
+        setCtx(null);
+        router.replace("/dashboard/p2p");
+        return null;
+      }
+    }
+
+    const next: StoredTradeContext = {
+      ...current,
+      status: trade.status || current.status,
+      expiresAt: trade.expiresAt || current.expiresAt,
+      completedAt: trade.settledAt || current.completedAt,
+      initiate: {
+        ...current.initiate,
+        reference: trade.reference || current.initiate?.reference,
+        side: trade.side || current.initiate?.side,
+        amountFiat: trade.amountFiat ?? current.initiate?.amountFiat,
+        amountCrypto: trade.amountCrypto ?? current.initiate?.amountCrypto,
+        platformFeeCrypto:
+          trade.platformFeeCrypto ?? current.initiate?.platformFeeCrypto,
+        netCryptoAmount:
+          trade.netCryptoAmount ?? current.initiate?.netCryptoAmount,
+        expiresAt: trade.expiresAt || current.initiate?.expiresAt,
+        paymentDetails:
+          trade.paymentDetails || current.initiate?.paymentDetails,
+      },
+    };
+    localStorage.setItem(`p2p_trade_${tradeId}`, JSON.stringify(next));
+    setCtx(next);
+    setTradeLoaded(true);
+    return next;
+  };
+
+  const refreshBalances = async () => {
+    try {
+      const response = await fetchOnce("/api/fstack/wallet/user-balances");
+      if (!response.ok) throw new Error("Unable to refresh wallet balances");
+      await response.json();
+    } catch {
+      toast({
+        title: "Balance refresh failed",
+        description: "Refresh your wallet to see the latest balance.",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     try {
@@ -145,10 +265,12 @@ export default function PaymentPage() {
 
       const parsed = JSON.parse(raw) as StoredTradeContext;
       setCtx(parsed);
+      void refreshTrade(parsed).catch((error) => {
+        setActionError(error.message || "Unable to refresh this trade");
+      }).finally(() => setLoading(false));
     } catch (e) {
       console.error("Failed to load stored trade context", e);
       setCtx(null);
-    } finally {
       setLoading(false);
     }
   }, [tradeId]);
@@ -156,17 +278,15 @@ export default function PaymentPage() {
   // 1. KEEP THE TIMER LOGIC (Essential for the UI)
   useEffect(() => {
     if (!ctx) return;
-    const paymentWindowMinutes = Number(ctx.paymentWindow) || 15;
-    if (!ctx.createdAt) return;
+    const expiresAt = ctx.expiresAt || ctx.initiate?.expiresAt;
+    if (!expiresAt) return;
 
     const computeTime = () => {
-      const created = new Date(ctx.createdAt).getTime();
-      const windowMs = paymentWindowMinutes * 60 * 1000;
-      const expireTime = created + windowMs;
+      const expireTime = new Date(expiresAt).getTime();
       const now = new Date().getTime();
       const diff = Math.max(0, expireTime - now);
 
-      if (diff === 0) setIsExpired(true);
+      setIsExpired(diff === 0);
 
       const minutes = Math.floor(diff / 60000);
       const seconds = Math.floor((diff % 60000) / 1000);
@@ -174,8 +294,8 @@ export default function PaymentPage() {
     };
 
     setTimeLeft(computeTime());
-    const status = (ctx.status || "pending_payment").toLowerCase();
-    if (status === "paid" || status === "completed" || localPaid) return;
+    const status = (ctx.status || "PENDING_PAYMENT").toUpperCase();
+    if (["COMPLETED", "CANCELLED", "CANCELLED_REVERSED", "FAILED"].includes(status) || localPaid) return;
 
     const timer = setInterval(() => {
       setTimeLeft(computeTime());
@@ -184,53 +304,38 @@ export default function PaymentPage() {
     return () => clearInterval(timer);
   }, [ctx, localPaid]);
 
-  // 2. ADD THE DEBUG LOGIC BELOW IT (To help us find the barcode)
-  useEffect(() => {
-    if (ctx) {
-      const details =
-        ctx.initiate?.paymentDetails || (ctx as any).paymentDetails;
-      if (details) {
-      } else {
-        console.warn(
-          "❌ No paymentDetails found in ctx.initiate OR ctx root. Entire ctx:",
-          ctx,
-        );
-      }
-    }
-  }, [ctx]);
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: "Copied", description: "Copied to clipboard" });
-  };
-
   const handleMarkPaid = async () => {
     try {
+      setActionError("");
+      setCanDispute(false);
       setLocalPaid(true);
       setUpdating(true);
       const reference = ctx?.initiate?.reference;
       if (!reference) throw new Error("Trade reference not found");
 
-      const res = await fetchWithAuth("/api/fstack/p2p/confirm-payment", {
+      const res = await fetchOnce("/api/fstack/p2p/confirm-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reference }),
       });
 
       const data = await res.json();
-      if (!res.ok || !data.success) {
+      if (!res.ok || data.success === false) {
         setLocalPaid(false);
         throw new Error(
           data.error || data.message || "Failed to confirm payment",
         );
       }
 
-      updateLocalStatus("paid");
+      updateLocalStatus(data.data?.status || "PAYMENT_CONFIRMED_BY_BUYER");
+      void refreshTrade().catch((error) => setActionError(error.message));
       toast({
         title: "Payment Successful",
         description: "The seller has been notified. Please wait for release.",
       });
     } catch (error: any) {
       setLocalPaid(false);
+      setActionError(error.message || "Failed to confirm payment");
       toast({
         title: "Error",
         description: error.message || "Failed to confirm payment",
@@ -243,11 +348,12 @@ export default function PaymentPage() {
 
   const handleInitiateRelease = async () => {
     try {
+      setActionError("");
       setUpdating(true);
       const reference = ctx?.initiate?.reference;
       if (!reference) throw new Error("Trade reference not found");
 
-      const res = await fetchWithAuth(
+      const res = await fetchOnce(
         `/api/fstack/trade/${reference}/initiate-release`,
         {
           method: "POST",
@@ -256,8 +362,8 @@ export default function PaymentPage() {
       );
 
       const data = await res.json();
-      if (!res.ok || !data.success)
-        throw new Error(data.message || "Failed to send OTP");
+      if (!res.ok || data.success === false)
+        throw new Error(data.message || data.error || "Failed to send OTP");
 
       setShowOtpModal(true);
       toast({
@@ -265,6 +371,7 @@ export default function PaymentPage() {
         description: "Check your email for the code.",
       });
     } catch (error: any) {
+      setActionError(error.message || "Failed to send OTP");
       toast({
         title: "Error",
         description: error.message,
@@ -284,8 +391,9 @@ export default function PaymentPage() {
 
     setVerifyingOtp(true);
     try {
+      setActionError("");
       const reference = ctx?.initiate?.reference;
-      const res = await fetchWithAuth(
+      const res = await fetchOnce(
         `/api/fstack/trade/${reference}/confirm-release`,
         {
           method: "POST",
@@ -295,13 +403,18 @@ export default function PaymentPage() {
       );
 
       const data = await res.json();
-      if (!res.ok || !data.success)
-        throw new Error(data.message || "Invalid OTP");
+      if (!res.ok || data.success === false)
+        throw new Error(data.message || data.error || "Invalid OTP");
 
       setShowOtpModal(false);
-      updateLocalStatus("completed", { completedAt: new Date().toISOString() });
+      updateLocalStatus(data.data?.status || "COMPLETED", {
+        completedAt: data.data?.settledAt || new Date().toISOString(),
+      });
+      void refreshBalances();
+      void refreshTrade().catch((error) => setActionError(error.message));
       toast({ title: "Success", description: "Crypto released successfully." });
     } catch (error: any) {
+      setActionError(error.message || "Invalid OTP");
       setOtpError(error.message);
     } finally {
       setVerifyingOtp(false);
@@ -311,21 +424,25 @@ export default function PaymentPage() {
   const handleCancelTrade = async (reason?: string) => {
     setCancelling(true);
     try {
+      setActionError("");
+      setCanDispute(false);
       const reference = ctx?.initiate?.reference;
-      const res = await fetchWithAuth(`/api/fstack/p2p/${reference}/cancel`, {
-        method: "POST",
+      const res = await fetchOnce(`/api/fstack/p2p/${reference}/cancel`, {
+        method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
 
       const data = await res.json();
-      if (!res.ok || !data.success)
-        throw new Error(data.message || "Cancel failed");
+      if (!res.ok || data.success === false)
+        throw new Error(data.message || data.error || "Cancel failed");
 
-      updateLocalStatus("cancelled", {
-        cancelledAt: new Date().toISOString(),
+      updateLocalStatus(data.data?.status || "CANCELLED_REVERSED", {
+        cancelledAt: data.data?.cancelledAt || new Date().toISOString(),
         cancelledBy: "buyer",
         cancelReason: reason,
       });
+      void refreshBalances();
+      void refreshTrade().catch((error) => setActionError(error.message));
 
       setShowCancelDialog(false);
       toast({
@@ -333,6 +450,10 @@ export default function PaymentPage() {
         description: "Order cancelled successfully.",
       });
     } catch (error: any) {
+      setActionError(error.message || "Cancel failed");
+      if (error.message?.includes("409") || /after payment|status/i.test(error.message)) {
+        setCanDispute(true);
+      }
       toast({
         title: "Error",
         description: error.message,
@@ -379,16 +500,54 @@ export default function PaymentPage() {
         </Button>
       </div>
     );
+  if (!tradeLoaded)
+    return (
+      <div className="mx-auto max-w-lg space-y-4 py-12 text-center">
+        <h1 className="text-xl font-semibold">Unable to load this trade</h1>
+        <p className="text-sm text-destructive">
+          {actionError || "Refresh the trade to check its latest status."}
+        </p>
+        <Button
+          onClick={() =>
+            void refreshTrade()
+              .then(() => setActionError(""))
+              .catch((error) => setActionError(error.message))
+          }
+        >
+          Refresh trade
+        </Button>
+      </div>
+    );
 
   const cryptoCode = ctx.ad?.cryptoCurrency || "USDT";
   const fiatCode = ctx.ad?.fiatCurrency || "NGN";
-  const status = ctx.status || "pending_payment";
+  const status = (ctx.status || "PENDING_PAYMENT").toUpperCase();
   const amountFiat = ctx.initiate?.amountFiat;
   const amountCrypto = ctx.initiate?.amountCrypto;
+  const netCryptoAmount = ctx.initiate?.netCryptoAmount;
   const price = ctx.initiate?.listingRate || ctx.ad?.price;
+  const isBuyerSide = ctx.initiate?.side?.toUpperCase() === "BUY";
+  const isSellerSide = ctx.initiate?.side?.toUpperCase() === "SELL";
+  const canConfirmPayment =
+    tradeLoaded && isBuyerSide && status === "PENDING_PAYMENT" && !localPaid;
+  const canInitiateRelease =
+    tradeLoaded &&
+    isSellerSide &&
+    !showOtpModal &&
+    ["PAYMENT_CONFIRMED_BY_BUYER", "MERCHANT_PAID"].includes(status);
+  const canCancel =
+    tradeLoaded &&
+    status === "PENDING_PAYMENT" &&
+    (isBuyerSide || isExpired);
+  const canOpenDispute = tradeLoaded && [
+    "PENDING_PAYMENT",
+    "MERCHANT_PAID",
+    "PAYMENT_CONFIRMED_BY_BUYER",
+  ].includes(status);
+  const paymentDetails = ctx.initiate?.paymentDetails;
 
   // Screen Switcher
-  if (status === "cancelled")
+  if (["CANCELLED", "CANCELLED_REVERSED"].includes(status))
     return (
       <TradeCancelScreen
         tradeId={ctx.tradeId}
@@ -403,10 +562,7 @@ export default function PaymentPage() {
         wasPaymentMade={localPaid}
       />
     );
-  if (
-    status === "disputed" ||
-    (status === "paid" && ctx.initiate?.side !== "SELL")
-  )
+  if (["DISPUTE", "DISPUTE_PENDING", "DISPUTE_RESOLVED"].includes(status))
     return (
       <TradeDisputeScreen
         tradeId={ctx.tradeId}
@@ -418,13 +574,13 @@ export default function PaymentPage() {
         fiatAmount={amountFiat || 0}
         disputeThresholdMinutes={15}
         onDisputeSubmitted={() =>
-          updateLocalStatus("disputed", {
+          updateLocalStatus("DISPUTE_PENDING", {
             disputedAt: new Date().toISOString(),
           })
         }
       />
     );
-  if (status === "completed")
+  if (status === "COMPLETED")
     return (
       <TradeCompletionScreen
         tradeId={ctx.tradeId}
@@ -448,9 +604,9 @@ export default function PaymentPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             {ctx.initiate?.side === "SELL" ? "Sell" : "Buy"} {cryptoCode}
             <Badge
-              variant={status === "pending_payment" ? "outline" : "default"}
+              variant={status === "PENDING_PAYMENT" ? "outline" : "default"}
             >
-              {status.replace("_", " ")}
+              {status.replaceAll("_", " ")}
             </Badge>
           </h1>
           <p className="text-muted-foreground text-sm">
@@ -458,7 +614,7 @@ export default function PaymentPage() {
           </p>
         </div>
 
-        {status === "pending_payment" && !isExpired && (
+        {status === "PENDING_PAYMENT" && !isExpired && (
           <Card className="bg-primary/5 border-primary/20">
             <CardContent className="p-4 flex items-center gap-3">
               <Clock className="h-5 w-5 text-primary" />
@@ -495,9 +651,19 @@ export default function PaymentPage() {
                   Amount to {ctx.initiate?.side === "SELL" ? "Send" : "Receive"}
                 </span>
                 <span className="text-xl font-bold">
-                  {amountCrypto} {cryptoCode}
+                  {ctx.initiate?.side === "SELL"
+                    ? amountCrypto
+                    : (netCryptoAmount ?? amountCrypto)} {cryptoCode}
                 </span>
               </div>
+              {ctx.initiate?.platformFeeCrypto !== undefined && (
+                <div className="flex justify-between items-center px-3 text-sm">
+                  <span className="text-muted-foreground">Platform fee</span>
+                  <span>
+                    {ctx.initiate.platformFeeCrypto} {cryptoCode}
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -512,7 +678,8 @@ export default function PaymentPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* ALIPAY QR CODE SECTION - Always show if alipayQrImage is present */}
-              {ctx.initiate?.paymentDetails?.alipayQrImage && (
+              {paymentDetails?.type === "ALIPAY" &&
+                paymentDetails.alipayQrImage && (
                 <>
                   <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-blue-200 rounded-xl bg-blue-50/50">
                     <div className="flex items-center gap-2 mb-4 text-blue-700 font-bold">
@@ -553,27 +720,6 @@ export default function PaymentPage() {
                             ctx.sellerName}
                         </p>
                       </div>
-                      <div className="flex items-center justify-between bg-white px-4 py-2 rounded-lg border border-blue-100 shadow-sm">
-                        <div className="text-left overflow-hidden">
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold">
-                            Alipay Email/ID
-                          </p>
-                          <p className="text-sm font-medium truncate">
-                            {ctx.initiate?.paymentDetails?.alipayEmail || "N/A"}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            handleCopy(
-                              ctx.initiate?.paymentDetails?.alipayEmail || "",
-                            )
-                          }
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
                     </div>
                   </div>
                   {/* Modal for enlarged QR */}
@@ -605,6 +751,33 @@ export default function PaymentPage() {
                     </div>
                   )}
                 </>
+              )}
+
+              {paymentDetails && (
+                <div className="border rounded-lg p-4 space-y-2">
+                  <h3 className="font-semibold text-sm">
+                    {paymentDetails.type || "Payment"} details
+                  </h3>
+                  {Object.entries(paymentDetails)
+                    .filter(
+                      ([key, value]) =>
+                        key !== "type" &&
+                        !/email|qr/i.test(key) &&
+                        typeof value === "string" &&
+                        value.length > 0,
+                    )
+                    .map(([key, value]) => (
+                      <div
+                        key={key}
+                        className="flex justify-between gap-3 text-sm"
+                      >
+                        <span className="text-muted-foreground">
+                          {key.replace(/([A-Z])/g, " $1")}
+                        </span>
+                        <span className="text-right break-all">{value}</span>
+                      </div>
+                    ))}
+                </div>
               )}
 
               {/* Improved Payment Methods Styling */}
@@ -649,45 +822,98 @@ export default function PaymentPage() {
             </CardContent>
           </Card>
 
-          <div className="space-y-3">
-            <Button
-              size="lg"
-              className={`w-full text-lg font-bold h-14 ${ctx.initiate?.side === "SELL" ? "bg-blue-600 hover:bg-blue-700" : "bg-green-600 hover:bg-green-700"}`}
-              onClick={
-                ctx.initiate?.side === "SELL"
-                  ? handleInitiateRelease
-                  : handleMarkPaid
-              }
-              disabled={updating || isExpired}
-            >
-              {updating ? (
-                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              ) : (
-                <CheckCircle className="h-5 w-5 mr-2" />
-              )}
-              {ctx.initiate?.side === "SELL"
-                ? "I have received payment"
-                : "I have paid"}
-            </Button>
+          {actionError && (
+            <div className="flex flex-col gap-3 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              <p>{actionError}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    void refreshTrade()
+                      .then(() => setActionError(""))
+                      .catch((error) => setActionError(error.message))
+                  }
+                >
+                  Refresh trade
+                </Button>
+                {canDispute && (
+                  <Button
+                    size="sm"
+                    onClick={() => setShowDisputeModal(true)}
+                  >
+                    Open dispute
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
-            {ctx.initiate?.side !== "SELL" && (
+          <div className="space-y-3">
+            {canConfirmPayment && (
+              <Button
+                size="lg"
+                className="w-full text-lg font-bold h-14 bg-green-600 hover:bg-green-700"
+                onClick={handleMarkPaid}
+                disabled={updating}
+              >
+                {updating ? (
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle className="h-5 w-5 mr-2" />
+                )}
+                I have paid
+              </Button>
+            )}
+
+            {canInitiateRelease && (
+              <Button
+                size="lg"
+                className="w-full text-lg font-bold h-14 bg-blue-600 hover:bg-blue-700"
+                onClick={handleInitiateRelease}
+                disabled={updating}
+              >
+                {updating ? (
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle className="h-5 w-5 mr-2" />
+                )}
+                Request release code
+              </Button>
+            )}
+
+            {status === "PAYMENT_CONFIRMED_BY_BUYER" && isBuyerSide && (
+              <p className="text-center text-sm text-muted-foreground">
+                Payment confirmed. Waiting for the seller to release the asset.
+              </p>
+            )}
+
+            {status === "PENDING_PAYMENT" && isSellerSide && (
+              <p className="text-center text-sm text-muted-foreground">
+                Waiting for the buyer to confirm payment.
+              </p>
+            )}
+
+            {canCancel && (
               <Button
                 variant="destructive"
                 className="w-full h-12"
                 onClick={() => setShowCancelDialog(true)}
-                disabled={updating}
+                disabled={cancelling || updating}
               >
                 <XCircle className="h-5 w-5 mr-2" /> Cancel Order
               </Button>
             )}
 
-            <Button
-              variant="outline"
-              className="w-full h-12"
-              onClick={() => setShowDisputeModal(true)}
-            >
-              <AlertTriangle className="h-5 w-5 mr-2" /> Report Issue
-            </Button>
+            {canOpenDispute && (
+              <Button
+                variant="outline"
+                className="w-full h-12"
+                onClick={() => setShowDisputeModal(true)}
+              >
+                <AlertTriangle className="h-5 w-5 mr-2" /> Open dispute
+              </Button>
+            )}
           </div>
         </div>
 
@@ -782,7 +1008,7 @@ export default function PaymentPage() {
           const formData = new FormData();
           formData.append("reason", reason);
           if (evidence) formData.append("evidence", evidence);
-          const res = await fetchWithAuth(
+          const res = await fetchOnce(
             `/api/fstack/p2p/${reference}/dispute`,
             {
               method: "POST",
@@ -790,14 +1016,19 @@ export default function PaymentPage() {
             },
           );
           const data = await res.json();
-          if (data.success) {
+          if (res.ok && data.success !== false) {
+            updateLocalStatus(data.data?.status || "DISPUTE_PENDING", {
+              disputedAt: new Date().toISOString(),
+            });
             toast({
               title: "Dispute Submitted",
               description: "Support will contact you soon.",
             });
             router.push("/dashboard/p2p");
           } else {
-            throw new Error(data.message);
+            throw new Error(
+              data.message || data.error || "Failed to open dispute",
+            );
           }
         }}
       />

@@ -17,11 +17,17 @@ export async function GET(request: NextRequest) {
 
     // The env var includes /api/, so we just append 'ads' and query params
     const apiUrl = `${baseUrl}ads?${queryString}`;
+    const token =
+      request.headers.get("Authorization") ||
+      (request.cookies.get("access_token")?.value
+        ? `Bearer ${request.cookies.get("access_token")?.value}`
+        : undefined);
 
     const response = await fetch(apiUrl, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: token } : {}),
       },
       cache: "no-store", // Ensure we get fresh data
     });

@@ -13,7 +13,9 @@ export async function POST(
     const { tradeId } = await params;
 
     const cookieStore = await cookies();
-    const accessToken = cookieStore.get("access_token")?.value;
+    const accessToken =
+      cookieStore.get("access_token")?.value ||
+      request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
 
     if (!accessToken) {
       return NextResponse.json(
