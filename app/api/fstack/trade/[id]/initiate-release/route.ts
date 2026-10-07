@@ -8,7 +8,9 @@ export async function POST(
 ) {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get("access_token")?.value;
+    const token =
+      cookieStore.get("access_token")?.value ||
+      req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
 
     if (!token) {
       return NextResponse.json(

@@ -28,13 +28,17 @@ export async function POST(request: NextRequest) {
     // Build endpoint: trade/{reference}/confirm-buyer-payment
     const endpoint = `${baseUrl}trade/${reference}/confirm-buyer-payment`;
 
-    const token = request.cookies.get("access_token")?.value;
+    const token =
+      request.headers.get("Authorization") ||
+      (request.cookies.get("access_token")?.value
+        ? `Bearer ${request.cookies.get("access_token")?.value}`
+        : undefined);
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(token ? { Authorization: token } : {}),
       },
       cache: "no-store",
     });

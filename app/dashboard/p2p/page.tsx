@@ -1,11 +1,19 @@
+
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, Filter, ShieldCheck, MapPin, Clock } from "lucide-react";
+import {
+  Star,
+  Filter,
+  ShieldCheck,
+  MapPin,
+  Clock,
+  LockKeyhole,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -26,10 +34,10 @@ import {
 import { P2P_CURRENCY_COUNTRIES, P2PCurrency } from "@/lib/constants";
 import { CurrencyCircleIcon } from "@/components/CurrencyCircleIcon";
 import { getMerchantAds } from "@/lib/p2p-storage";
-// ...existing code...
 import { TraderProfileModal } from "@/components/p2p/TraderProfileModal";
 import { OrderModal } from "@/components/p2p/OrderModal";
-// ...existing code...
+import { fetchWithAuth } from "@/components/auth-form";
+import { formatAdPrice } from "@/lib/p2p-price";
 
 export default function P2PMarketplacePage() {
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
@@ -53,6 +61,12 @@ export default function P2PMarketplacePage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ngnWallet, setNgnWallet] = useState<{
+    available: number;
+    locked: number;
+  } | null>(null);
+  const ngnLockedMessage =
+    "NGN trading needs a Finstack NGN wallet, which is available for Nigerian accounts.";
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -60,17 +74,41 @@ export default function P2PMarketplacePage() {
     totalPages: 1,
   });
 
+  // Used so an old, slow response can never overwrite a newer one
+  const latestRequest = useRef(0);
+
   // Fetch real ads
-  const fetchAds = async (page = 1, isLoadMore = false) => {
+  const fetchAds = async (
+    page = 1,
+    isLoadMore = false,
+    asset = selectedCrypto,
+  ) => {
+    const requestId = ++latestRequest.current;
     try {
+      if (asset === "NGN" && !ngnWallet) {
+        setRealAds([]);
+        setLoading(false);
+        return;
+      }
       if (isLoadMore) setLoadingMore(true);
       else setLoading(true);
 
       setError(null);
-      // Append query params for pagination
-      const res = await fetch(`/api/fstack/p2p?page=${page}&limit=20`);
+
+      // The Buy tab lists merchant SELL ads. The Sell tab lists merchant BUY ads.
+      const query = new URLSearchParams({
+        asset,
+        type: activeTab === "buy" ? "SELL" : "BUY",
+        page: String(page),
+        limit: "20",
+      });
+      if (selectedFiat !== "all") query.set("fiat", selectedFiat);
+
+      const res = await fetch(`/api/fstack/p2p?${query}`);
       const json = await res.json();
-      // Debug logging removed for production
+
+      // A newer request has started, so ignore this answer
+      if (requestId !== latestRequest.current) return;
 
       if (json.success && Array.isArray(json.data)) {
         const newAds: P2PAd[] = [];
@@ -82,10 +120,12 @@ export default function P2PMarketplacePage() {
           if (!newMerchants[merchantId] && item.userId) {
             newMerchants[merchantId] = {
               id: merchantId,
-              name: `${item.userId.firstName || "Unknown"} ${item.userId.lastName || "User"}`,
+              name:
+                item.userId.displayName ||
+                `${item.userId.firstName || "Unknown"} ${item.userId.lastName || "User"}`,
               businessName: `${item.userId.firstName || "Merchant"} Trading`,
               rating: 95, // Default good rating
-              totalTrades: Math.floor(Math.random() * 50) + 10,
+              totalTrades: 0, // No real trade count from the backend yet
               completionRate: 98,
               responseTime: "5 mins",
               verifiedBadge: true,
@@ -120,8 +160,6 @@ export default function P2PMarketplacePage() {
           });
         });
 
-        // Debug logging removed for production
-
         if (isLoadMore) {
           setRealAds((prev) => {
             // Prevent duplicates
@@ -130,14 +168,11 @@ export default function P2PMarketplacePage() {
             return [...prev, ...uniqueNewAds];
           });
           setRealMerchants((prev) => ({ ...prev, ...newMerchants }));
-          // IMPORTANT: Update pagination state to current page
           if (json.pagination) {
-            setPagination((prev) => ({
+            setPagination({
               ...json.pagination,
-              // If backend returns same page/total, we trust it.
-              // But critical: ensure we update the current page in state
               page: json.pagination.page,
-            }));
+            });
           }
         } else {
           setRealAds(newAds);
@@ -147,22 +182,61 @@ export default function P2PMarketplacePage() {
           }
         }
       } else {
-        // Debug logging removed for production
         if (!isLoadMore)
           setError("Failed to load orders. Please try again later.");
       }
     } catch (error) {
-      // Debug logging removed for production
+      if (requestId !== latestRequest.current) return;
       if (!isLoadMore) setError("Cannot find orders right now.");
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (requestId === latestRequest.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchAds(1, false);
+    let mounted = true;
+    const loadNgnWallet = async () => {
+      try {
+        const response = await fetchWithAuth(
+          "/api/fstack/wallet/user-balances",
+        );
+        const result = await response.json();
+        const wallet = Array.isArray(result.data)
+          ? result.data.find(
+              (entry: any) =>
+                entry.currency === "NGN" && entry.provider === "NOMBA",
+            )
+          : undefined;
+        if (mounted && response.ok && wallet) {
+          setNgnWallet({
+            available: Number(wallet.balance?.available) || 0,
+            locked: Number(wallet.balance?.locked) || 0,
+          });
+        }
+      } catch {
+        if (mounted) setNgnWallet(null);
+      }
+    };
+
+    void loadNgnWallet();
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  // Reload the list whenever the coin, the tab, the fiat or the wallet changes
+  useEffect(() => {
+    if (selectedCrypto === "NGN" && !ngnWallet) {
+      setRealAds([]);
+      setLoading(false);
+      return;
+    }
+    void fetchAds(1, false, selectedCrypto);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCrypto, ngnWallet, activeTab, selectedFiat]);
 
   const handleLoadMore = () => {
     if (pagination.page < pagination.totalPages) {
@@ -207,7 +281,6 @@ export default function P2PMarketplacePage() {
   // Removes separators like " - " and content in parentheses
   const cleanMethodName = (name: string) => {
     // 1. Split by hyphen (taking FIRST part)
-    // Supports "Bank - Number", "Bank-Number", "Bank – Number"
     let clean = name.split(/[\-\–]/)[0].trim();
 
     // 2. Remove content in parentheses e.g. "PalmPay (My Name)"
@@ -233,14 +306,11 @@ export default function P2PMarketplacePage() {
       methods = ad.paymentMethods;
     }
 
-    // Apply cleaning to ALL results
-    // Filter out purely numeric strings if they look like account numbers (10+ digits)
     return (
       methods
         .map(cleanMethodName)
-        // Set removes duplicates within the single ad
         .filter((val, index, self) => self.indexOf(val) === index)
-        // Optional: filter out strings that are JUST numbers (likely accidental account numbers)
+        // Filter out strings that are JUST numbers (likely accidental account numbers)
         .filter((m) => !/^\d{10,}$/.test(m))
     );
   };
@@ -283,10 +353,7 @@ export default function P2PMarketplacePage() {
       })
       .sort((a, b) => {
         if (sortBy === "price") {
-          // When user clicks 'buy', they see merchants 'selling' (correctType='sell')
-          // We want lowest prices first for buying
-          // When user clicks 'sell', they see merchants 'buying' (correctType='buy')
-          // We want highest prices first for selling
+          // Buying: show lowest price first. Selling: show highest price first.
           const correctType = type === "buy" ? "sell" : "buy";
           return correctType === "sell" ? a.price - b.price : b.price - a.price;
         }
@@ -296,80 +363,20 @@ export default function P2PMarketplacePage() {
       });
   };
 
-  // Load merchant ads from localStorage
-  const [merchantAds, setMerchantAds] = useState<P2PAd[]>([]);
-
-  /* 
-  // Disable local storage fetching as requested
-  useEffect(() => {
-    // Load ads immediately
-    const stored = getMerchantAds()
-    setMerchantAds(stored)
-    // Debug logging removed for production
-
-    // Also check every 500ms in case new ads were added
-    const interval = setInterval(() => {
-      const updated = getMerchantAds()
-      setMerchantAds(updated)
-    }, 500)
-
-    return () => clearInterval(interval)
-  }, [])
-  */
-
-  // Combine real ads with merchant ads from localStorage
-  // Filter out merchantAds that might be duplicates or invalid
   const allAds = [...realAds];
 
-  // Only add merchantAds if they are not already in realAds (by ID)
-  // And ensure they are properly formatted
-  // if (merchantAds && merchantAds.length > 0) {
-  //     const realAdIds = new Set(realAds.map(ad => ad.id));
-  //     merchantAds.forEach(ad => {
-  //         if (!realAdIds.has(ad.id)) {
-  //             allAds.push(ad);
-  //         }
-  //     });
-  // }
-
   const buyAds = filterAds(allAds, "buy");
-  const sellAds = filterAds(allAds, "sell");
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-500">
-        <p className="animate-pulse">Loading orders...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-red-500 space-y-2">
-        <ShieldCheck className="w-12 h-12 text-gray-300" />
-        <p className="text-lg font-medium">{error}</p>
-        <Button
-          onClick={() => window.location.reload()}
-          variant="outline"
-          size="sm"
-        >
-          Retry
-        </Button>
-      </div>
-    );
-  }
+  const sellAds = selectedCrypto === "NGN" ? [] : filterAds(allAds, "sell");
 
   const handleMerchantClick = (merchantId: string) => {
     setSelectedMerchant(merchantId);
     setShowMerchantModal(true);
   };
 
-  // const handleAdClick = (ad: P2PAd) => {
-  //   setSelectedAd(ad)
-  //   setShowOrderModal(true)
-  // }
   const handleAdClick = (ad: P2PAd) => {
-    // Fix: Set ad.type to match the active tab
+    if (ad.cryptoCurrency === "NGN" && !ngnWallet) return;
+    if (ad.cryptoCurrency === "NGN" && activeTab !== "buy") return;
+    // Set ad.type to match the active tab
     const fixedAd = { ...ad, type: activeTab };
     setSelectedAd(fixedAd);
     setShowOrderModal(true);
@@ -381,8 +388,7 @@ export default function P2PMarketplacePage() {
   };
 
   // Get unique pairs and countries for filters
-  const cryptoCurrencies = ["CNGN", "USDC", "USDT"];
-  // Remove duplicate RMB
+  const cryptoCurrencies = ["CNGN", "USDC", "USDT", "NGN"];
   const fiatCurrencies = ["NGN", "RMB", "GHS", "XAF", "XOF"];
   const uniqueCountries = Array.from(new Set(allAds.map((ad) => ad.country)));
 
@@ -393,53 +399,24 @@ export default function P2PMarketplacePage() {
     .filter(Boolean)
     .sort();
 
-  // const renderAdRow = (ad: P2PAd, actionLabel: string, actionColor: string) => {
-  //   const merchant = getMerchant(ad.merchantId);
+  const clearFilters = () => {
+    setSelectedCrypto("CNGN");
+    setSelectedFiat("all");
+    setFilterPayment("all");
+    setFilterCountry("all");
+    setMinAmount("");
+    setVerifiedOnly(false);
+  };
+
   const renderAdRow = (ad: P2PAd, actionLabel: string, actionColor: string) => {
     const merchant = getMerchant(ad.merchantId);
 
-    // Helper for fiat symbol
-    const getFiatSymbol = (fiat: string) => {
-      if (fiat === "NGN") return "₦";
-      if (fiat === "RMB" || fiat === "CNY") return "¥";
-      if (fiat === "GHS") return "₵";
-      if (fiat === "USD") return "$";
-      return fiat;
-    };
-    const effectivePrice = ad.price < 0.1 ? 1 / ad.price : ad.price;
-    const formattedPrice = new Intl.NumberFormat("en-NG", {
-      minimumFractionDigits: 3,
-      maximumFractionDigits: 3,
-    }).format(effectivePrice);
-    let priceDisplay;
-    if (ad.cryptoCurrency === "USDC") {
-      // USDC: [fiat symbol][price]/USD
-      priceDisplay = (
-        <>
-          {getFiatSymbol(ad.fiatCurrency)}
-          {formattedPrice}
-          <span className="font-light">/USD</span>
-        </>
-      );
-    } else if (ad.cryptoCurrency === "CNGN") {
-      // CNGN: ₦{price}/{fiatCurrency}
-      priceDisplay = (
-        <>
-          {"₦"}
-          {formattedPrice}
-          <span className="font-light">/{ad.fiatCurrency}</span>
-        </>
-      );
-    } else {
-      // Fallback for other cryptos
-      priceDisplay = (
-        <>
-          {getFiatSymbol(ad.fiatCurrency)}
-          {formattedPrice}
-          <span className="font-light">/{ad.fiatCurrency}</span>
-        </>
-      );
-    }
+    // One price label for every coin, matching the backend's meaning of price
+    const priceDisplay = formatAdPrice(
+      ad.price,
+      ad.cryptoCurrency,
+      ad.fiatCurrency,
+    );
 
     return (
       <div
@@ -450,7 +427,7 @@ export default function P2PMarketplacePage() {
         {/* Merchant */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Merchant</p>
-          <div className="font-medium text-foreground flex items-center gap-1">
+          <div className="text-[13px] font-medium text-foreground flex items-center gap-1">
             {merchant.name}
             {merchant.verifiedBadge && (
               <ShieldCheck className="w-4 h-4 text-blue-600" />
@@ -461,19 +438,15 @@ export default function P2PMarketplacePage() {
         {/* Price */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Price</p>
-          <p className="text-base font-medium text-foreground">
+         <p className="text-[13px] font-medium text-foreground leading-tight break-words">
             {priceDisplay}
-          </p>
-          <p className="text-xs text-gray-400 font-light">
-            {ad.cryptoCurrency}/
-            <span className="font-light">{ad.fiatCurrency}</span>
           </p>
         </div>
 
         {/* Available */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Available</p>
-          <p className="text-sm text-foreground">
+          <p className="text-[13px] text-sm text-foreground">
             {ad.available.toLocaleString()} {ad.cryptoCurrency}
           </p>
         </div>
@@ -481,7 +454,7 @@ export default function P2PMarketplacePage() {
         {/* Limits */}
         <div className="space-y-1">
           <p className="text-xs text-gray-600 mb-1 md:hidden">Limits</p>
-          <p className="text-sm text-foreground">
+          <p className="text-[13px] text-sm text-foreground">
             {ad.minLimit.toLocaleString()} - {ad.maxLimit.toLocaleString()}
           </p>
           <p className="text-xs text-gray-600">{ad.fiatCurrency}</p>
@@ -582,21 +555,41 @@ export default function P2PMarketplacePage() {
 
       {/* Crypto Currency Horizontal Tabs */}
       <div className="flex items-center gap-2 border-b border-gray-200 overflow-x-auto pb-2 scrollbar-hide">
-        {cryptoCurrencies.map((crypto) => (
-          <button
-            key={crypto}
-            onClick={() => setSelectedCrypto(crypto)}
-            className={cn(
-              "px-4 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap",
-              selectedCrypto === crypto
-                ? "bg-blue-600 text-white font-semibold"
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
-            )}
-          >
-            {crypto}
-          </button>
-        ))}
+        {cryptoCurrencies.map((crypto) => {
+          const locked = crypto === "NGN" && !ngnWallet;
+          return (
+            <div
+              key={crypto}
+              title={locked ? ngnLockedMessage : undefined}
+              className="shrink-0"
+            >
+              <button
+                type="button"
+                onClick={() => setSelectedCrypto(crypto)}
+                disabled={locked}
+                aria-label={locked ? `NGN, locked. ${ngnLockedMessage}` : crypto}
+                className={cn(
+                  "px-4 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap inline-flex items-center gap-1.5",
+                  selectedCrypto === crypto
+                    ? "bg-blue-600 text-white font-semibold"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
+                  locked && "cursor-not-allowed text-gray-400 opacity-70",
+                )}
+              >
+                {crypto}
+                {locked && <LockKeyhole className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+          );
+        })}
       </div>
+
+      {selectedCrypto === "NGN" && ngnWallet && (
+        <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-600">
+          <span>Available: {ngnWallet.available.toLocaleString()} NGN</span>
+          <span>In active trades: {ngnWallet.locked.toLocaleString()} NGN</span>
+        </div>
+      )}
 
       {/* Filters Row */}
       <div className="flex flex-wrap items-center gap-3 pb-2">
@@ -614,7 +607,6 @@ export default function P2PMarketplacePage() {
                       : selectedFiat === "GHS"
                         ? "₵"
                         : null}
-                {/* For XAF/XOF, the icon is rendered separately below, so no '?' here */}
               </div>
               <SelectValue placeholder="Select currency" />
             </div>
@@ -644,18 +636,6 @@ export default function P2PMarketplacePage() {
                   ) : null}
                   {currency === "XAF" || currency === "XOF" ? (
                     <CurrencyCircleIcon code={currency} size={20} />
-                  ) : null}
-                  {/* Only show '?' for truly unknown currencies */}
-                  {!(
-                    currency === "NGN" ||
-                    currency === "RMB" ||
-                    currency === "GHS" ||
-                    currency === "XAF" ||
-                    currency === "XOF"
-                  ) ? (
-                    <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
-                      ?
-                    </div>
                   ) : null}
                   <span>{currency}</span>
                 </div>
@@ -706,13 +686,15 @@ export default function P2PMarketplacePage() {
             <h3 className="text-lg font-semibold text-foreground">
               {activeTab === "buy" ? "Buy" : "Sell"} {selectedCrypto}
             </h3>
-            <span className="text-sm text-gray-600">
-              {activeTab === "buy" ? buyAds.length : sellAds.length}{" "}
-              {(activeTab === "buy" ? buyAds.length : sellAds.length) === 1
-                ? "offer"
-                : "offers"}{" "}
-              available
-            </span>
+            {!loading && !error && (
+              <span className="text-sm text-gray-600">
+                {activeTab === "buy" ? buyAds.length : sellAds.length}{" "}
+                {(activeTab === "buy" ? buyAds.length : sellAds.length) === 1
+                  ? "offer"
+                  : "offers"}{" "}
+                available
+              </span>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -727,82 +709,95 @@ export default function P2PMarketplacePage() {
               <div>Action</div>
             </div>
 
-            {activeTab === "buy" && buyAds.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-gray-500 mb-2">
-                  No merchants match your filters
-                </p>
+            {/* Loading (the tabs and filters above stay on screen) */}
+            {loading && (
+              <div className="text-center py-12 text-gray-500 animate-pulse">
+                Loading orders...
+              </div>
+            )}
+
+            {/* Error */}
+            {error && !loading && (
+              <div className="text-center py-12 text-red-500">
+                <p className="mb-2">{error}</p>
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setSelectedCrypto("USDT");
-                    setSelectedFiat("all");
-                    setFilterPayment("all");
-                    setFilterCountry("all");
-                    setMinAmount("");
-                    setVerifiedOnly(false);
-                  }}
+                  size="sm"
+                  onClick={() => fetchAds(1, false)}
                 >
-                  Clear Filters
+                  Retry
                 </Button>
               </div>
             )}
 
-            {activeTab === "buy" &&
-              buyAds.map((ad) =>
-                renderAdRow(
-                  ad,
-                  "Buy",
-                  "bg-green-600 hover:bg-green-700 text-white",
-                ),
-              )}
+            {!loading && !error && (
+              <>
+                {activeTab === "buy" && buyAds.length === 0 && (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500 mb-2">
+                      No merchants match your filters
+                    </p>
+                    <Button variant="outline" onClick={clearFilters}>
+                      Clear Filters
+                    </Button>
+                  </div>
+                )}
 
-            {activeTab === "sell" && sellAds.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-gray-500 mb-2">
-                  No merchants match your filters
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedCrypto("USDT");
-                    setSelectedFiat("all");
-                    setFilterPayment("all");
-                    setFilterCountry("all");
-                    setMinAmount("");
-                    setVerifiedOnly(false);
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              </div>
+                {activeTab === "buy" &&
+                  buyAds.map((ad) =>
+                    renderAdRow(
+                      ad,
+                      "Buy",
+                      "bg-green-600 hover:bg-green-700 text-white",
+                    ),
+                  )}
+
+                {activeTab === "sell" && selectedCrypto === "NGN" && (
+                  <div className="text-center py-12 text-gray-500">
+                    NGN selling is not available yet.
+                  </div>
+                )}
+
+                {activeTab === "sell" &&
+                  selectedCrypto !== "NGN" &&
+                  sellAds.length === 0 && (
+                    <div className="text-center py-12">
+                      <p className="text-gray-500 mb-2">
+                        No merchants match your filters
+                      </p>
+                      <Button variant="outline" onClick={clearFilters}>
+                        Clear Filters
+                      </Button>
+                    </div>
+                  )}
+
+                {activeTab === "sell" &&
+                  sellAds.map((ad) =>
+                    renderAdRow(
+                      ad,
+                      "Sell",
+                      "bg-blue-600 hover:bg-blue-700 text-white",
+                    ),
+                  )}
+
+                {/* Pagination Load More */}
+                {pagination.totalPages > 1 &&
+                  pagination.page < pagination.totalPages && (
+                    <div className="flex justify-center pt-6 border-t border-gray-100">
+                      <Button
+                        onClick={handleLoadMore}
+                        disabled={loadingMore}
+                        variant="outline"
+                        className="min-w-[200px]"
+                      >
+                        {loadingMore
+                          ? "Loading..."
+                          : `Load More (${Math.max(0, pagination.total - pagination.page * pagination.limit)} remaining)`}
+                      </Button>
+                    </div>
+                  )}
+              </>
             )}
-
-            {activeTab === "sell" &&
-              sellAds.map((ad) =>
-                renderAdRow(
-                  ad,
-                  "Sell",
-                  "bg-blue-600 hover:bg-blue-700 text-white",
-                ),
-              )}
-
-            {/* Pagination Load More */}
-            {pagination.totalPages > 1 &&
-              pagination.page < pagination.totalPages && (
-                <div className="flex justify-center pt-6 border-t border-gray-100">
-                  <Button
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    variant="outline"
-                    className="min-w-[200px]"
-                  >
-                    {loadingMore
-                      ? "Loading..."
-                      : `Load More (${pagination.total - pagination.page * pagination.limit} remaining)`}
-                  </Button>
-                </div>
-              )}
           </div>
         </div>
       </Card>

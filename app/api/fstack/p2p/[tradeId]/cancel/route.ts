@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-export async function POST(
+async function handleCancelTrade(
   request: NextRequest,
   { params }: { params: Promise<{ tradeId: string }> },
 ) {
@@ -22,7 +22,9 @@ export async function POST(
 
     // Get token from cookies
     const cookieStore = await cookies();
-    const token = cookieStore.get("access_token")?.value;
+    const token =
+      cookieStore.get("access_token")?.value ||
+      request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
 
     if (!token) {
       return NextResponse.json(
@@ -96,4 +98,18 @@ export async function POST(
       { status: 500 },
     );
   }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ tradeId: string }> },
+) {
+  return handleCancelTrade(request, context);
+}
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ tradeId: string }> },
+) {
+  return handleCancelTrade(request, context);
 }
