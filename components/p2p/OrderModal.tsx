@@ -1348,7 +1348,6 @@ function OrderModal({
                 <div>
                   <Label htmlFor="crypto-amount">
                     You Receive ({ad.cryptoCurrency})
-                    {!tradeCreated && " – before fee"}
                   </Label>
                   <div className="relative mt-1">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 flex items-center justify-center">
@@ -1402,7 +1401,6 @@ function OrderModal({
                 <div>
                   <Label htmlFor="crypto-amount">
                     You Send ({ad.cryptoCurrency})
-                    {!tradeCreated && " – before fee"}
                   </Label>
                   <div className="relative mt-1">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 flex items-center justify-center">
