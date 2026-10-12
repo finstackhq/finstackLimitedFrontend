@@ -23,11 +23,12 @@ import {
 import { saveMerchantAd } from "@/lib/p2p-storage";
 import { fetchWithAuth } from "@/components/auth-form";
 import { P2PAd, PaymentMethod } from "@/lib/p2p-mock-data";
+import { isNairaAsset, toBackendPrice } from "@/lib/p2p-price";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
 
 // Supported pairs constant
 // Supported pairs constant removed to allow all combinations
-const CRYPTOS = ["CNGN", "USDC", "USDT"];
+const CRYPTOS = ["NGN", "CNGN", "USDC", "USDT"];
 const FIATS = ["RMB", "GHS", "XAF", "XOF", "USD", "NGN"];
 const TIME_LIMITS = [15, 30, 60]; // minutes
 
@@ -121,32 +122,32 @@ export function MerchantAdWizard() {
 
   // Compute base rate for selected pair (generic for all pairs)
   // For CNGN/fiat, also compute the inverse for display
-  const { computedBaseRate, displayRate, displayFiatPerCNGN } = useMemo(() => {
+  const { computedBaseRate, displayRate, displayNairaPerFiat } = useMemo(() => {
     const [crypto, fiat] = ad.pair.split("/") as [string, string];
     if (!rates || Object.keys(rates).length === 0)
-      return { computedBaseRate: 0, displayRate: 0, displayFiatPerCNGN: false };
+      return { computedBaseRate: 0, displayRate: 0, displayNairaPerFiat: false };
     const fiatKey = fiat === "RMB" ? "CNY" : fiat;
 
-    if (crypto === "USDC") {
+    if (crypto === "USDC" || crypto === "USDT") {
       if (fiatKey === "USD")
         return {
           computedBaseRate: 1,
           displayRate: 1,
-          displayFiatPerCNGN: false,
+          displayNairaPerFiat: false,
         };
       return {
         computedBaseRate: rates[fiatKey] || 0,
         displayRate: rates[fiatKey] || 0,
-        displayFiatPerCNGN: false,
+        displayNairaPerFiat: false,
       };
     }
 
-    if (crypto === "CNGN") {
+    if (isNairaAsset(crypto)) {
       if (fiatKey === "NGN")
         return {
           computedBaseRate: 1,
           displayRate: 1,
-          displayFiatPerCNGN: true,
+          displayNairaPerFiat: true,
         };
       const usdToFiat = fiatKey === "USD" ? 1 : rates[fiatKey];
       const usdToNGN = rates["NGN"];
@@ -154,26 +155,27 @@ export function MerchantAdWizard() {
         return {
           computedBaseRate: 0,
           displayRate: 0,
-          displayFiatPerCNGN: true,
+          displayNairaPerFiat: true,
         };
       const baseRate = usdToFiat / usdToNGN;
-      // For display, invert so user sees large number: 1 CNGN = X fiat => X = 1 / baseRate
+      // Naira assets are displayed as naira per unit of fiat.
       return {
         computedBaseRate: baseRate,
         displayRate: 1 / baseRate,
-        displayFiatPerCNGN: true,
+        displayNairaPerFiat: true,
       };
     }
 
-    return { computedBaseRate: 0, displayRate: 0, displayFiatPerCNGN: false };
+    return { computedBaseRate: 0, displayRate: 0, displayNairaPerFiat: false };
   }, [ad.pair, rates]);
 
   // Derive floating display price
   const floatingDisplayPrice = useMemo(() => {
     if (ad.priceType !== "floating" || !computedBaseRate) return undefined;
     const margin = ad.margin || 0;
-    return parseFloat((computedBaseRate * (1 + margin / 100)).toFixed(6));
-  }, [ad.priceType, ad.margin, computedBaseRate]);
+    const referenceRate = displayNairaPerFiat ? displayRate : computedBaseRate;
+    return parseFloat((referenceRate * (1 + margin / 100)).toFixed(6));
+  }, [ad.priceType, ad.margin, computedBaseRate, displayNairaPerFiat, displayRate]);
 
   // Sync base & floating display into ad state when dependencies change
   useEffect(() => {
@@ -263,10 +265,12 @@ export function MerchantAdWizard() {
         type: ad.tradeType.toUpperCase(), // "SELL" or "BUY"
         asset: cryptoCurrency,
         fiat: fiatCurrency,
-        price:
+        price: toBackendPrice(
           ad.priceType === "fixed"
             ? ad.fixedPrice!
             : floatingDisplayPrice || ad.fixedPrice!,
+          cryptoCurrency,
+        ),
         minLimit: ad.minLimit || 0,
         maxLimit: ad.maxLimit || 0,
         availableAmount: ad.totalAvailable || 0,
@@ -396,8 +400,8 @@ export function MerchantAdWizard() {
                       <p className="font-medium capitalize">{tt}</p>
                       <p className="text-xs text-gray-500 mt-1">
                         {tt === "buy"
-                          ? "You are buying crypto from users."
-                          : "You are selling crypto to users."}
+                          ? "You are buying the selected asset from users."
+                          : "You are selling the selected asset to users."}
                       </p>
                     </button>
                   ))}
@@ -413,7 +417,7 @@ export function MerchantAdWizard() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <p className="text-xs font-semibold tracking-wide text-gray-500 mb-2">
-                      Crypto Asset
+                      Asset to Trade
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       {CRYPTOS.map((c) => {
@@ -435,7 +439,7 @@ export function MerchantAdWizard() {
                           >
                             <span className="text-lg font-semibold">{c}</span>
                             <span className="block text-[11px] text-gray-500 mt-1">
-                              Stable Asset
+                              {c === "NGN" ? "Fiat Currency" : "Stable Asset"}
                             </span>
                             {active && (
                               <span className="absolute top-2 right-2 text-blue-600 text-xs font-bold">
@@ -488,12 +492,10 @@ export function MerchantAdWizard() {
                   )}
                   {!loadingRates && !fetchError && computedBaseRate > 0 && (
                     <span className="font-medium">
-                      {/* Always show '1 [fiat] = X CNGN' for CNGN pairs */}
                       {(() => {
                         const [crypto, fiat] = ad.pair.split("/");
-                        if (crypto === "CNGN") {
-                          // Show: 1 [fiat] = X CNGN
-                          return `1 ${fiat} = ${displayRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} CNGN`;
+                        if (isNairaAsset(crypto)) {
+                          return `1 ${fiat} = ${displayRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${crypto}`;
                         }
                         // Default: 1 [crypto] = X [fiat]
                         return `1 ${crypto} = ${computedBaseRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${fiat}`;
@@ -531,7 +533,11 @@ export function MerchantAdWizard() {
                 {ad.priceType === "fixed" && (
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">
-                      Fixed Price ({ad.pair})
+                      Fixed Price (
+                      {isNairaAsset(ad.pair.split("/")[0])
+                        ? `NGN per 1 ${ad.pair.split("/")[1]}`
+                        : ad.pair}
+                      )
                     </label>
                     <Input
                       type="number"
@@ -544,14 +550,16 @@ export function MerchantAdWizard() {
                     />
                     <p className="text-[11px] text-gray-500">
                       Market reference: FIXED @
-                      {computedBaseRate
-                        ? computedBaseRate.toLocaleString(undefined, {
+                      {(displayNairaPerFiat ? displayRate : computedBaseRate)
+                        ? (displayNairaPerFiat ? displayRate : computedBaseRate).toLocaleString(undefined, {
                             maximumFractionDigits: 6,
                           })
                         : "—"}{" "}
-                      {ad.pair.split("/")[1]} (@#
-                      {computedBaseRate
-                        ? computedBaseRate.toLocaleString(undefined, {
+                      {displayNairaPerFiat
+                        ? `NGN per ${ad.pair.split("/")[1]}`
+                        : ad.pair.split("/")[1]} (@#
+                      {(displayNairaPerFiat ? displayRate : computedBaseRate)
+                        ? (displayNairaPerFiat ? displayRate : computedBaseRate).toLocaleString(undefined, {
                             maximumFractionDigits: 6,
                           })
                         : "—"}
@@ -822,8 +830,8 @@ export function MerchantAdWizard() {
                     label="Live Rate"
                     value={
                       computedBaseRate
-                        ? displayFiatPerCNGN
-                          ? `${displayRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${ad.pair.split("/")[1]} = 1 ${ad.pair.split("/")[0]}`
+                          ? displayNairaPerFiat
+                          ? `1 ${ad.pair.split("/")[1]} = ${displayRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${ad.pair.split("/")[0]}`
                           : `1 ${ad.pair.split("/")[0]} = ${computedBaseRate.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${ad.pair.split("/")[1]}`
                         : "—"
                     }
@@ -833,7 +841,7 @@ export function MerchantAdWizard() {
                     value={(() => {
                       if (ad.priceType === "fixed") {
                         const [crypto, fiat] = ad.pair.split("/");
-                        if (crypto === "CNGN") {
+                        if (isNairaAsset(crypto)) {
                           // Show: Fixed @₦[fixedPrice]/[fiat]
                           return `Fixed @₦${ad.fixedPrice}/${fiat}`;
                         }
