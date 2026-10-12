@@ -366,7 +366,7 @@ export default function P2PMarketplacePage() {
   const allAds = [...realAds];
 
   const buyAds = filterAds(allAds, "buy");
-  const sellAds = selectedCrypto === "NGN" ? [] : filterAds(allAds, "sell");
+  const sellAds = filterAds(allAds, "sell");
 
   const handleMerchantClick = (merchantId: string) => {
     setSelectedMerchant(merchantId);
@@ -375,7 +375,6 @@ export default function P2PMarketplacePage() {
 
   const handleAdClick = (ad: P2PAd) => {
     if (ad.cryptoCurrency === "NGN" && !ngnWallet) return;
-    if (ad.cryptoCurrency === "NGN" && activeTab !== "buy") return;
     // Set ad.type to match the active tab
     const fixedAd = { ...ad, type: activeTab };
     setSelectedAd(fixedAd);
@@ -752,14 +751,7 @@ export default function P2PMarketplacePage() {
                     ),
                   )}
 
-                {activeTab === "sell" && selectedCrypto === "NGN" && (
-                  <div className="text-center py-12 text-gray-500">
-                    NGN selling is not available yet.
-                  </div>
-                )}
-
                 {activeTab === "sell" &&
-                  selectedCrypto !== "NGN" &&
                   sellAds.length === 0 && (
                     <div className="text-center py-12">
                       <p className="text-gray-500 mb-2">
