@@ -14,13 +14,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { amount, otpCode, destinationAccountNumber, institutionCode, accountName } = body;
+    const { amount, otpCode, destinationAccountNumber, accountName } = body;
+    const bankCode = body.bankCode ?? body.institutionCode;
 
-    if (!amount || !otpCode || !destinationAccountNumber || !institutionCode || !accountName) {
+    if (!amount || !otpCode || !destinationAccountNumber || !bankCode || !accountName) {
       return NextResponse.json(
         {
           error:
-            "amount, otpCode, destinationAccountNumber, institutionCode and accountName are required",
+            "amount, otpCode, destinationAccountNumber, bankCode and accountName are required",
         },
         { status: 400 },
       );
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
         amount,
         otpCode,
         destinationAccountNumber,
-        institutionCode,
+        bankCode,
         accountName,
       }),
       cache: "no-store",

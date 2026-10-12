@@ -14,10 +14,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { amount } = body;
+    const { amount, destinationAccountNumber, accountName } = body;
+    const bankCode = body.bankCode ?? body.institutionCode;
 
-    if (!amount) {
-      return NextResponse.json({ error: "amount is required" }, { status: 400 });
+    if (!amount || !destinationAccountNumber || !bankCode || !accountName) {
+      return NextResponse.json(
+        {
+          error:
+            "amount, destinationAccountNumber, bankCode and accountName are required",
+        },
+        { status: 400 },
+      );
     }
 
     const token = request.cookies.get("access_token")?.value;
@@ -28,7 +35,12 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ amount }),
+      body: JSON.stringify({
+        amount,
+        destinationAccountNumber,
+        bankCode,
+        accountName,
+      }),
       cache: "no-store",
     });
 

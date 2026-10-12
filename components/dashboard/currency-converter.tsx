@@ -1,300 +1,257 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { ArrowRightLeft, Info, RefreshCw } from "lucide-react"
+import { ArrowRightLeft, Loader2 } from "lucide-react"
+import { P2PAd, P2POrder, Merchant } from "@/lib/p2p-types"
+import { OrderModal } from "@/components/p2p/OrderModal"
+import { saveOrder } from "@/lib/p2p-storage"
+import { formatAdPrice } from "@/lib/p2p-price"
 
 const currencies = [
-  { 
-    value: "NGN", 
-    label: "Nigerian Naira", 
-    symbol: "₦", 
-    logo: "https://otiktpyazqotihijbwhm.supabase.co/storage/v1/object/public/images/f0f01069-7e35-4291-8664-af625c9c9623-nigeria-logo.png"
-  },
-  { 
-    value: "RMB", 
-    label: "Chinese Yuan", 
-    symbol: "¥", 
-    logo: "https://otiktpyazqotihijbwhm.supabase.co/storage/v1/object/public/images/a0e173f8-1f7d-4317-bead-1182d677213c-rmb.png"
-  },
-  { 
-    value: "USDT", 
-    label: "Tether", 
-    symbol: "$", 
-    logo: "https://otiktpyazqotihijbwhm.supabase.co/storage/v1/object/public/images/ef95eebe-7923-4b32-87a6-d755b8caba30-usdt%20logo.png"
-  },
-  { 
-    value: "USDC", 
-    label: "USD Coin", 
-    symbol: "$", 
-    logo: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=026"
-  },
-  { 
-    value: "XOF", 
-    label: "West African CFA", 
-    symbol: "CFA", 
-    logo: "https://flagcdn.com/w40/sn.png"
-  },
-  { 
-    value: "XAF", 
-    label: "Central African CFA", 
-    symbol: "FCFA", 
-    logo: "https://flagcdn.com/w40/cm.png"
-  },
-  { 
-    value: "GHS", 
-    label: "Ghanaian Cedi", 
-    symbol: "₵", 
-    logo: "https://flagcdn.com/w40/gh.png"
-  },
+  { value: "NGN", label: "Nigerian Naira" },
+  { value: "CNGN", label: "cNGN" },
+  { value: "RMB", label: "Chinese Yuan" },
+  { value: "USDC", label: "USD Coin" },
+  { value: "XOF", label: "West African CFA" },
+  { value: "XAF", label: "Central African CFA" },
+  { value: "GHS", label: "Ghanaian Cedi" },
 ]
+
+type AdResult = {
+  id: string
+  _id?: string
+  asset: string
+  fiat: string
+  price: number
+  availableAmount?: number
+  minLimit: number
+  maxLimit: number
+  timeLimit?: number
+  status?: string
+  instructions?: string
+  autoReply?: string
+  paymentMethods?: string[]
+  paymentMethodDetails?: any[]
+  direction: "BUY" | "SELL"
+  estimatedReceive: number
+  userId?: { _id?: string; displayName?: string; firstName?: string; lastName?: string }
+}
 
 export function CurrencyConverter() {
   const [fromCurrency, setFromCurrency] = useState("NGN")
-  const [toCurrency, setToCurrency] = useState("USDT")
+  const [toCurrency, setToCurrency] = useState("RMB")
   const [amount, setAmount] = useState("1000")
-  const [convertedAmount, setConvertedAmount] = useState(0)
-  const [exchangeRates, setExchangeRates] = useState({
-    NGN: 1635, // USD to NGN
-    RMB: 7.24, // USD to RMB
-    USDT: 1    // USD to USDT
-  })
+  const [ads, setAds] = useState<AdResult[]>([])
   const [loading, setLoading] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [searched, setSearched] = useState(false)
+  const [error, setError] = useState("")
 
-  // Fetch live exchange rates
-  const fetchLiveRates = async () => {
+  const [selectedAd, setSelectedAd] = useState<P2PAd | null>(null)
+  const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null)
+  const [showOrderModal, setShowOrderModal] = useState(false)
+
+  const reset = () => {
+    setAds([])
+    setSearched(false)
+    setError("")
+  }
+
+  const handleSwap = () => {
+    setFromCurrency(toCurrency)
+    setToCurrency(fromCurrency)
+    reset()
+  }
+
+  const handleConvert = async () => {
+    setError("")
+    if (fromCurrency === toCurrency) return setError("Choose two different currencies.")
+    if (!(Number(amount) > 0)) return setError("Enter a valid amount.")
+
     setLoading(true)
     try {
-      const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD')
-      const data = await response.json()
-      setExchangeRates({
-        NGN: data.rates.NGN,
-        RMB: data.rates.CNY, // Chinese Yuan in the API
-        USDT: 1
-      })
-      setLastUpdated(new Date())
-    } catch (error) {
-      console.error('Failed to fetch live rates:', error)
-      // Keep existing rates as fallback
+      const qs = new URLSearchParams({ from: fromCurrency, to: toCurrency, amount })
+      const res = await fetch(`/api/fstack/ads/convert?${qs}`)
+      const text = await res.text()
+      let json: any
+      try {
+        json = JSON.parse(text)
+      } catch {
+        throw new Error(`Server returned an unexpected response (${res.status}). Please try again.`)
+      }
+      if (!res.ok) throw new Error(json.message || "Failed to fetch ads")
+      setAds(json.data || [])
+      setSearched(true)
+    } catch (e: any) {
+      setError(e.message)
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    fetchLiveRates()
-    // Update every 5 minutes
-    const interval = setInterval(fetchLiveRates, 5 * 60 * 1000)
-    return () => clearInterval(interval)
-  }, [])
+  const merchantName = (ad: AdResult) =>
+    ad.userId?.displayName ||
+    [ad.userId?.firstName, ad.userId?.lastName].filter(Boolean).join(" ") ||
+    "Merchant"
 
-  useEffect(() => {
-    const numAmount = Number.parseFloat(amount) || 0
-    let result = 0
+  const openTrade = (ad: AdResult) => {
+    const merchantId = ad.userId?._id || "unknown"
 
-    if (fromCurrency === toCurrency) {
-      result = numAmount
-    } else {
-      // Convert through USD
-      const amountInUSD = numAmount / exchangeRates[fromCurrency as keyof typeof exchangeRates]
-      result = amountInUSD * exchangeRates[toCurrency as keyof typeof exchangeRates]
+    // Same mapping the P2P marketplace page uses
+    const p2pAd: P2PAd = {
+      id: ad._id || ad.id,
+      merchantId,
+      // "buy" = the user is buying the asset, "sell" = the user is selling it
+      type: ad.direction === "BUY" ? "buy" : "sell",
+      cryptoCurrency: ad.asset,
+      fiatCurrency: ad.fiat,
+      price: ad.price,
+      available: ad.availableAmount || 0,
+      minLimit: ad.minLimit,
+      maxLimit: ad.maxLimit,
+      paymentMethods: Array.isArray(ad.paymentMethods) ? ad.paymentMethods : ["Bank Transfer"],
+      paymentMethodDetails: ad.paymentMethodDetails || [],
+      paymentWindow: ad.timeLimit || 15,
+      instructions: ad.instructions || "",
+      autoReply: ad.autoReply || "",
+      country: "NG",
+      isActive: ad.status ? ad.status === "ACTIVE" : true,
     }
 
-    setConvertedAmount(result)
-  }, [amount, fromCurrency, toCurrency, exchangeRates])
-
-  const handleSwap = () => {
-    setFromCurrency(toCurrency)
-    setToCurrency(fromCurrency)
-  }
-
-  const getBalance = (currency: string) => {
-    if (currency === "NGN") return "-- NGN"
-    if (currency === "USDT") return "-- USDT"
-    if (currency === "RMB") return "-- RMB"
-    return "-- " + currency
-  }
-
-  // Optimized: Show direct rate for selected currencies
-  const getRate = () => {
-    if (fromCurrency === toCurrency) return `1 ${fromCurrency} = 1 ${toCurrency}`;
-    // Calculate direct rate using exchangeRates
-    const fromRate = exchangeRates[fromCurrency as keyof typeof exchangeRates];
-    const toRate = exchangeRates[toCurrency as keyof typeof exchangeRates];
-    if (!fromRate || !toRate) return "Rate unavailable";
-    // Convert 1 unit of fromCurrency to toCurrency
-    const rate = (1 / fromRate) * toRate;
-    const decimals = fromCurrency === "USDT" || toCurrency === "USDT" ? 6 : 2;
-    return `1 ${fromCurrency} ≈ ${rate.toFixed(decimals)} ${toCurrency}`;
-  }
-
-  const getEquivalentValue = () => {
-    const amountNum = Number.parseFloat(amount) || 0
-    if (fromCurrency === "USDT") {
-      return `≈ ₦${(amountNum * exchangeRates.NGN).toLocaleString()}`
-    } else if (fromCurrency === "NGN") {
-      return `≈ $${(amountNum / exchangeRates.NGN).toFixed(2)}`
-    } else if (fromCurrency === "RMB") {
-      return `≈ $${(amountNum / exchangeRates.RMB).toFixed(2)}`
+    const merchant: Merchant = {
+      id: merchantId,
+      name: merchantName(ad),
+      businessName: `${ad.userId?.firstName || "Merchant"} Trading`,
+      rating: 95,
+      totalTrades: 0,
+      completionRate: 98,
+      responseTime: "5 mins",
+      verifiedBadge: true,
+      activeAds: 1,
+      country: "NG",
+      joinedDate: new Date().toISOString(),
+      languages: ["English"],
     }
-    return ''
+
+    setSelectedAd(p2pAd)
+    setSelectedMerchant(merchant)
+    setShowOrderModal(true)
   }
+
+  const CurrencySelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+    <Select value={value} onValueChange={(v) => { onChange(v); reset() }}>
+      <SelectTrigger className="w-28 bg-white">
+        <span className="font-medium">{value}</span>
+      </SelectTrigger>
+      <SelectContent>
+        {currencies.map((c) => (
+          <SelectItem key={c.value} value={c.value}>{c.value} - {c.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
 
   return (
-    <Card className="relative overflow-hidden border-0 shadow-lg bg-white">
-      <div className="relative p-6">
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <h3 className="text-xl font-semibold text-gray-900">Currency Converter</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={fetchLiveRates}
-                disabled={loading}
-                className="h-6 w-6 p-0"
-              >
-                <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
-            <p className="text-gray-600">Live exchange rates</p>
-            <p className="text-xs text-gray-500 mt-1">
-              Last updated: {lastUpdated.toLocaleTimeString()}
-            </p>
-          </div>
+    <Card className="border-0 shadow-lg bg-white p-6 space-y-6">
+      <h3 className="text-xl font-semibold text-center text-gray-900">Currency Converter</h3>
 
-          {/* From Currency */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">From</span>
-              <span className="text-sm text-gray-500">Balance: {getBalance(fromCurrency)}</span>
-            </div>
-            
-            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border">
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="bg-transparent border-0 text-gray-900 text-xl font-semibold placeholder:text-gray-400 focus-visible:ring-0 p-0 h-auto"
-                  placeholder="0"
-                />
-                <div className="text-sm text-gray-500 mt-1">
-                  {getEquivalentValue()}
-                </div>
-              </div>
-              
-              <Select value={fromCurrency} onValueChange={setFromCurrency}>
-                <SelectTrigger className="w-auto bg-white border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <img 
-                      src={currencies.find(c => c.value === fromCurrency)?.logo} 
-                      alt={fromCurrency}
-                      className="w-6 h-6 rounded-full object-cover"
-                    />
-                    <span className="font-medium">{fromCurrency}</span>
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  {currencies.map((currency) => (
-                    <SelectItem key={currency.value} value={currency.value}>
-                      <div className="flex items-center gap-2">
-                        <img 
-                          src={currency.logo} 
-                          alt={currency.value}
-                          className="w-5 h-5 rounded-full object-cover"
-                        />
-                        <span>{currency.value}</span>
-                        <span className="text-gray-500 text-xs">- {currency.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Swap Button */}
-          <div className="flex justify-center">
-            <button
-              onClick={handleSwap}
-              className="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 transition-all duration-200 flex items-center justify-center group"
-            >
-              <ArrowRightLeft className="w-4 h-4 text-white transition-transform duration-200 group-hover:rotate-180" />
-            </button>
-          </div>
-
-          {/* To Currency */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">To</span>
-              <span className="text-sm text-gray-500">Balance: {getBalance(toCurrency)}</span>
-            </div>
-            
-            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border">
-              <div className="flex-1">
-                <div className="text-xl font-semibold text-gray-900">
-                  {convertedAmount.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 6,
-                  })}
-                </div>
-              </div>
-              
-              <Select value={toCurrency} onValueChange={setToCurrency}>
-                <SelectTrigger className="w-auto bg-white border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <img 
-                      src={currencies.find(c => c.value === toCurrency)?.logo} 
-                      alt={toCurrency}
-                      className="w-6 h-6 rounded-full object-cover"
-                    />
-                    <span className="font-medium">{toCurrency}</span>
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  {currencies.map((currency) => (
-                    <SelectItem key={currency.value} value={currency.value}>
-                      <div className="flex items-center gap-2">
-                        <img 
-                          src={currency.logo} 
-                          alt={currency.value}
-                          className="w-5 h-5 rounded-full object-cover"
-                        />
-                        <span>{currency.value}</span>
-                        <span className="text-gray-500 text-xs">- {currency.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
-        {/* Rate Info */}
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Info className="w-4 h-4" />
-            <span>Rate</span>
-            <span className="ml-auto font-medium">{getRate()}</span>
-          </div>
-        </div>
-
-        {/* Convert Button */}
-        <div className="mt-6">
-          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg">
-            Convert Now
-          </Button>
+      <div className="space-y-2">
+        <span className="text-sm font-medium text-gray-700">I have</span>
+        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border">
+          <Input
+            type="number"
+            value={amount}
+            onChange={(e) => { setAmount(e.target.value); reset() }}
+            className="bg-transparent border-0 text-xl font-semibold focus-visible:ring-0 p-0 h-auto"
+            placeholder="0"
+          />
+          <CurrencySelect value={fromCurrency} onChange={setFromCurrency} />
         </div>
       </div>
+
+      <div className="flex justify-center">
+        <button onClick={handleSwap} className="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 flex items-center justify-center">
+          <ArrowRightLeft className="w-4 h-4 text-white" />
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        <span className="text-sm font-medium text-gray-700">I want</span>
+        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border">
+          <div className="flex-1 text-xl font-semibold text-gray-900">
+            {ads.length > 0
+              ? `≈ ${ads[0].estimatedReceive.toLocaleString(undefined, { maximumFractionDigits: 6 })}`
+              : <span className="text-gray-400">0.00</span>}
+          </div>
+          <CurrencySelect value={toCurrency} onChange={setToCurrency} />
+        </div>
+      </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      <Button onClick={handleConvert} disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3">
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Convert"}
+      </Button>
+
+      {searched && ads.length === 0 && (
+        <p className="text-center text-sm text-gray-500">
+          No ads match {fromCurrency} → {toCurrency} for this amount.
+        </p>
+      )}
+
+      {ads.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-gray-700">
+            {ads.length} ad{ads.length > 1 ? "s" : ""} found
+          </p>
+          {ads.map((ad, i) => (
+            <div key={ad.id} className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <div className="font-medium text-gray-900">
+                  {merchantName(ad)} {i === 0 && <span className="ml-2 text-xs text-green-600">Best rate</span>}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {formatAdPrice(ad.price, ad.asset, ad.fiat)}
+                </div>
+                <div className="text-xs text-gray-400">
+                  Limit: {ad.minLimit.toLocaleString()} - {ad.maxLimit.toLocaleString()} {ad.fiat}
+                  {ad.timeLimit ? ` · ${ad.timeLimit} min` : ""}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-semibold text-gray-900">
+                  ≈ {ad.estimatedReceive.toLocaleString(undefined, { maximumFractionDigits: 6 })} {toCurrency}
+                </div>
+                <Button
+                  size="sm"
+                  className="mt-2 bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={ad.asset === "NGN" && ad.direction === "SELL"}
+                  onClick={() => openTrade(ad)}
+                >
+                  Trade
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedAd && selectedMerchant && (
+        <OrderModal
+          ad={selectedAd}
+          trader={selectedMerchant}
+          open={showOrderModal}
+          onClose={() => {
+            setShowOrderModal(false)
+            setSelectedAd(null)
+            setSelectedMerchant(null)
+          }}
+          onOrderCreated={(order: P2POrder) => saveOrder(order)}
+        />
+      )}
     </Card>
   )
 }
-
-
