@@ -496,7 +496,7 @@ export default function P2PMarketplacePage() {
           </div>
         </div>
 
-        {/* Action */}
+        {/* Action active */}
         <div>
           <Button
             onClick={(e) => {
