@@ -458,7 +458,12 @@ export default function WithdrawPage() {
         : "/api/fstack/withdraw/initiate";
 
       const body = isNombaFlow
-        ? { amount: parseFloat(amount) }
+         ? {
+            amount: parseFloat(amount),
+            destinationAccountNumber: nombaAccountNumber,
+            bankCode: nombaBankCode,
+            accountName: nombaAccountName.trim(),
+          }
         : {
             walletCurrency: selectedWallet === "NGN" ? "CNGN" : "USDC",
             amount: parseFloat(amount),
@@ -543,8 +548,8 @@ export default function WithdrawPage() {
           amount: parseFloat(amount),
           otpCode,
           destinationAccountNumber: nombaAccountNumber,
-          institutionCode: nombaBankCode,
-          accountName: nombaAccountName,
+          bankCode: nombaBankCode,
+          accountName: nombaAccountName.trim(),
         };
       } else {
         const destination =
@@ -658,7 +663,7 @@ export default function WithdrawPage() {
   // real lookup later given this moves real money; ask if you'd like that
   // built (it needs one new backend endpoint + provider function first).
   const canContinueNombaDestination =
-    !!nombaBankCode && nombaAccountNumber.length >= 10 && nombaAccountName.trim().length > 2;
+    !!nombaBankCode && /^\d{10}$/.test(nombaAccountNumber) && nombaAccountName.trim().length > 2;
 
   return (
     <div className="space-y-6">
