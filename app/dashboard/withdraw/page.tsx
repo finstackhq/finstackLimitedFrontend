@@ -177,6 +177,7 @@ export default function WithdrawPage() {
   >(null);
 
   const [amount, setAmount] = useState("");
+  const [fee, setFee] = useState<number | null>(null);
 
   const [selectedDestination, setSelectedDestination] = useState<
     number | string | null
@@ -650,9 +651,32 @@ export default function WithdrawPage() {
 
   // UPDATED: NGN_NOMBA is naira too, same fee/symbol treatment as NGN.
   const isNairaFlow = selectedWallet === "NGN" || selectedWallet === "NGN_NOMBA";
-  const fee = isNairaFlow ? 50 : 1;
+  const feeCurrency = isNairaFlow ? "NGN" : "USDC";
 
-  const totalAmount = amount ? Number.parseFloat(amount) + fee : 0;
+  useEffect(() => {
+    if (!selectedWallet) return;
+    let cancelled = false;
+    setFee(null);
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/fstack/withdraw/fee?currency=${feeCurrency}`,
+          { cache: "no-store" },
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!cancelled && res.ok && typeof data.fee === "number") {
+          setFee(data.fee);
+        }
+      } catch {
+        // fee stays null; Continue is disabled
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedWallet, feeCurrency]);
+
+  const totalAmount = amount && fee !== null ? Number.parseFloat(amount) + fee : 0;
 
   // Can the user move past Step 2 for the Nomba flow? Needs a bank, an
   // account number of a sensible length, and a typed account name.
@@ -1064,9 +1088,14 @@ export default function WithdrawPage() {
                       <span className="text-gray-600">Transaction Fee</span>
 
                       <span className="font-medium text-foreground">
-                        {isNairaFlow ? "₦" : "$"}
-
-                        {fee.toFixed(2)}
+                        {fee === null ? (
+                          "Unavailable"
+                        ) : (
+                          <>
+                            {isNairaFlow ? "₦" : "$"}
+                            {fee.toFixed(2)}
+                          </>
+                        )}
                       </span>
                     </div>
 
@@ -1076,9 +1105,14 @@ export default function WithdrawPage() {
                       </span>
 
                       <span className="font-semibold text-foreground">
-                        {isNairaFlow ? "₦" : "$"}
-
-                        {totalAmount.toFixed(2)}
+                        {fee === null ? (
+                          "-"
+                        ) : (
+                          <>
+                            {isNairaFlow ? "₦" : "$"}
+                            {totalAmount.toFixed(2)}
+                          </>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -1115,7 +1149,7 @@ export default function WithdrawPage() {
 
               <Button
                 onClick={handleInitiateWithdrawal}
-                disabled={!amount || Number.parseFloat(amount) <= 0 || loading}
+                disabled={!amount || Number.parseFloat(amount) <= 0 || loading || fee === null}
                 className="flex-1 bg-[#2F67FA] hover:bg-[#2F67FA]/90 text-white"
               >
                 {loading ? (

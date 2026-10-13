@@ -1693,59 +1693,43 @@ export default function MerchantDashboard() {
   };
 
   const handleSaveEdit = async (updatedAd: P2PAd) => {
-    try {
-      const payload = {
-        price: updatedAd.price,
-        minLimit: updatedAd.minLimit,
-        maxLimit: updatedAd.maxLimit,
-        availableAmount: updatedAd.available,
-        status: updatedAd.isActive ? "ACTIVE" : "INACTIVE",
-      };
+    const payload = {
+      price: updatedAd.price,
+      minLimit: updatedAd.minLimit,
+      maxLimit: updatedAd.maxLimit,
+      availableAmount: updatedAd.available,
+      status: updatedAd.isActive ? "ACTIVE" : "INACTIVE",
+    };
 
-      const res = await fetch(`/api/fstack/merchant?id=${updatedAd.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    const res = await fetch(`/api/fstack/merchant?id=${updatedAd.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-      const json = await res.json();
+    const json = await res.json();
 
-      if (!res.ok) {
-        throw new Error(json.error || "Failed to update ad");
-      }
-
-      // Update local state
-      setAds((prev) =>
-        prev.map((a) => {
-          if (a.id === updatedAd.id) {
-            return {
-              ...a,
-              fixedPrice: updatedAd.price,
-              totalAvailable: updatedAd.available,
-              minLimit: updatedAd.minLimit,
-              maxLimit: updatedAd.maxLimit,
-              paymentMethods: updatedAd.paymentMethods as any,
-              timeLimit: updatedAd.paymentWindow,
-              status: updatedAd.isActive ? "ACTIVE" : "INACTIVE",
-            };
-          }
-          return a;
-        }),
-      );
-      // this senda a success message
-      toast({
-        title: "Ad Updated",
-        description: "Your ad has been updated successfully",
-      });
-      setShowEditModal(false);
-    } catch (err: any) {
-      console.error("Failed to update ad:", err);
-      toast({
-        title: "Update Failed",
-        description: err.message || "Could not update ad",
-        variant: "destructive",
-      });
+    if (!res.ok) {
+      throw new Error(json.error || "Failed to update ad");
     }
+
+    setAds((prev) =>
+      prev.map((a) => {
+        if (a.id === updatedAd.id) {
+          return {
+            ...a,
+            fixedPrice: updatedAd.price,
+            totalAvailable: updatedAd.available,
+            minLimit: updatedAd.minLimit,
+            maxLimit: updatedAd.maxLimit,
+            paymentMethods: updatedAd.paymentMethods as any,
+            timeLimit: updatedAd.paymentWindow,
+            status: updatedAd.isActive ? "ACTIVE" : "INACTIVE",
+          };
+        }
+        return a;
+      }),
+    );
   };
 
   const handleCopy = (text: string, type: string) => {

@@ -15,7 +15,7 @@ interface EditAdModalProps {
   ad: P2PAd;
   open: boolean;
   onClose: () => void;
-  onSave: (updatedAd: P2PAd) => void;
+  onSave: (updatedAd: P2PAd) => void | Promise<void>;
 }
 
 export function EditAdModal({ ad, open, onClose, onSave }: EditAdModalProps) {
@@ -74,18 +74,22 @@ export function EditAdModal({ ad, open, onClose, onSave }: EditAdModalProps) {
     }
 
     setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    onSave(formData);
-    toast({
-      title: 'Ad Updated',
-      description: 'Your ad has been updated successfully'
-    });
-
-    setIsLoading(false);
-    onClose();
+    try {
+      await onSave(formData);
+      toast({
+        title: 'Ad Updated',
+        description: 'Your ad has been updated successfully'
+      });
+      onClose();
+    } catch (error) {
+      toast({
+        title: 'Update Failed',
+        description: error instanceof Error ? error.message : 'Could not update ad',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const paymentMethodOptions = ['Bank Transfer', 'MTN Mobile Money', 'Alipay', 'Custom Account', 'CNGN Wallet'];
