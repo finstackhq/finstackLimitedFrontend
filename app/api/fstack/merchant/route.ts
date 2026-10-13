@@ -1,5 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 
+function getBackendErrorMessage(errorText: string): string {
+  const findMessage = (value: unknown): string | undefined => {
+    if (typeof value === "string") return value;
+    if (Array.isArray(value)) {
+      const messages = value.map(findMessage).filter(Boolean);
+      return messages.length ? messages.join(", ") : undefined;
+    }
+    if (value && typeof value === "object") {
+      const details = value as Record<string, unknown>;
+      for (const key of ["message", "errors", "error", "detail"]) {
+        const message = findMessage(details[key]);
+        if (message) return message;
+      }
+      for (const detail of Object.values(details)) {
+        const message = findMessage(detail);
+        if (message) return message;
+      }
+    }
+    return undefined;
+  };
+
+  try {
+    return findMessage(JSON.parse(errorText)) || errorText;
+  } catch {
+    return errorText;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const baseUrl = process.env.FINSTACK_BACKEND_API_URL;
@@ -44,11 +72,10 @@ export async function POST(req: NextRequest) {
         errorText,
       );
       try {
-        const errorJson = JSON.parse(errorText);
         return NextResponse.json(
           {
             success: false,
-            error: `Backend returned ${response.status}: ${JSON.stringify(errorJson)}`,
+            error: getBackendErrorMessage(errorText),
           },
           { status: response.status },
         );
@@ -184,11 +211,10 @@ export async function PATCH(req: NextRequest) {
         errorText,
       );
       try {
-        const errorJson = JSON.parse(errorText);
         return NextResponse.json(
           {
             success: false,
-            error: `Backend returned ${response.status}: ${JSON.stringify(errorJson)}`,
+            error: getBackendErrorMessage(errorText),
           },
           { status: response.status },
         );
