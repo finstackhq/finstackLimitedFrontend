@@ -1089,7 +1089,7 @@ export default function WithdrawPage() {
 
                       <span className="font-medium text-foreground">
                         {fee === null ? (
-                          "Unavailable"
+                          "Added at confirmation"
                         ) : (
                           <>
                             {isNairaFlow ? "₦" : "$"}
@@ -1106,7 +1106,10 @@ export default function WithdrawPage() {
 
                       <span className="font-semibold text-foreground">
                         {fee === null ? (
-                          "-"
+                          <>
+                            {isNairaFlow ? "₦" : "$"}
+                            {Number.parseFloat(amount).toFixed(2)} + fee
+                          </>
                         ) : (
                           <>
                             {isNairaFlow ? "₦" : "$"}
@@ -1149,7 +1152,7 @@ export default function WithdrawPage() {
 
               <Button
                 onClick={handleInitiateWithdrawal}
-                disabled={!amount || Number.parseFloat(amount) <= 0 || loading || fee === null}
+                disabled={!amount || Number.parseFloat(amount) <= 0 || loading}
                 className="flex-1 bg-[#2F67FA] hover:bg-[#2F67FA]/90 text-white"
               >
                 {loading ? (
