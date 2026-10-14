@@ -10,11 +10,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Percent, Save, ArrowRightLeft, Download, Upload, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const P2P_ASSETS = ['USDC', 'CNGN'] as const;
+const P2P_ASSETS = ['USDC', 'CNGN', 'NGN'] as const;
 const P2P_TARGETS = ['RMB', 'GHS', 'XAF', 'XOF', 'USD', 'NGN'] as const;
 const FLAT_CURRENCIES = ['NGN', 'USDC', 'CNGN'] as const;
 
 type FeeType = 'P2P' | 'DEPOSIT' | 'WITHDRAWAL';
+const COLLAPSED_ROWS = 5;
 
 interface FeeConfig {
   id?: string | number;
@@ -63,6 +64,8 @@ export function FeeSettings() {
   const [currency, setCurrency] = useState<string>('USDC');
   const [targetCurrency, setTargetCurrency] = useState<string>('NGN');
   const [amount, setAmount] = useState<string>('');
+  const [listFilter, setListFilter] = useState<'ALL' | FeeType | 'LEGACY'>('ALL');
+  const [showAll, setShowAll] = useState(false);
 
   const loadConfigs = useCallback(async () => {
     try {
@@ -129,6 +132,22 @@ export function FeeSettings() {
 
   const unit = type === 'P2P' ? '%' : currency === 'NGN' ? '₦' : currency;
 
+  const timeOf = (c: FeeConfig) => new Date(c.updatedAt ?? c.updated_at ?? 0).getTime() || 0;
+  const filtered = configs
+    .filter((c) =>
+      listFilter === 'ALL' ? true : listFilter === 'LEGACY' ? !isActiveType(c.type) : c.type === listFilter
+    )
+    .sort((a, b) => timeOf(b) - timeOf(a));
+  const visible = showAll ? filtered : filtered.slice(0, COLLAPSED_ROWS);
+  const hasLegacy = configs.some((c) => !isActiveType(c.type));
+  const filterOptions: Array<{ key: 'ALL' | FeeType | 'LEGACY'; label: string }> = [
+    { key: 'ALL', label: 'All' },
+    { key: 'P2P', label: 'P2P' },
+    { key: 'DEPOSIT', label: 'Deposit' },
+    { key: 'WITHDRAWAL', label: 'Withdrawal' },
+    ...(hasLegacy ? [{ key: 'LEGACY' as const, label: 'Legacy' }] : []),
+  ];
+
   return (
     <div className="space-y-6">
       <Card className="p-6">
@@ -183,7 +202,10 @@ export function FeeSettings() {
                 <button
                   key={c}
                   type="button"
-                  onClick={() => setCurrency(c)}
+                  onClick={() => {
+                    setCurrency(c);
+                    if (type === 'P2P' && c === targetCurrency) setTargetCurrency(c === 'NGN' ? 'XOF' : 'NGN');
+                  }}
                   className={cn(
                     'p-3 rounded-lg border text-center text-sm font-semibold transition-all',
                     currency === c
@@ -203,7 +225,7 @@ export function FeeSettings() {
                 Target Fiat Currency
               </Label>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                {P2P_TARGETS.map((c) => (
+                {P2P_TARGETS.filter((c) => c !== currency).map((c) => (
                   <button
                     key={c}
                     type="button"
@@ -261,7 +283,27 @@ export function FeeSettings() {
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Current Fee Settings</h3>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h3 className="text-lg font-semibold">Current Fee Settings</h3>
+          <div className="flex flex-wrap gap-2">
+            {filterOptions.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setListFilter(key);
+                  setShowAll(false);
+                }}
+                className={cn(
+                  'px-3 py-1 rounded-full border text-xs font-medium transition-colors',
+                  listFilter === key ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-200 hover:bg-gray-50'
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         {loadingConfigs ? (
           <div className="animate-pulse bg-gray-200 h-24 rounded-lg" />
         ) : loadError ? (
@@ -281,7 +323,7 @@ export function FeeSettings() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {configs.map((c, i) => {
+                {visible.map((c, i) => {
                   const active = isActiveType(c.type);
                   return (
                     <tr key={c.id ?? `${c.type}-${c.currency}-${c.targetCurrency ?? ''}-${i}`}>
@@ -306,6 +348,16 @@ export function FeeSettings() {
                 })}
               </tbody>
             </table>
+            {filtered.length > COLLAPSED_ROWS && (
+              <div className="pt-3 text-center">
+                <Button variant="ghost" size="sm" onClick={() => setShowAll((v) => !v)}>
+                  {showAll ? 'Show less' : `Show all ${filtered.length}`}
+                </Button>
+              </div>
+            )}
+            {filtered.length === 0 && (
+              <p className="py-4 text-sm text-gray-500">No settings match this filter.</p>
+            )}
           </div>
         )}
       </Card>
