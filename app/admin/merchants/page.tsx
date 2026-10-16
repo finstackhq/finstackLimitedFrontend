@@ -61,12 +61,19 @@ export default function MerchantsPage() {
             const mappedMerchants: Merchant[] = data.users.map(
               (user: any, index: number) => ({
                 id: user._id || `MER-${index + 1}`,
-                businessName: user.businessName || user.email.split("@")[0], // Use email prefix as business name
-                ownerName: user.ownerName || user.email.split("@")[0],
+                businessName:
+                  user.businessName ||
+                  [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+                  user.email.split("@")[0],
+                ownerName:
+                  user.ownerName ||
+                  [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+                  user.email.split("@")[0],
                 email: user.email,
                 phone: user.phone || "N/A",
                 country: user.country || "Unknown",
-                status: (user.status || "pending") as
+                status: (user.status ||
+                  (user.kycVerified === true ? "verified" : "pending")) as
                   | "verified"
                   | "pending"
                   | "under_review"
@@ -85,7 +92,8 @@ export default function MerchantsPage() {
                 paymentMethods: user.paymentMethods || ["Bank Transfer"],
                 verificationDocuments: user.verificationDocuments || [],
                 compliance: {
-                  kycStatus: (user.compliance?.kycStatus || "pending") as
+                  kycStatus: (user.compliance?.kycStatus ||
+                    (user.kycVerified === true ? "approved" : "pending")) as
                     | "approved"
                     | "pending"
                     | "under_review"
