@@ -36,6 +36,25 @@ interface Order {
   paymentProof?: string;
 }
 
+// userId can be a plain string, a populated object with names,
+// or a sanitized object that only contains _id.
+const getBuyerName = (user: any): string => {
+  if (!user) return "Unknown";
+
+  if (typeof user === "string") {
+    return user.slice(0, 8) + "...";
+  }
+
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ");
+  if (fullName) return fullName;
+
+  if (typeof user._id === "string") {
+    return user._id.slice(0, 8) + "...";
+  }
+
+  return "Unknown";
+};
+
 export default function MerchantOrdersPage() {
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -55,7 +74,7 @@ export default function MerchantOrdersPage() {
           const mappedOrders: Order[] = json.trades.map((trade: any) => ({
             id: trade._id || trade.id,
             reference: trade.reference || trade._id || trade.id,
-            buyerName: trade.userId?.slice(0, 8) + "..." || "Unknown",
+            buyerName: getBuyerName(trade.userId),
             cryptoAmount: trade.amountCrypto || 0,
             fiatAmount: trade.amountFiat || 0,
             netCryptoAmount: trade.netCryptoAmount || 0,
@@ -71,15 +90,29 @@ export default function MerchantOrdersPage() {
             paymentProof: trade.paymentProof,
           }));
           setOrders(mappedOrders);
+        } else {
+          console.error("Orders request did not succeed:", res.status, json);
+          toast({
+            title: "Could not load orders",
+            description:
+              json?.message || json?.error || "The server returned an unexpected response.",
+            variant: "destructive",
+          });
         }
       } catch (err) {
         console.error("Failed to fetch orders:", err);
+        toast({
+          title: "Could not load orders",
+          description: "Something went wrong displaying your orders.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

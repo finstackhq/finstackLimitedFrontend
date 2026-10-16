@@ -197,16 +197,6 @@ export function MerchantsTable({ merchants }: MerchantsTableProps) {
     return stars;
   };
 
-  const handleApproveMerchant = () => {
-    if (!selectedMerchant) return;
-    // In a real app, this would update the merchant status
-  };
-
-  const handleSuspendMerchant = () => {
-    if (!selectedMerchant) return;
-    // In a real app, this would suspend the merchant
-  };
-
   if (isMobile) {
     return (
       <>
@@ -567,30 +557,6 @@ export function MerchantsTable({ merchants }: MerchantsTableProps) {
                           </span>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="space-y-2 pt-4 border-t">
-                      {selectedMerchant.status !== "verified" &&
-                        selectedMerchant.status !== "suspended" && (
-                          <Button
-                            onClick={handleApproveMerchant}
-                            className="w-full bg-green-600 hover:bg-green-700"
-                          >
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Approve Merchant
-                          </Button>
-                        )}
-                      {selectedMerchant.status !== "suspended" && (
-                        <Button
-                          onClick={handleSuspendMerchant}
-                          variant="outline"
-                          className="w-full border-red-200 text-red-600 hover:bg-red-50"
-                        >
-                          <XCircle className="w-4 h-4 mr-2" />
-                          Suspend Merchant
-                        </Button>
-                      )}
                     </div>
                   </TabsContent>
                 </Tabs>
@@ -1009,33 +975,6 @@ export function MerchantsTable({ merchants }: MerchantsTableProps) {
                           </span>
                         </div>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="space-y-3 pt-6 border-t">
-                    <h4 className="font-medium text-gray-900">Actions</h4>
-                    <div className="flex space-x-3">
-                      {selectedMerchant.status !== "verified" &&
-                        selectedMerchant.status !== "suspended" && (
-                          <Button
-                            onClick={handleApproveMerchant}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Approve Merchant
-                          </Button>
-                        )}
-                      {selectedMerchant.status !== "suspended" && (
-                        <Button
-                          onClick={handleSuspendMerchant}
-                          variant="outline"
-                          className="border-red-200 text-red-600 hover:bg-red-50"
-                        >
-                          <XCircle className="w-4 h-4 mr-2" />
-                          Suspend Merchant
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </TabsContent>
