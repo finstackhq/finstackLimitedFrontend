@@ -67,6 +67,22 @@ import { Eye, EyeOff } from "lucide-react";
 
 type FormMode = "login" | "signup";
 
+const fallbackReferralOptions = [
+  "Instagram",
+  "Facebook",
+  "TikTok",
+  "X (Twitter)",
+  "LinkedIn",
+  "YouTube",
+  "WhatsApp",
+  "Snapchat",
+  "Telegram",
+  "Reddit",
+  "Threads",
+  "Family or Friends",
+  "Other",
+];
+
 interface PasswordStrength {
   score: number;
   label: string;
@@ -86,8 +102,46 @@ export function AuthForm() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [referralSource, setReferralSource] = useState("");
+  const [referralOptions, setReferralOptions] = useState(fallbackReferralOptions);
+  const [referralOptionsError, setReferralOptionsError] = useState("");
+  const [loadingReferralOptions, setLoadingReferralOptions] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const loadReferralOptions = async () => {
+    setLoadingReferralOptions(true);
+    setReferralOptionsError("");
+
+    try {
+      const res = await fetch("/api/registration-options", {
+        cache: "no-store",
+      });
+      const data = await res.json();
+      if (!res.ok || !Array.isArray(data?.howYouHeardAboutUs)) {
+        throw new Error("Registration options are unavailable.");
+      }
+
+      const options = data.howYouHeardAboutUs.filter(
+        (option: unknown): option is string => typeof option === "string",
+      );
+      if (options.length === 0) {
+        throw new Error("Registration options are unavailable.");
+      }
+
+      setReferralOptions(options);
+    } catch {
+      setReferralOptions(fallbackReferralOptions);
+      setReferralOptionsError(
+        "Could not load the latest options. Default options are shown; try again.",
+      );
+    } finally {
+      setLoadingReferralOptions(false);
+    }
+  };
+
+  React.useEffect(() => {
+    void loadReferralOptions();
+  }, []);
 
   // Check for logout param
   React.useEffect(() => {
@@ -403,19 +457,48 @@ export function AuthForm() {
                 <Label htmlFor="referralSource">
                   How did you hear about us?
                 </Label>
-                <Input
-                  id="referralSource"
-                  type="text"
-                  placeholder="e.g., Google, Friend, Social Media..."
+                <Select
                   value={referralSource}
-                  onChange={(e) => {
-                    setReferralSource(e.target.value);
+                  onValueChange={(value) => {
+                    setReferralSource(value);
                     if (referralError) setReferralError("");
                   }}
-                  className={`h-12 ${referralError ? "border-destructive" : ""}`}
-                />
+                >
+                  <SelectTrigger
+                    id="referralSource"
+                    className={`h-12 ${referralError ? "border-destructive" : ""}`}
+                    aria-invalid={!!referralError}
+                  >
+                    <SelectValue
+                      placeholder={
+                        loadingReferralOptions
+                          ? "Loading options..."
+                          : "Select an option"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {referralOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {referralError && (
                   <p className="text-sm text-destructive">{referralError}</p>
+                )}
+                {referralOptionsError && (
+                  <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
+                    <p>{referralOptionsError}</p>
+                    <button
+                      type="button"
+                      onClick={() => void loadReferralOptions()}
+                      className="shrink-0 text-primary hover:underline"
+                    >
+                      Retry
+                    </button>
+                  </div>
                 )}
               </div>
             )}
