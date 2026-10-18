@@ -39,7 +39,7 @@ interface Merchant {
   registrationDate: string;
   lastActive: string;
   totalTrades: number;
-  totalVolume: number;
+  totalVolume: Record<string, number>;
   rating: number;
   reviewCount: number;
   paymentMethods: string[];
@@ -167,6 +167,14 @@ export function MerchantsTable({ merchants }: MerchantsTableProps) {
     }).format(amount);
   };
 
+  const formatVolume = (volume: Record<string, number>) =>
+    Object.entries(volume)
+      .map(
+        ([currency, amount]) =>
+          `${currency} ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(amount)}`,
+      )
+      .join(", ") || "—";
+
   const getStatusIcon = (status: Merchant["status"]) => {
     switch (status) {
       case "verified":
@@ -247,7 +255,7 @@ export function MerchantsTable({ merchants }: MerchantsTableProps) {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Total Volume:</span>
                   <span className="text-sm font-medium">
-                    {formatCurrency(merchant.totalVolume)}
+                    {formatVolume(merchant.totalVolume)}
                   </span>
                 </div>
 
@@ -384,7 +392,7 @@ export function MerchantsTable({ merchants }: MerchantsTableProps) {
                             </span>
                           </div>
                           <p className="font-medium">
-                            {formatCurrency(selectedMerchant.totalVolume)}
+                            {formatVolume(selectedMerchant.totalVolume)}
                           </p>
                         </div>
                         <div className="p-3 bg-gray-50 rounded-lg">
@@ -646,7 +654,7 @@ export function MerchantsTable({ merchants }: MerchantsTableProps) {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {formatCurrency(merchant.totalVolume)}
+                      {formatVolume(merchant.totalVolume)}
                     </div>
                     <div className="text-xs text-gray-500">
                       {merchant.totalTrades.toLocaleString()} trades
@@ -812,7 +820,7 @@ export function MerchantsTable({ merchants }: MerchantsTableProps) {
                               </span>
                             </div>
                             <p className="font-medium text-lg">
-                              {formatCurrency(selectedMerchant.totalVolume)}
+                              {formatVolume(selectedMerchant.totalVolume)}
                             </p>
                           </div>
                           <div className="p-4 bg-gray-50 rounded-lg">
