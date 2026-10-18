@@ -1282,7 +1282,7 @@ function OrderModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className="max-w-md"
+        className="max-w-md max-h-[90vh] overflow-y-auto"
         aria-describedby="order-modal-description"
       >
         <DialogHeader>
