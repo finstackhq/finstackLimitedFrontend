@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { DollarSign, Save, ArrowRightLeft, Download, Upload, Check } from 'lucide-react';
+import { Receipt, Save, ArrowRightLeft, Download, Upload, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const P2P_ASSETS = ['USDC', 'CNGN', 'NGN'] as const;
@@ -153,7 +153,7 @@ export function FeeSettings() {
       <Card className="p-6">
         <div className="mb-6">
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-blue-600" />
+            <Receipt className="w-5 h-5 text-blue-600" />
             Transaction Fee Settings
           </h2>
           <p className="text-sm text-gray-600 mt-1">
