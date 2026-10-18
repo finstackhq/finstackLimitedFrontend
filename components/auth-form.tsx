@@ -80,6 +80,7 @@ const fallbackReferralOptions = [
   "Reddit",
   "Threads",
   "Family or Friends",
+  "Google",
   "Other",
 ];
 
@@ -128,7 +129,7 @@ export function AuthForm() {
         throw new Error("Registration options are unavailable.");
       }
 
-      setReferralOptions(options);
+      setReferralOptions([...new Set([...options, "Google"])]);
     } catch {
       setReferralOptions(fallbackReferralOptions);
       setReferralOptionsError(
