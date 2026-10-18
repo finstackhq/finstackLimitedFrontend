@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Percent, Save, ArrowRightLeft, Download, Upload, Check } from 'lucide-react';
+import { DollarSign, Save, ArrowRightLeft, Download, Upload, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const P2P_ASSETS = ['USDC', 'CNGN', 'NGN'] as const;
@@ -28,21 +28,21 @@ interface FeeConfig {
 }
 
 const TYPE_OPTIONS = [
-  { type: 'P2P' as FeeType, icon: ArrowRightLeft, label: 'P2P Trade', desc: 'Percentage per trade' },
+  { type: 'P2P' as FeeType, icon: ArrowRightLeft, label: 'P2P Trade', desc: 'Flat fee per trade' },
   { type: 'DEPOSIT' as FeeType, icon: Download, label: 'Deposit', desc: 'Incoming funds' },
   { type: 'WITHDRAWAL' as FeeType, icon: Upload, label: 'Withdraw', desc: 'Outgoing funds' },
 ];
 
 const isActiveType = (t: string): t is FeeType => ['P2P', 'DEPOSIT', 'WITHDRAWAL'].includes(t);
 
-// Percent shown to admins <-> decimal rate sent to API
-const percentToRate = (pct: number) => Number((pct / 100).toFixed(8));
-const rateToPercent = (rate: number) => Number((rate * 100).toFixed(6));
-
 function formatFee(c: FeeConfig): string {
   const amount = Number(c.feeAmount);
   if (!Number.isFinite(amount)) return String(c.feeAmount);
-  if (c.type === 'P2P') return `${rateToPercent(amount)}%`;
+  if (c.type === 'P2P') {
+    return c.currency === 'NGN'
+      ? `₦${amount.toLocaleString('en-NG')} flat`
+      : `${amount} ${c.currency} flat`;
+  }
   if (c.currency === 'NGN') return `₦${amount.toLocaleString('en-NG')} flat`;
   return `${amount} ${c.currency}`;
 }
@@ -93,7 +93,7 @@ export function FeeSettings() {
 
   const currencyOptions: readonly string[] = type === 'P2P' ? P2P_ASSETS : FLAT_CURRENCIES;
   const parsed = amount.trim() === '' ? NaN : Number(amount);
-  const valid = Number.isFinite(parsed) && parsed >= 0 && (type !== 'P2P' || parsed <= 100);
+  const valid = Number.isFinite(parsed) && parsed >= 0;
 
   const handleSubmit = async () => {
     if (!valid) return;
@@ -102,7 +102,7 @@ export function FeeSettings() {
       const payload: Record<string, unknown> = {
         type,
         currency,
-        feeAmount: type === 'P2P' ? percentToRate(parsed) : parsed,
+        feeAmount: parsed,
       };
       if (type === 'P2P') payload.targetCurrency = targetCurrency;
 
@@ -130,7 +130,7 @@ export function FeeSettings() {
     }
   };
 
-  const unit = type === 'P2P' ? '%' : currency === 'NGN' ? '₦' : currency;
+  const unit = currency === 'NGN' ? '₦' : currency;
 
   const timeOf = (c: FeeConfig) => new Date(c.updatedAt ?? c.updated_at ?? 0).getTime() || 0;
   const filtered = configs
@@ -153,7 +153,7 @@ export function FeeSettings() {
       <Card className="p-6">
         <div className="mb-6">
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Percent className="w-5 h-5 text-blue-600" />
+            <DollarSign className="w-5 h-5 text-blue-600" />
             Transaction Fee Settings
           </h2>
           <p className="text-sm text-gray-600 mt-1">
@@ -246,7 +246,7 @@ export function FeeSettings() {
 
           <div>
             <Label htmlFor="feeAmount" className="text-xs font-semibold tracking-wide text-gray-500 mb-3 block">
-              {type === 'P2P' ? 'Fee (%)' : currency === 'NGN' ? 'Flat Fee (NGN)' : `Fee (${currency})`}
+              {type === 'P2P' ? `Flat Fee (${currency})` : currency === 'NGN' ? 'Flat Fee (NGN)' : `Fee (${currency})`}
             </Label>
             <div className="relative max-w-xs">
               <Input
@@ -254,7 +254,6 @@ export function FeeSettings() {
                 type="number"
                 step="any"
                 min="0"
-                max={type === 'P2P' ? 100 : undefined}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="pr-12 text-lg font-semibold"
@@ -262,9 +261,6 @@ export function FeeSettings() {
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">{unit}</span>
             </div>
-            {type === 'P2P' && valid && (
-              <p className="text-xs text-gray-500 mt-2">Sent to API as rate {percentToRate(parsed)}</p>
-            )}
             {type === 'WITHDRAWAL' && currency === 'NGN' && (
               <p className="text-xs text-gray-500 mt-2">
                 Shared flat fee for NGN withdrawals via Nomba or 9PSB. The user pays the withdrawal amount plus this
