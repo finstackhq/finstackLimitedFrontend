@@ -18,7 +18,7 @@ interface Merchant {
   registrationDate: string;
   lastActive: string;
   totalTrades: number;
-  totalVolume: number;
+  totalVolume: Record<string, number>;
   rating: number;
   reviewCount: number;
   paymentMethods: string[];
@@ -42,6 +42,36 @@ interface Merchant {
   };
   suspensionReason?: string;
 }
+
+const toCurrencyVolumes = (value: unknown): Record<string, number> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([currency, amount]) => {
+      const number = typeof amount === "number" ? amount : Number(amount);
+      return Number.isFinite(number) ? [[currency, number]] : [];
+    }),
+  );
+};
+
+const formatVolume = (volume: Record<string, number>) =>
+  Object.entries(volume)
+    .map(
+      ([currency, amount]) =>
+        `${currency} ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(amount)}`,
+    )
+    .join(", ") || "—";
+
+const totalVolumes = (merchants: Merchant[]) => {
+  const totals = merchants.reduce<Record<string, number>>((result, merchant) => {
+    Object.entries(merchant.totalVolume).forEach(([currency, amount]) => {
+      result[currency] = (result[currency] || 0) + amount;
+    });
+    return result;
+  }, {});
+
+  return formatVolume(totals);
+};
 
 export default function MerchantsPage() {
   const [merchants, setMerchants] = useState<Merchant[]>([]);
@@ -86,7 +116,7 @@ export default function MerchantsPage() {
                 registrationDate: user.createdAt || new Date().toISOString(),
                 lastActive: user.lastActive || new Date().toISOString(),
                 totalTrades: user.totalTrades || 0,
-                totalVolume: user.totalVolume || 0,
+                totalVolume: toCurrencyVolumes(user.totalVolume),
                 rating: user.rating || 0,
                 reviewCount: user.reviewCount || 0,
                 paymentMethods: user.paymentMethods || ["Bank Transfer"],
@@ -167,8 +197,8 @@ export default function MerchantsPage() {
       trending: "down" as const,
     },
     {
-      title: "Total Trading Volume",
-      value: `$${(merchants.reduce((sum, m) => sum + m.totalVolume, 0) / 1000000).toFixed(1)}M`,
+      title: "Trading Volume by Currency",
+      value: totalVolumes(merchants),
       change: "+18.7%",
       trending: "up" as const,
     },
@@ -273,7 +303,7 @@ export default function MerchantsPage() {
             <h3 className="text-xs font-medium text-gray-500 mb-2 truncate">
               {stat.title}
             </h3>
-            <p className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-1 truncate">
+            <p className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 whitespace-normal break-words">
               {stat.value}
             </p>
             <div className="flex items-center">
