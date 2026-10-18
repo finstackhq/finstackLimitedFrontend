@@ -28,7 +28,7 @@ interface FeeConfig {
 }
 
 const TYPE_OPTIONS = [
-  { type: 'P2P' as FeeType, icon: ArrowRightLeft, label: 'P2P Trade', desc: 'Flat fee per trade' },
+  { type: 'P2P' as FeeType, icon: ArrowRightLeft, label: 'P2P Trade', desc: 'Rate per unit of fiat' },
   { type: 'DEPOSIT' as FeeType, icon: Download, label: 'Deposit', desc: 'Incoming funds' },
   { type: 'WITHDRAWAL' as FeeType, icon: Upload, label: 'Withdraw', desc: 'Outgoing funds' },
 ];
@@ -40,8 +40,8 @@ function formatFee(c: FeeConfig): string {
   if (!Number.isFinite(amount)) return String(c.feeAmount);
   if (c.type === 'P2P') {
     return c.currency === 'NGN'
-      ? `₦${amount.toLocaleString('en-NG')} flat`
-      : `${amount} ${c.currency} flat`;
+      ? `₦${amount.toLocaleString('en-NG')} per 1 ${c.targetCurrency || 'fiat unit'}`
+      : `${amount} ${c.currency} per 1 ${c.targetCurrency || 'fiat unit'}`;
   }
   if (c.currency === 'NGN') return `₦${amount.toLocaleString('en-NG')} flat`;
   return `${amount} ${c.currency}`;
@@ -130,7 +130,7 @@ export function FeeSettings() {
     }
   };
 
-  const unit = currency === 'NGN' ? '₦' : currency;
+  const unit = type === 'P2P' ? currency : currency === 'NGN' ? '₦' : currency;
 
   const timeOf = (c: FeeConfig) => new Date(c.updatedAt ?? c.updated_at ?? 0).getTime() || 0;
   const filtered = configs
@@ -246,7 +246,11 @@ export function FeeSettings() {
 
           <div>
             <Label htmlFor="feeAmount" className="text-xs font-semibold tracking-wide text-gray-500 mb-3 block">
-              {type === 'P2P' ? `Flat Fee (${currency})` : currency === 'NGN' ? 'Flat Fee (NGN)' : `Fee (${currency})`}
+              {type === 'P2P'
+                ? `Rate (${currency} per 1 ${targetCurrency})`
+                : currency === 'NGN'
+                  ? 'Flat Fee (NGN)'
+                  : `Fee (${currency})`}
             </Label>
             <div className="relative max-w-xs">
               <Input
@@ -261,6 +265,11 @@ export function FeeSettings() {
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">{unit}</span>
             </div>
+            {type === 'P2P' && (
+              <p className="text-xs text-gray-500 mt-2">
+                Amount is in {currency} for each 1 {targetCurrency}.
+              </p>
+            )}
             {type === 'WITHDRAWAL' && currency === 'NGN' && (
               <p className="text-xs text-gray-500 mt-2">
                 Shared flat fee for NGN withdrawals via Nomba or 9PSB. The user pays the withdrawal amount plus this
