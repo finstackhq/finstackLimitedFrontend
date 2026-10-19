@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sanitizeParticipantTradeResponse } from "@/lib/sanitize-participant-trade-response";
 
 // GET /api/fstack/orders -> proxy to backend orders endpoint
 export async function GET(request: NextRequest) {
@@ -49,14 +50,14 @@ export async function GET(request: NextRequest) {
 
     // Auto-logout on unauthorized
     if (res.status === 401) {
-      const out = NextResponse.json(data, { status: 401 });
+      const out = NextResponse.json(sanitizeParticipantTradeResponse(data), { status: 401 });
       try {
         out.cookies.delete("access_token");
       } catch {}
       return out;
     }
 
-    return NextResponse.json(data, { status: res.status });
+    return NextResponse.json(sanitizeParticipantTradeResponse(data), { status: res.status });
   } catch (error: any) {
     console.error("[fstack/orders] GET error:", error?.message || error);
     return NextResponse.json(

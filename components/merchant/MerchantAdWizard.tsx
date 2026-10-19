@@ -693,9 +693,14 @@ export function MerchantAdWizard() {
                           const displayStr =
                             method.type === "BANK"
                               ? `${method.bankName} - ${method.accountNumber} (${method.accountName})`
-                              : `Alipay - ${method.alipayAccountName} (${method.alipayEmail})`;
+                              : `Alipay - ${method.alipayAccountName}`;
+                          const legacyDisplayStr =
+                            method.type === "ALIPAY"
+                              ? `Alipay - ${method.alipayAccountName} (${method.alipayEmail})`
+                              : "";
                           const isSelected =
-                            ad.paymentMethods.includes(displayStr);
+                            ad.paymentMethods.includes(displayStr) ||
+                            ad.paymentMethods.includes(legacyDisplayStr);
                           return (
                             <label
                               key={
@@ -711,7 +716,20 @@ export function MerchantAdWizard() {
                               <input
                                 type="checkbox"
                                 checked={isSelected}
-                                onChange={() => togglePaymentMethod(displayStr)}
+                                onChange={() => {
+                                  if (isSelected && legacyDisplayStr) {
+                                    setAd((prev) => ({
+                                      ...prev,
+                                      paymentMethods: prev.paymentMethods.filter(
+                                        (paymentMethod) =>
+                                          paymentMethod !== displayStr &&
+                                          paymentMethod !== legacyDisplayStr,
+                                      ),
+                                    }));
+                                  } else {
+                                    togglePaymentMethod(displayStr);
+                                  }
+                                }}
                                 className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                               />
                               <div>

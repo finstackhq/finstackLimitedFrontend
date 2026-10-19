@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { sanitizeParticipantTradeResponse } from "@/lib/sanitize-participant-trade-response"
 
 export async function POST(
   request: NextRequest,
@@ -38,7 +39,7 @@ export async function POST(
       )
     }
 
-    return NextResponse.json(data, { status: response.status })
+    return NextResponse.json(sanitizeParticipantTradeResponse(data), { status: response.status })
   } catch (error) {
     console.error("Error in trade initiation proxy:", error)
     return NextResponse.json(

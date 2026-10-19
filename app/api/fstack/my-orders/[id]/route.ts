@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sanitizeParticipantTradeResponse } from "@/lib/sanitize-participant-trade-response";
 
 export async function GET(
   req: NextRequest,
@@ -52,7 +53,9 @@ export async function GET(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: order });
+    return NextResponse.json(
+      sanitizeParticipantTradeResponse({ success: true, data: order }),
+    );
   } catch (error) {
     console.error("Fetch order error:", error);
     return NextResponse.json(

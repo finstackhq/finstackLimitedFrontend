@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sanitizeParticipantTradeResponse } from "@/lib/sanitize-participant-trade-response";
 
 // POST /api/fstack/orders/initiate-release -> initiate crypto release (sends OTP)
 export async function POST(request: NextRequest) {
@@ -48,14 +49,14 @@ export async function POST(request: NextRequest) {
 
     // Auto-logout on unauthorized
     if (res.status === 401) {
-      const out = NextResponse.json(data, { status: 401 });
+      const out = NextResponse.json(sanitizeParticipantTradeResponse(data), { status: 401 });
       try {
         out.cookies.delete("access_token");
       } catch {}
       return out;
     }
 
-    return NextResponse.json(data, { status: res.status });
+    return NextResponse.json(sanitizeParticipantTradeResponse(data), { status: res.status });
   } catch (error: any) {
     console.error(
       "[fstack/orders/initiate-release] POST error:",

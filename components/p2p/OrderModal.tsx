@@ -228,7 +228,6 @@
 //         if (selectedPayment.type === "ALIPAY") {
 //           paymentDetails = {
 //             alipayAccountName: selectedPayment.alipayAccountName,
-//             alipayEmail: selectedPayment.alipayEmail,
 //             alipayQrImage: selectedPayment.alipayQrImage,
 //             country: selectedPayment.country || "NG",
 //             type: "ALIPAY",
@@ -655,11 +654,6 @@
 //                           {method.alipayAccountName && (
 //                             <span className="text-xs opacity-90">
 //                               Alipay Name: {method.alipayAccountName}
-//                             </span>
-//                           )}
-//                           {method.alipayEmail && (
-//                             <span className="text-xs opacity-90">
-//                               Alipay Email: {method.alipayEmail}
 //                             </span>
 //                           )}
 //                         </button>
@@ -1094,7 +1088,6 @@ function OrderModal({
         if (selectedPayment.type === "ALIPAY") {
           paymentDetails = {
             alipayAccountName: selectedPayment.alipayAccountName,
-            alipayEmail: selectedPayment.alipayEmail,
             alipayQrImage: selectedPayment.alipayQrImage,
             country: selectedPayment.country || "NG",
             type: "ALIPAY",
@@ -1518,11 +1511,6 @@ function OrderModal({
                           {method.alipayAccountName && (
                             <span className="text-xs opacity-90">
                               Alipay Name: {method.alipayAccountName}
-                            </span>
-                          )}
-                          {method.alipayEmail && (
-                            <span className="text-xs opacity-90">
-                              Alipay Email: {method.alipayEmail}
                             </span>
                           )}
                         </button>

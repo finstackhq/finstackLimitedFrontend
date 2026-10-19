@@ -58,9 +58,19 @@ export default function OrderDetailsPage({
           bankName: t.paymentDetails?.bankName,
           bankAccountNumber: t.paymentDetails?.accountNumber,
           bankAccountName: t.paymentDetails?.accountName,
-          alipayAccountName: t.paymentDetails?.alipayAccountName,
-          alipayEmail: t.paymentDetails?.alipayEmail,
-          alipayQrImage: t.paymentDetails?.alipayQrImage,
+          paymentDetails: t.paymentDetails
+            ? {
+                type: t.paymentDetails.type,
+                alipayAccountName: t.paymentDetails.alipayAccountName,
+                alipayQrImage: t.paymentDetails.alipayQrImage,
+                bankName: t.paymentDetails.bankName,
+                accountNumber: t.paymentDetails.accountNumber,
+                accountName: t.paymentDetails.accountName,
+                bankCode: t.paymentDetails.bankCode,
+                country: t.paymentDetails.country,
+                customAccountDetails: t.paymentDetails.customAccountDetails,
+              }
+            : undefined,
           customAccountDetails: t.paymentDetails?.customAccountDetails,
 
           side: t.side,
@@ -254,27 +264,23 @@ export default function OrderDetailsPage({
       <div className="bg-gray-50 border rounded-lg p-6 mb-4">
         <h2 className="text-lg font-semibold mb-4">Payment Details</h2>
         {/* Alipay Details Card */}
-        {(order.alipayAccountName || order.alipayEmail || order.alipayQrImage) && (
+        {order.paymentDetails?.type?.toUpperCase() === "ALIPAY" && (
           <div className="flex flex-col items-center gap-4 p-4 bg-white border rounded-lg shadow-sm mx-auto max-w-md">
             <div className="w-full flex flex-col gap-2">
-              {order.alipayAccountName && (
+              {order.paymentDetails.alipayAccountName && (
                 <div>
                   <span className="block text-xs text-gray-500">Alipay Name</span>
-                  <span className="font-medium text-base">{order.alipayAccountName}</span>
-                </div>
-              )}
-              {order.alipayEmail && (
-                <div>
-                  <span className="block text-xs text-gray-500">Alipay Email</span>
-                  <span className="font-medium text-base">{order.alipayEmail}</span>
+                  <span className="font-medium text-base">
+                    {order.paymentDetails.alipayAccountName}
+                  </span>
                 </div>
               )}
             </div>
-            {order.alipayQrImage && (
+            {order.paymentDetails.alipayQrImage && (
               <div className="flex flex-col items-center gap-2">
                 <span className="text-xs text-gray-500 mb-1">Alipay QR Code</span>
                 <img
-                  src={order.alipayQrImage}
+                  src={order.paymentDetails.alipayQrImage}
                   alt="Alipay QR"
                   className="w-64 h-64 object-contain border-2 rounded-lg shadow cursor-pointer transition-transform duration-200 hover:scale-105"
                   onClick={() => setShowQrModal && setShowQrModal(true)}
@@ -292,7 +298,7 @@ export default function OrderDetailsPage({
                       onClick={e => e.stopPropagation()}
                     >
                       <img
-                        src={order.alipayQrImage}
+                        src={order.paymentDetails.alipayQrImage}
                         alt="Alipay QR Large"
                         className="w-96 h-96 object-contain rounded border mb-4"
                       />
@@ -337,7 +343,7 @@ export default function OrderDetailsPage({
             !order.bankAccountNumber &&
             !order.bankAccountName &&
             !order.customAccountDetails &&
-            !(order.alipayAccountName || order.alipayEmail || order.alipayQrImage) && (
+            order.paymentDetails?.type?.toUpperCase() !== "ALIPAY" && (
               <li className="text-gray-500">No payment details available.</li>
             )}
         </ul>

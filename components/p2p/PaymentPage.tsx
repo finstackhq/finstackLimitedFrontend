@@ -63,8 +63,12 @@ type StoredTradeContext = {
       type?: string;
       alipayAccountName?: string;
       alipayQrImage?: string;
+      bankName?: string;
+      accountNumber?: string;
+      accountName?: string;
+      bankCode?: string;
       country?: string;
-      [key: string]: any;
+      customAccountDetails?: string;
     };
   };
   status?:
@@ -678,7 +682,7 @@ export default function PaymentPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* ALIPAY QR CODE SECTION - Always show if alipayQrImage is present */}
-              {paymentDetails?.type === "ALIPAY" &&
+              {paymentDetails?.type?.toUpperCase() === "ALIPAY" &&
                 paymentDetails.alipayQrImage && (
                 <>
                   <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-blue-200 rounded-xl bg-blue-50/50">
@@ -781,11 +785,15 @@ export default function PaymentPage() {
               )}
 
               {/* Improved Payment Methods Styling */}
-              {ctx.paymentMethods && ctx.paymentMethods.length > 0 && (
+              {ctx.paymentMethods?.some(
+                (method) => !/^alipay\b/i.test(method.trim()),
+              ) && (
                 <div className="border rounded-lg p-4 space-y-3">
                   <div className="mb-2 font-semibold text-gray-700">Other Payment Methods</div>
                   <div className="flex flex-col gap-3">
-                    {ctx.paymentMethods.map((method, idx) => {
+                    {ctx.paymentMethods
+                      .filter((method) => !/^alipay\b/i.test(method.trim()))
+                      .map((method, idx) => {
                       // Try to parse method as "Label - Value" or fallback
                       const [label, ...rest] = method.split("-");
                       const value = rest.join("-").trim();
@@ -795,7 +803,7 @@ export default function PaymentPage() {
                           <span className="text-sm font-mono text-gray-900 break-all">{value || label.trim()}</span>
                         </div>
                       );
-                    })}
+                      })}
                   </div>
                 </div>
               )}
