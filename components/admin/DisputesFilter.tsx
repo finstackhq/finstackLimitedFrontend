@@ -120,9 +120,9 @@ export function DisputesFilter({ onFilter }: DisputesFilterProps) {
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="under_review">Under Review</SelectItem>
               <SelectItem value="resolved">Resolved</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
               <SelectItem value="escalated">Escalated</SelectItem>
             </SelectContent>
           </Select>

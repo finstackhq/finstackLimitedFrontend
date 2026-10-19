@@ -56,9 +56,10 @@ export default function DisputesPage() {
             respondent,
             amount: dispute.amountFiat || dispute.amountCrypto || 0,
             currency: dispute.currencySource || dispute.currencyTarget || 'USD',
-            status: dispute.status === 'DISPUTE_PENDING' ? 'open' : 
-                    dispute.status === 'DISPUTE_RESOLVED' ? 'resolved' : 
-                    'under_review',
+                status: dispute.status === 'DISPUTE_PENDING' ? 'open' :
+                  ['DISPUTE_RESOLVED', 'COMPLETED'].includes(dispute.status) ? 'resolved' :
+                  ['CANCELLED_REVERSED', 'CANCELLED'].includes(dispute.status) ? 'cancelled' :
+                  'under_review',
             priority: 'medium' as const,
             category: 'payment_issue' as const,
             description: dispute.logs?.[dispute.logs.length - 1]?.message || 'Dispute opened',
