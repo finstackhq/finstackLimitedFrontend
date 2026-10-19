@@ -760,11 +760,11 @@ export default function WithdrawPage() {
                 </div>
 
                 <h3 className="text-lg font-semibold text-foreground mb-1">
-                  NGN Wallet
+                  CNGN Wallet (Paycrest)
                 </h3>
 
                 <p className="text-sm text-gray-600 mb-2">
-                  Withdraw Nigerian Naira
+                  Withdraw CNGN through Paycrest
                 </p>
 
                 <p className="text-lg font-semibold text-foreground">
@@ -794,11 +794,11 @@ export default function WithdrawPage() {
                 </div>
 
                 <h3 className="text-lg font-semibold text-foreground mb-1">
-                  Naira (Bank Transfer)
+                  NGN Wallet (Nomba)
                 </h3>
 
                 <p className="text-sm text-gray-600 mb-2">
-                  Withdraw straight to your bank account
+                  Withdraw NGN to your bank account through Nomba
                 </p>
 
                 <p className="text-lg font-semibold text-foreground">
