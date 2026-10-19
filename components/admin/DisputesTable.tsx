@@ -274,9 +274,9 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
 
       {/* Dispute Detail Modal */}
       <Dialog open={!!selectedDispute} onOpenChange={() => setSelectedDispute(null)}>
-        <DialogContent className="w-[95vw] max-w-6xl sm:max-w-6xl h-[90vh] overflow-hidden rounded-xl p-0">
+        <DialogContent className="flex h-[90vh] w-[95vw] max-w-6xl flex-col overflow-hidden rounded-xl p-0 sm:max-w-6xl">
           {selectedDispute && (
-            <div className="flex flex-col h-full pointer-events-auto">
+            <div className="flex min-h-0 flex-1 flex-col pointer-events-auto">
               {/* Header */}
               <DialogHeader className="p-6 border-b border-gray-100 sticky top-0 bg-white z-10 w-full">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
