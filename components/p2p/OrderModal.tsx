@@ -1295,7 +1295,7 @@ function OrderModal({
         {/* Accessibility description for DialogContent */}
         <div id="order-modal-description" className="sr-only">
           Complete your P2P order by entering the amount, selecting a payment
-          method, and confirming the transaction. Platform fee and seller
+          method, and confirming the transaction. Trade amounts and seller
           instructions are shown below.
         </div>
 
@@ -1568,22 +1568,8 @@ function OrderModal({
             </div>
           </div>
 
-          {/* Fee shown only after the backend creates the trade */}
-          {!tradeCreated && (
-            <p className="text-xs text-gray-500">
-              A platform fee applies. The exact fee and final amount are shown
-              after you confirm, before you continue.
-            </p>
-          )}
-
           {initiatePayload && (
             <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm">
-              <div className="flex justify-between gap-3">
-                <span>Platform fee</span>
-                <span>
-                  {initiatePayload.platformFeeCrypto ?? 0} {ad.cryptoCurrency}
-                </span>
-              </div>
               <div className="flex justify-between gap-3 font-semibold">
                 <span>
                   {ad.type === "buy" ? "You Receive" : "You Send"}
