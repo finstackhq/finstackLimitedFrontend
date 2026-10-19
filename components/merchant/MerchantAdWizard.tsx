@@ -79,9 +79,6 @@ export function MerchantAdWizard() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [customMethod, setCustomMethod] = useState("");
-  const [feeNotice, setFeeNotice] = useState<string | null>(null);
-  const [feeInfoLoading, setFeeInfoLoading] = useState(true);
-  const [feeInfoError, setFeeInfoError] = useState<string | null>(null);
 
   const [ad, setAd] = useState<MerchantAdDraft>({
     tradeType: "buy",
@@ -120,48 +117,6 @@ export function MerchantAdWizard() {
 
   const { methods: allPaymentMethods, loading: loadingMethods } =
     usePaymentMethods();
-
-  useEffect(() => {
-    const [asset, fiat] = ad.pair.split("/");
-    const controller = new AbortController();
-
-    const loadFeeNotice = async () => {
-      setFeeInfoLoading(true);
-      setFeeInfoError(null);
-      setFeeNotice(null);
-
-      try {
-        const query = new URLSearchParams({ asset, fiat });
-        const response = await fetchWithAuth(
-          `/api/ads/fee-info?${query.toString()}`,
-          { signal: controller.signal },
-        );
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.error || data.message || "Unable to load P2P platform fee information.",
-          );
-        }
-        if (typeof data.notice !== "string" || !data.notice.trim()) {
-          throw new Error("P2P platform fee information is unavailable.");
-        }
-
-        setFeeNotice(data.notice);
-      } catch (error: any) {
-        if (!controller.signal.aborted) {
-          setFeeInfoError(
-            error.message || "Unable to load P2P platform fee information.",
-          );
-        }
-      } finally {
-        if (!controller.signal.aborted) setFeeInfoLoading(false);
-      }
-    };
-
-    void loadFeeNotice();
-    return () => controller.abort();
-  }, [ad.pair]);
 
   // Removed old bank account fetching logic; now using usePaymentMethods
 
@@ -301,16 +256,6 @@ export function MerchantAdWizard() {
   };
 
   const publish = async () => {
-    if (feeInfoLoading || feeInfoError || !feeNotice) {
-      toast({
-        title: "Fee information unavailable",
-        description:
-          "P2P platform fee information must load before you can publish this ad.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       // Convert wizard format to P2PAd format
       const [cryptoCurrency, fiatCurrency] = ad.pair.split("/");
@@ -952,21 +897,13 @@ export function MerchantAdWizard() {
                   />
                 </div>
                 <div
-                  role={feeInfoError ? "alert" : "note"}
-                  className={cn(
-                    "mt-5 rounded-md border p-4",
-                    feeInfoError
-                      ? "border-red-300 bg-red-50 text-red-800"
-                      : "border-amber-300 bg-amber-50 text-amber-950",
-                  )}
+                  role="note"
+                  className="mt-5 rounded-md border border-amber-300 bg-amber-50 p-4 text-amber-950"
                 >
                   <p className="font-semibold">P2P platform fee</p>
                   <p className="mt-1 text-sm">
-                    {feeInfoLoading
-                      ? "Loading fee information..."
-                      : feeInfoError
-                        ? `Fee information could not be loaded: ${feeInfoError}`
-                        : feeNotice}
+                    The platform fee is charged to the trader, not to you, and
+                    is not deducted from your merchant proceeds.
                   </p>
                 </div>
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
@@ -979,7 +916,6 @@ export function MerchantAdWizard() {
                   </Button>
                   <Button
                     onClick={publish}
-                    disabled={feeInfoLoading || !!feeInfoError || !feeNotice}
                     className="bg-green-600 hover:bg-green-700 sm:w-auto flex items-center gap-2"
                   >
                     <Check className="w-4 h-4" /> Publish Ad
