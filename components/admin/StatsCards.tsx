@@ -103,6 +103,7 @@ import {
   Users,
   Clock,
   AlertCircle,
+  Landmark,
 } from "lucide-react";
 
 interface StatsCardsProps {
@@ -113,8 +114,10 @@ interface StatsCardsProps {
     platformBalances: {
       USDC: number;
       CNGN: number;
-      NGN: number;
+      NGN: number | null;
     };
+    platformBalanceStatus?: { NGN?: string };
+    platformBalanceFetchedAt?: { NGN?: string | null };
     totalTransactionVolume?: number;
   };
 }
@@ -136,6 +139,17 @@ export function StatsCards({ data }: StatsCardsProps) {
   const formatNumber = (num: number) =>
     new Intl.NumberFormat("en-US").format(num);
 
+  const nombaNgnAmount = data.platformBalances?.NGN;
+  const nombaNgnIsLive =
+    data.platformBalanceStatus?.NGN === "LIVE" &&
+    typeof nombaNgnAmount === "number";
+  const fetchedAtValue = data.platformBalanceFetchedAt?.NGN;
+  const fetchedAt = fetchedAtValue ? new Date(fetchedAtValue) : null;
+  const nombaLastUpdated =
+    fetchedAt && !Number.isNaN(fetchedAt.getTime())
+      ? fetchedAt.toLocaleString()
+      : undefined;
+
   const stats = [
     {
       title: "Total Users",
@@ -143,6 +157,9 @@ export function StatsCards({ data }: StatsCardsProps) {
       icon: <Users className="w-4 h-4 text-blue-600" />,
       change: "+8.2%",
       trending: "up" as const,
+      helperText: "",
+      lastUpdated: undefined,
+      statusLabel: undefined,
     },
     {
       title: "Pending KYC",
@@ -150,6 +167,9 @@ export function StatsCards({ data }: StatsCardsProps) {
       icon: <Clock className="w-4 h-4 text-orange-600" />,
       change: "Action",
       trending: "up" as const,
+      helperText: "",
+      lastUpdated: undefined,
+      statusLabel: undefined,
     },
     {
       title: "USDC Liquidity",
@@ -157,6 +177,9 @@ export function StatsCards({ data }: StatsCardsProps) {
       icon: <Wallet className="w-4 h-4 text-green-600" />,
       change: "Live",
       trending: "up" as const,
+      helperText: "",
+      lastUpdated: undefined,
+      statusLabel: undefined,
     },
     {
       title: "CNGN Liquidity",
@@ -164,6 +187,20 @@ export function StatsCards({ data }: StatsCardsProps) {
       icon: <Wallet className="w-4 h-4 text-purple-600" />,
       change: "Live",
       trending: "up" as const,
+      helperText: "",
+      lastUpdated: undefined,
+      statusLabel: undefined,
+    },
+    {
+      title: "Nomba Payout Balance (NGN)",
+      value: nombaNgnIsLive ? formatCNGN(nombaNgnAmount) : "Unavailable",
+      icon: <Landmark className="w-4 h-4 text-emerald-600" />,
+      change: "",
+      trending: "up" as const,
+      helperText:
+        "Finstack’s NGN balance held with Nomba, which Nomba uses to fund bank payouts.",
+      lastUpdated: nombaLastUpdated,
+      statusLabel: nombaNgnIsLive ? "LIVE" : "UNAVAILABLE",
     },
     {
       title: "Suspended",
@@ -171,11 +208,14 @@ export function StatsCards({ data }: StatsCardsProps) {
       icon: <AlertCircle className="w-4 h-4 text-red-600" />,
       change: "-2%",
       trending: "down" as const,
+      helperText: "",
+      lastUpdated: undefined,
+      statusLabel: undefined,
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
       {stats.map((stat) => (
         <div
           key={stat.title}
@@ -190,20 +230,40 @@ export function StatsCards({ data }: StatsCardsProps) {
           <p className="text-xl font-bold text-gray-900 mb-1 truncate">
             {stat.value}
           </p>
-          <div className="flex items-center text-xs">
-            {stat.trending === "up" ? (
-              <TrendingUp className="w-3 h-3 text-green-600 mr-1" />
-            ) : (
-              <TrendingDown className="w-3 h-3 text-red-600 mr-1" />
-            )}
+          {stat.helperText && (
+            <p className="mb-2 text-xs leading-relaxed text-gray-500">
+              {stat.helperText}
+            </p>
+          )}
+          {stat.lastUpdated && (
+            <p className="mb-2 text-xs text-gray-500">
+              Last updated: {stat.lastUpdated}
+            </p>
+          )}
+          {stat.statusLabel ? (
             <span
-              className={
-                stat.trending === "up" ? "text-green-600" : "text-red-600"
-              }
+              className={`text-xs ${
+                stat.statusLabel === "LIVE" ? "text-green-600" : "text-gray-500"
+              }`}
             >
-              {stat.change}
+              {stat.statusLabel === "LIVE" ? "Live" : "Unavailable"}
             </span>
-          </div>
+          ) : (
+            <div className="flex items-center text-xs">
+              {stat.trending === "up" ? (
+                <TrendingUp className="w-3 h-3 text-green-600 mr-1" />
+              ) : (
+                <TrendingDown className="w-3 h-3 text-red-600 mr-1" />
+              )}
+              <span
+                className={
+                  stat.trending === "up" ? "text-green-600" : "text-red-600"
+                }
+              >
+                {stat.change}
+              </span>
+            </div>
+          )}
         </div>
       ))}
     </div>

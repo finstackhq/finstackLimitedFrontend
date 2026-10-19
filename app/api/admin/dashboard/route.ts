@@ -207,6 +207,8 @@ export async function GET(request: NextRequest) {
           CNGN: 0,
           NGN: 0,
         },
+        platformBalanceStatus: summary.data?.platformBalanceStatus || {},
+        platformBalanceFetchedAt: summary.data?.platformBalanceFetchedAt || {},
         totalTransactionVolume: volume.data?.totalVolume || 0,
         recentTransactions: mappedTransactions,
       },
