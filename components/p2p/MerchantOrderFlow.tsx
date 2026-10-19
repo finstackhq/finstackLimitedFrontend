@@ -359,7 +359,7 @@ export function MerchantOrderFlow({
             </p>
             <p className="text-lg font-bold">
               {isMerchantBuying
-                ? (order.netCryptoAmount ?? "—")
+                ? (order.netCryptoAmount ?? order.cryptoAmount)
                 : order.cryptoAmount} {order.cryptoCurrency}
             </p>
           </div>

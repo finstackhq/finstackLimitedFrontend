@@ -453,7 +453,7 @@ export default function MerchantOrdersPage() {
                   </p>
                   <p className="font-bold">
                     {order.side === "SELL"
-                      ? (order.netCryptoAmount ?? "—")
+                      ? (order.netCryptoAmount ?? order.cryptoAmount)
                       : order.cryptoAmount} {order.cryptoCurrency}
                   </p>
                 </div>
