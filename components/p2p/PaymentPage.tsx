@@ -660,14 +660,6 @@ export default function PaymentPage() {
                     : (netCryptoAmount ?? amountCrypto)} {cryptoCode}
                 </span>
               </div>
-              {ctx.initiate?.platformFeeCrypto !== undefined && (
-                <div className="flex justify-between items-center px-3 text-sm">
-                  <span className="text-muted-foreground">Platform fee</span>
-                  <span>
-                    {ctx.initiate.platformFeeCrypto} {cryptoCode}
-                  </span>
-                </div>
-              )}
             </CardContent>
           </Card>
 
