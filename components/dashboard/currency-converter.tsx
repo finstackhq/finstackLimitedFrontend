@@ -69,12 +69,16 @@ export function CurrencyConverter() {
   const handleConvert = async () => {
     setError("")
     if (fromCurrency === toCurrency) return setError("Choose two different currencies.")
-    if (!(Number(amount) > 0)) return setError("Enter a valid amount.")
+    if (!Number.isFinite(Number(amount)) || !(Number(amount) > 0)) return setError("Enter a valid amount.")
 
     setLoading(true)
     try {
       const qs = new URLSearchParams({ from: fromCurrency, to: toCurrency, amount })
-      const res = await fetch(`/api/fstack/ads/convert?${qs}`)
+      const token = localStorage.getItem("accessToken")
+      const res = await fetch(`/api/ads/conversion-search?${qs}`, {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       const text = await res.text()
       let json: any
       try {
@@ -82,15 +86,22 @@ export function CurrencyConverter() {
       } catch {
         throw new Error(`Server returned an unexpected response (${res.status}). Please try again.`)
       }
-      if (!res.ok) throw new Error(json.message || "Failed to fetch ads")
-      setAds(json.data || [])
+      if (!res.ok) throw new Error(json.message || json.error || "Failed to fetch ads")
+      setAds(Array.isArray(json.data) ? json.data : [])
       setSearched(true)
     } catch (e: any) {
-      setError(e.message)
+      setError(e.message || "Failed to fetch ads")
     } finally {
       setLoading(false)
     }
   }
+
+  const bestBuyAd = ads
+    .filter((ad) => ad.direction === "BUY")
+    .reduce<AdResult | null>((best, ad) => !best || ad.price < best.price ? ad : best, null)
+  const bestSellAd = ads
+    .filter((ad) => ad.direction === "SELL")
+    .reduce<AdResult | null>((best, ad) => !best || ad.price > best.price ? ad : best, null)
 
   const merchantName = (ad: AdResult) =>
     ad.userId?.displayName ||
@@ -102,7 +113,7 @@ export function CurrencyConverter() {
 
     // Same mapping the P2P marketplace page uses
     const p2pAd: P2PAd = {
-      id: ad._id || ad.id,
+      id: ad.id,
       merchantId,
       // "buy" = the user is buying the asset, "sell" = the user is selling it
       type: ad.direction === "BUY" ? "buy" : "sell",
@@ -182,8 +193,8 @@ export function CurrencyConverter() {
         <span className="text-sm font-medium text-gray-700">I want</span>
         <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border">
           <div className="flex-1 text-xl font-semibold text-gray-900">
-            {ads.length > 0
-              ? `≈ ${ads[0].estimatedReceive.toLocaleString(undefined, { maximumFractionDigits: 6 })}`
+            {searched
+              ? <span className="text-sm font-normal text-gray-500">See estimated amounts with matching offers</span>
               : <span className="text-gray-400">0.00</span>}
           </div>
           <CurrencySelect value={toCurrency} onChange={setToCurrency} />
@@ -205,16 +216,21 @@ export function CurrencyConverter() {
       {ads.length > 0 && (
         <div className="space-y-3">
           <p className="text-sm font-medium text-gray-700">
-            {ads.length} ad{ads.length > 1 ? "s" : ""} found
+            {ads.length} matching ad{ads.length > 1 ? "s" : ""} found
           </p>
-          {ads.map((ad, i) => (
+          {ads.map((ad) => (
             <div key={ad.id} className="flex items-center justify-between p-4 border rounded-lg">
               <div>
                 <div className="font-medium text-gray-900">
-                  {merchantName(ad)} {i === 0 && <span className="ml-2 text-xs text-green-600">Best rate</span>}
+                  {merchantName(ad)}
+                  {ad.id === bestBuyAd?.id && <span className="ml-2 text-xs text-green-600">Best BUY offer</span>}
+                  {ad.id === bestSellAd?.id && <span className="ml-2 text-xs text-green-600">Best SELL offer</span>}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {ad.direction === "BUY" ? `You buy ${toCurrency}` : `You sell ${fromCurrency}`}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {formatAdPrice(ad.price, ad.asset, ad.fiat)}
+                  Price: {formatAdPrice(ad.price, ad.asset, ad.fiat)}
                 </div>
                 <div className="text-xs text-gray-400">
                   Limit: {ad.minLimit.toLocaleString()} - {ad.maxLimit.toLocaleString()} {ad.fiat}
@@ -228,7 +244,6 @@ export function CurrencyConverter() {
                 <Button
                   size="sm"
                   className="mt-2 bg-blue-600 hover:bg-blue-700 text-white"
-                  disabled={ad.asset === "NGN" && ad.direction === "SELL"}
                   onClick={() => openTrade(ad)}
                 >
                   Trade
@@ -243,6 +258,7 @@ export function CurrencyConverter() {
         <OrderModal
           ad={selectedAd}
           trader={selectedMerchant}
+          initialAmount={Number(amount)}
           open={showOrderModal}
           onClose={() => {
             setShowOrderModal(false)

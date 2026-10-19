@@ -901,6 +901,7 @@ interface P2PAdExtended extends P2PAd {
 interface OrderModalProps {
   ad: P2PAdExtended;
   trader: TraderWithStats;
+  initialAmount?: number;
   open: boolean;
   onClose: () => void;
   onOrderCreated: (order: P2POrder) => void;
@@ -910,6 +911,7 @@ function getFiatSymbol(fiat: string) {
   if (fiat === "NGN") return "₦";
   if (fiat === "GHS") return "₵";
   if (fiat === "USD") return "$";
+  if (fiat === "RMB") return "¥";
 }
 
 // ---------------------------------------------------------------------------
@@ -928,14 +930,19 @@ function fiatFromAsset(asset: number, price: number) {
 function OrderModal({
   ad,
   trader,
+  initialAmount,
   open,
   onClose,
   onOrderCreated,
 }: OrderModalProps) {
   const { toast } = useToast();
   const router = useRouter();
-  const [fiatAmount, setFiatAmount] = useState("");
-  const [cryptoAmount, setCryptoAmount] = useState("");
+  const [fiatAmount, setFiatAmount] = useState(() =>
+    ad.type === "buy" && initialAmount != null ? String(initialAmount) : "",
+  );
+  const [cryptoAmount, setCryptoAmount] = useState(() =>
+    ad.type === "sell" && initialAmount != null ? String(initialAmount) : "",
+  );
   // For SELL flow, selectedPayment is the user's payment method object
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   // Fetch user payment methods for SELL flow
@@ -968,7 +975,9 @@ function OrderModal({
   const isSupportedCrypto = supportedCryptos.includes(ad.cryptoCurrency);
 
   // Track which field was last edited
-  const [lastEdited, setLastEdited] = useState<"fiat" | "crypto">("fiat");
+  const [lastEdited, setLastEdited] = useState<"fiat" | "crypto">(() =>
+    ad.type === "sell" ? "crypto" : "fiat",
+  );
 
   // One conversion rule for every asset
   useEffect(() => {
@@ -1103,7 +1112,6 @@ function OrderModal({
       }
 
       const payload = {
-        adId: ad.id,
         amountSource: Number(fiatAmount),
         ...(ad.type === "sell"
           ? {
@@ -1128,7 +1136,7 @@ function OrderModal({
 
       let response, data;
       try {
-        response = await fetchOnce("/api/fstack/p2p", {
+        response = await fetchOnce(`/api/trade/initiate/${encodeURIComponent(ad.id)}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
