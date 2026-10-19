@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { sanitizeParticipantTradeResponse } from "@/lib/sanitize-participant-trade-response";
 
 export async function POST(
   req: NextRequest,
@@ -30,7 +31,7 @@ export async function POST(
     });
 
     const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+    return NextResponse.json(sanitizeParticipantTradeResponse(data), { status: response.status });
   } catch (error: any) {
     console.error("Merchant paid error:", error);
     return NextResponse.json(

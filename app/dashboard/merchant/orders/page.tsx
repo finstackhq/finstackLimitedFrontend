@@ -294,14 +294,6 @@ export default function MerchantOrdersPage() {
                         readOnly
                       />
                     </div>
-                    <div>
-                      <span className="block text-xs text-gray-500">Alipay Email</span>
-                      <input
-                        className="w-full border rounded px-2 py-1 text-sm bg-gray-100"
-                        value={paymentDetails.alipayEmail || ""}
-                        readOnly
-                      />
-                    </div>
                   </div>
                   {paymentDetails.country && (
                     <div className="mt-2 text-xs text-gray-500">
@@ -313,9 +305,7 @@ export default function MerchantOrdersPage() {
             )}
             {paymentDetails && paymentDetails.type !== "BANK" && paymentDetails.type !== "ALIPAY" && (
               <div className="text-sm text-gray-500">
-                Unrecognized payment details type. Raw details:
-                <br />
-                <pre>{JSON.stringify(paymentDetails, null, 2)}</pre>
+                Unrecognized payment details type.
               </div>
             )}
           </Card>

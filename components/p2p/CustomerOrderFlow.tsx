@@ -40,10 +40,11 @@ interface P2POrder {
     | "disputed";
   createdAt: Date;
   expiresAt: Date;
-  // Payment details from merchant
-  alipayAccountName?: string;
-  alipayEmail?: string;
-  alipayQrImage?: string;
+  paymentDetails?: {
+    type?: string;
+    alipayAccountName?: string;
+    alipayQrImage?: string;
+  };
   customAccountDetails?: string;
   bankAccountNumber?: string;
   bankAccountName?: string;
@@ -440,51 +441,29 @@ export function CustomerOrderFlow({
               )}
 
               {/* Alipay Details */}
-              {order.paymentMethod === "Alipay" && (
+              {order.paymentDetails?.type?.toUpperCase() === "ALIPAY" && (
                 <div className="p-4 bg-gray-50 rounded-lg border">
                   <h4 className="font-medium mb-3 flex items-center gap-2">
                     <QrCode className="w-5 h-5" />
                     Alipay Payment Details
                   </h4>
                   <div className="space-y-3">
-                    {order.alipayAccountName && (
+                    {order.paymentDetails.alipayAccountName && (
                       <div>
                         <p className="text-xs text-gray-600">Account Name</p>
-                        <p className="font-medium">{order.alipayAccountName}</p>
+                        <p className="font-medium">
+                          {order.paymentDetails.alipayAccountName}
+                        </p>
                       </div>
                     )}
-                    {order.alipayEmail && (
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-gray-600">Email/Phone</p>
-                          <p className="font-medium">{order.alipayEmail}</p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            copyToClipboard(
-                              order.alipayEmail!,
-                              "Alipay contact",
-                            )
-                          }
-                        >
-                          {copied === "Alipay contact" ? (
-                            <Check className="w-4 h-4" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                    {order.alipayQrImage && (
+                    {order.paymentDetails.alipayQrImage && (
                       <div className="space-y-3">
                         <p className="text-xs text-gray-600">
                           Scan QR Code to Pay
                         </p>
                         <div className="bg-white p-4 rounded-lg border-2 inline-block">
                           <img
-                            src={order.alipayQrImage}
+                            src={order.paymentDetails.alipayQrImage}
                             alt="Alipay QR Code"
                             className="w-48 h-48 object-contain"
                           />
@@ -495,7 +474,7 @@ export function CustomerOrderFlow({
                           size="sm"
                           onClick={() => {
                             const link = document.createElement("a");
-                            link.href = order.alipayQrImage!;
+                            link.href = order.paymentDetails?.alipayQrImage!;
                             link.download = `qr-code-${order.id}.png`;
                             document.body.appendChild(link);
                             link.click();

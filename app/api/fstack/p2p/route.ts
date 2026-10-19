@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
+import { sanitizeParticipantTradeResponse } from "@/lib/sanitize-participant-trade-response";
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(sanitizeParticipantTradeResponse(data));
   } catch (error) {
     console.error("Error in P2P ads proxy:", error);
     return NextResponse.json(
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(sanitizeParticipantTradeResponse(data));
   } catch (error) {
     console.error("Error in P2P trade initiation proxy:", error);
     return NextResponse.json(

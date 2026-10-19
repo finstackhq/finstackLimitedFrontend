@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sanitizeParticipantTradeResponse } from '@/lib/sanitize-participant-trade-response'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,10 +56,10 @@ export async function GET(request: NextRequest) {
         }
 
         if (!res.ok) {
-            return NextResponse.json(data, { status: res.status })
+            return NextResponse.json(sanitizeParticipantTradeResponse(data), { status: res.status })
         }
 
-        return NextResponse.json(data, { status: 200 })
+        return NextResponse.json(sanitizeParticipantTradeResponse(data), { status: 200 })
 
     } catch (error: any) {
         console.error('[fstack/my-orders] Error:', error)
