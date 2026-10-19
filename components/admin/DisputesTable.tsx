@@ -378,7 +378,7 @@ export function DisputesTable({ disputes, onDisputeResolved }: DisputesTableProp
                                  <p className="font-semibold">{formatCurrency(selectedDispute.tradeDetails.amountFiat, selectedDispute.tradeDetails.currencySource)}</p>
                               </div>
                               <div>
-                                 <p className="text-xs text-gray-500 uppercase">Crypto Amount</p>
+                                 <p className="text-xs text-gray-500 uppercase">Asset Amount</p>
                                  <p className="font-semibold">{selectedDispute.tradeDetails.amountCrypto.toFixed(6)} {selectedDispute.tradeDetails.currencyTarget}</p>
                               </div>
                                <div>
