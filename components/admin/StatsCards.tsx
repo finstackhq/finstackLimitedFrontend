@@ -96,6 +96,7 @@
 
 "use client";
 
+import type { ReactNode } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -105,6 +106,17 @@ import {
   AlertCircle,
   Landmark,
 } from "lucide-react";
+
+interface StatCard {
+  title: string;
+  value: string;
+  icon: ReactNode;
+  change?: string;
+  trending?: "up" | "down";
+  helperText?: string;
+  lastUpdated?: string;
+  statusLabel?: "LIVE" | "UNAVAILABLE";
+}
 
 interface StatsCardsProps {
   data: {
@@ -150,16 +162,13 @@ export function StatsCards({ data }: StatsCardsProps) {
       ? fetchedAt.toLocaleString()
       : undefined;
 
-  const stats = [
+  const overviewStats: StatCard[] = [
     {
       title: "Total Users",
       value: formatNumber(data.totalUsers || 0),
       icon: <Users className="w-4 h-4 text-blue-600" />,
       change: "+8.2%",
       trending: "up" as const,
-      helperText: "",
-      lastUpdated: undefined,
-      statusLabel: undefined,
     },
     {
       title: "Pending KYC",
@@ -167,40 +176,6 @@ export function StatsCards({ data }: StatsCardsProps) {
       icon: <Clock className="w-4 h-4 text-orange-600" />,
       change: "Action",
       trending: "up" as const,
-      helperText: "",
-      lastUpdated: undefined,
-      statusLabel: undefined,
-    },
-    {
-      title: "USDC Liquidity",
-      value: formatUSDC(data.platformBalances?.USDC || 0),
-      icon: <Wallet className="w-4 h-4 text-green-600" />,
-      change: "Live",
-      trending: "up" as const,
-      helperText: "",
-      lastUpdated: undefined,
-      statusLabel: undefined,
-    },
-    {
-      title: "CNGN Liquidity",
-      value: formatCNGN(data.platformBalances?.CNGN || 0),
-      icon: <Wallet className="w-4 h-4 text-purple-600" />,
-      change: "Live",
-      trending: "up" as const,
-      helperText: "",
-      lastUpdated: undefined,
-      statusLabel: undefined,
-    },
-    {
-      title: "Nomba Payout Balance (NGN)",
-      value: nombaNgnIsLive ? formatCNGN(nombaNgnAmount) : "Unavailable",
-      icon: <Landmark className="w-4 h-4 text-emerald-600" />,
-      change: "",
-      trending: "up" as const,
-      helperText:
-        "Finstack’s NGN balance held with Nomba, which Nomba uses to fund bank payouts.",
-      lastUpdated: nombaLastUpdated,
-      statusLabel: nombaNgnIsLive ? "LIVE" : "UNAVAILABLE",
     },
     {
       title: "Suspended",
@@ -208,64 +183,114 @@ export function StatsCards({ data }: StatsCardsProps) {
       icon: <AlertCircle className="w-4 h-4 text-red-600" />,
       change: "-2%",
       trending: "down" as const,
-      helperText: "",
-      lastUpdated: undefined,
-      statusLabel: undefined,
     },
   ];
 
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+  const liquidityStats: StatCard[] = [
+    {
+      title: "USDC Liquidity",
+      value: formatUSDC(data.platformBalances?.USDC || 0),
+      icon: <Wallet className="w-4 h-4 text-green-600" />,
+      statusLabel: "LIVE",
+    },
+    {
+      title: "CNGN Liquidity",
+      value: formatCNGN(data.platformBalances?.CNGN || 0),
+      icon: <Wallet className="w-4 h-4 text-purple-600" />,
+      statusLabel: "LIVE",
+    },
+    {
+      title: "Nomba Payout Balance (NGN)",
+      value: nombaNgnIsLive ? formatCNGN(nombaNgnAmount) : "Unavailable",
+      icon: <Landmark className="w-4 h-4 text-emerald-600" />,
+      helperText:
+        "Finstack’s NGN balance held with Nomba, which Nomba uses to fund bank payouts.",
+      lastUpdated: nombaLastUpdated,
+      statusLabel: nombaNgnIsLive ? "LIVE" : "UNAVAILABLE",
+    },
+  ];
+
+  const renderCards = (stats: StatCard[]) => (
+    <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
       {stats.map((stat) => (
         <div
           key={stat.title}
-          className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm"
+          className="flex h-full min-h-[148px] min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-5 shadow-sm"
         >
-          <div className="flex justify-between items-start mb-2">
-            <h3 className="text-xs font-medium text-gray-500 uppercase">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-sm font-medium leading-5 text-gray-600">
               {stat.title}
             </h3>
-            {stat.icon}
+            <span className="shrink-0">{stat.icon}</span>
           </div>
-          <p className="text-xl font-bold text-gray-900 mb-1 truncate">
+          <p className="mt-3 break-words text-2xl font-semibold text-gray-900">
             {stat.value}
           </p>
           {stat.helperText && (
-            <p className="mb-2 text-xs leading-relaxed text-gray-500">
+            <p className="mt-2 text-xs leading-relaxed text-gray-500">
               {stat.helperText}
             </p>
           )}
-          {stat.lastUpdated && (
-            <p className="mb-2 text-xs text-gray-500">
-              Last updated: {stat.lastUpdated}
-            </p>
-          )}
-          {stat.statusLabel ? (
-            <span
-              className={`text-xs ${
-                stat.statusLabel === "LIVE" ? "text-green-600" : "text-gray-500"
-              }`}
-            >
-              {stat.statusLabel === "LIVE" ? "Live" : "Unavailable"}
-            </span>
-          ) : (
-            <div className="flex items-center text-xs">
-              {stat.trending === "up" ? (
-                <TrendingUp className="w-3 h-3 text-green-600 mr-1" />
-              ) : (
-                <TrendingDown className="w-3 h-3 text-red-600 mr-1" />
-              )}
+          <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-4">
+            {stat.lastUpdated ? (
+              <p className="text-xs text-gray-500">
+                Last updated: {stat.lastUpdated}
+              </p>
+            ) : (
+              <span />
+            )}
+            {stat.statusLabel ? (
               <span
-                className={
-                  stat.trending === "up" ? "text-green-600" : "text-red-600"
-                }
+                className={`text-xs font-medium ${
+                  stat.statusLabel === "LIVE"
+                    ? "text-green-600"
+                    : "text-gray-500"
+                }`}
               >
-                {stat.change}
+                {stat.statusLabel === "LIVE" ? "Live" : "Unavailable"}
               </span>
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center text-xs">
+                {stat.trending === "up" ? (
+                  <TrendingUp className="mr-1 h-3 w-3 text-green-600" />
+                ) : (
+                  <TrendingDown className="mr-1 h-3 w-3 text-red-600" />
+                )}
+                <span
+                  className={
+                    stat.trending === "up" ? "text-green-600" : "text-red-600"
+                  }
+                >
+                  {stat.change}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       ))}
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <section className="space-y-3" aria-labelledby="overview-metrics-heading">
+        <h2
+          id="overview-metrics-heading"
+          className="text-sm font-semibold text-gray-700"
+        >
+          Platform Overview
+        </h2>
+        {renderCards(overviewStats)}
+      </section>
+      <section className="space-y-3" aria-labelledby="liquidity-metrics-heading">
+        <h2
+          id="liquidity-metrics-heading"
+          className="text-sm font-semibold text-gray-700"
+        >
+          Platform Liquidity
+        </h2>
+        {renderCards(liquidityStats)}
+      </section>
     </div>
   );
 }
