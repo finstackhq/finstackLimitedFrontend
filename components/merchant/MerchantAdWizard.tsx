@@ -79,8 +79,6 @@ export function MerchantAdWizard() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [customMethod, setCustomMethod] = useState("");
-  const [feeRateLabel, setFeeRateLabel] = useState<string | null>(null);
-  const [feeRateLoading, setFeeRateLoading] = useState(false);
 
   const [ad, setAd] = useState<MerchantAdDraft>({
     tradeType: "buy",
@@ -119,47 +117,6 @@ export function MerchantAdWizard() {
 
   const { methods: allPaymentMethods, loading: loadingMethods } =
     usePaymentMethods();
-
-  useEffect(() => {
-    const [asset, fiat] = ad.pair.split("/");
-    const controller = new AbortController();
-
-    const loadFeeRate = async () => {
-      setFeeRateLoading(true);
-      setFeeRateLabel(null);
-
-      try {
-        const query = new URLSearchParams({ asset, fiat });
-        const response = await fetch(`/api/ads/fee-info?${query}`, {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        const body = await response.json();
-        const fee = body?.data?.fee ?? body?.data?.feeConfig ?? body?.data ?? body?.fee ?? body;
-        const feeAmount = Number(fee?.feeAmount ?? fee?.amount);
-
-        if (!response.ok || !Number.isFinite(feeAmount) || feeAmount < 0) {
-          return;
-        }
-
-        const feeCurrency = fee.currency || fee.asset || asset;
-        const targetCurrency = fee.targetCurrency || fee.fiat || fiat;
-        const formattedAmount =
-          feeCurrency === "NGN"
-            ? `₦${feeAmount.toLocaleString("en-NG")}`
-            : `${feeAmount.toLocaleString()} ${feeCurrency}`;
-
-        setFeeRateLabel(`${formattedAmount} per 1 ${targetCurrency}`);
-      } catch {
-        // The explanatory notice remains visible if the rate lookup is unavailable.
-      } finally {
-        if (!controller.signal.aborted) setFeeRateLoading(false);
-      }
-    };
-
-    void loadFeeRate();
-    return () => controller.abort();
-  }, [ad.pair]);
 
   // Removed old bank account fetching logic; now using usePaymentMethods
 
@@ -943,17 +900,10 @@ export function MerchantAdWizard() {
                   role="note"
                   className="mt-5 rounded-md border border-amber-300 bg-amber-50 p-4 text-amber-950"
                 >
-                  <p className="font-semibold">P2P platform fee</p>
+                  <p className="font-semibold">Fee paid by the user/buyer</p>
                   <p className="mt-1 text-sm">
-                    The platform fee is charged to the trader, not to you, and
-                    is not deducted from your merchant proceeds.
-                  </p>
-                  <p className="mt-2 text-sm font-medium">
-                    {feeRateLabel
-                      ? `Fee rate: ${feeRateLabel}`
-                      : feeRateLoading
-                        ? "Loading fee rate..."
-                        : "Fee rate currently unavailable."}
+                    The user/buyer pays the platform fee, and it will not be
+                    deducted from your merchant proceeds.
                   </p>
                 </div>
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
