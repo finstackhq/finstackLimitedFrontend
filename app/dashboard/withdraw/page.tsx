@@ -92,7 +92,29 @@ import { AddAccountDialog } from "@/components/dashboard/add-account-dialog";
 
 import { AddWalletDialog } from "@/components/dashboard/add-wallet-dialog";
 
-import { ArrowLeft, Sparkles, Plus, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ChevronsUpDown,
+  Sparkles,
+  Plus,
+  Loader2,
+} from "lucide-react";
+
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import { convertCurrency } from "@/lib/mock-api";
 
@@ -202,6 +224,7 @@ export default function WithdrawPage() {
   const [nombaBanks, setNombaBanks] = useState<NombaBank[]>([]);
   const [loadingNombaBanks, setLoadingNombaBanks] = useState(true);
   const [nombaBankCode, setNombaBankCode] = useState("");
+  const [nombaBankPickerOpen, setNombaBankPickerOpen] = useState(false);
   const [nombaAccountNumber, setNombaAccountNumber] = useState("");
   const [nombaAccountName, setNombaAccountName] = useState("");
 
@@ -852,22 +875,62 @@ export default function WithdrawPage() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="nomba-bank">Bank</Label>
-                <select
-                  id="nomba-bank"
-                  className="w-full border rounded-md h-10 px-3 text-sm"
-                  value={nombaBankCode}
-                  onChange={(e) => setNombaBankCode(e.target.value)}
-                  disabled={loadingNombaBanks}
+                <Popover
+                  open={nombaBankPickerOpen}
+                  onOpenChange={setNombaBankPickerOpen}
                 >
-                  <option value="">
-                    {loadingNombaBanks ? "Loading banks..." : "Select a bank"}
-                  </option>
-                  {nombaBanks.map((b) => (
-                    <option key={b.code} value={b.code}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="nomba-bank"
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={nombaBankPickerOpen}
+                      className="w-full justify-between font-normal"
+                      disabled={loadingNombaBanks || nombaBanks.length === 0}
+                    >
+                      {nombaBankCode
+                        ? nombaBanks.find((bank) => bank.code === nombaBankCode)
+                            ?.name
+                        : loadingNombaBanks
+                          ? "Loading banks..."
+                          : "Select a bank"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[var(--radix-popover-trigger-width)] p-0"
+                    align="start"
+                  >
+                    <Command>
+                      <CommandInput placeholder="Search banks..." />
+                      <CommandList>
+                        <CommandEmpty>No bank found.</CommandEmpty>
+                        <CommandGroup>
+                          {nombaBanks.map((bank) => (
+                            <CommandItem
+                              key={bank.code}
+                              value={`${bank.name} ${bank.code}`}
+                              onSelect={() => {
+                                setNombaBankCode(bank.code);
+                                setNombaBankPickerOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${
+                                  nombaBankCode === bank.code
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                }`}
+                              />
+                              {bank.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 {!loadingNombaBanks && nombaBanks.length === 0 && (
                   <p className="text-xs text-red-600 mt-1">
                     Could not load the bank list. Please try again shortly.
