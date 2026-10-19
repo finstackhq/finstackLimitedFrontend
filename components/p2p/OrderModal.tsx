@@ -1568,26 +1568,6 @@ function OrderModal({
             </div>
           </div>
 
-          {initiatePayload && (
-            <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm">
-              <div className="flex justify-between gap-3 font-semibold">
-                <span>
-                  {ad.type === "buy" ? "You Receive" : "You Send"}
-                </span>
-                <span>
-                  {ad.type === "buy"
-                    ? (initiatePayload.netCryptoAmount ??
-                      initiatePayload.amountCrypto ??
-                      0)
-                    : (initiatePayload.amountCrypto ??
-                      initiatePayload.netCryptoAmount ??
-                      0)}{" "}
-                  {ad.cryptoCurrency}
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* Seller's Instructions */}
           <div className="flex items-center text-xs bg-yellow-50 rounded-md p-2 mt-2 border border-yellow-200">
             <AlertCircle className="w-4 h-4 mr-2 text-yellow-600" />
