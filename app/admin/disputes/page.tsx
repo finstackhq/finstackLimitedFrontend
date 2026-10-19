@@ -19,13 +19,14 @@ export default function DisputesPage() {
   const fetchDisputes = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/disputes');
+      const res = await fetch('/api/admin/disputes?status=ALL');
       const data = await res.json();
 
       if (data.success && Array.isArray(data.disputes)) {
         // Map backend data to frontend format
         const mappedDisputes = data.disputes.map((dispute: any) => {
           const openedById = dispute.disputeDetails?.openedBy;
+          const wasResolved = Boolean(dispute.disputeDetails?.resolvedAt);
           const buyerId = dispute.userId?._id;
           const sellerId = dispute.merchantId?._id;
 
@@ -56,8 +57,8 @@ export default function DisputesPage() {
             respondent,
             amount: dispute.amountFiat || dispute.amountCrypto || 0,
             currency: dispute.currencySource || dispute.currencyTarget || 'USD',
-                status: dispute.status === 'DISPUTE_PENDING' ? 'open' :
-                  ['DISPUTE_RESOLVED', 'COMPLETED'].includes(dispute.status) ? 'resolved' :
+                status: wasResolved || ['DISPUTE_RESOLVED', 'COMPLETED'].includes(dispute.status) ? 'resolved' :
+                  dispute.status === 'DISPUTE_PENDING' ? 'open' :
                   ['CANCELLED_REVERSED', 'CANCELLED'].includes(dispute.status) ? 'cancelled' :
                   'under_review',
             priority: 'medium' as const,
