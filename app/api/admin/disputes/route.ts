@@ -17,11 +17,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get("page") || "1";
     const limit = searchParams.get("limit") || "20";
+    const status = searchParams.get("status")?.toUpperCase();
 
     // Build query string
     const queryParams = new URLSearchParams();
     queryParams.append("page", page);
     queryParams.append("limit", limit);
+    if (status && ["OPEN", "RESOLVED", "ALL"].includes(status)) {
+      queryParams.append("status", status);
+    }
 
     const endpoint = `${baseUrl}admin/disputes?${queryParams.toString()}`;
 
