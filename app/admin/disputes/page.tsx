@@ -222,7 +222,7 @@ export default function DisputesPage() {
       </div>
 
       <DisputesFilter onFilter={handleFilter} />
-      <DisputesTable disputes={filteredDisputes} />
+      <DisputesTable disputes={filteredDisputes} onDisputeResolved={fetchDisputes} />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useIsMobile } from '../../hooks/use-mobile';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Eye, 
   MessageCircle, 
@@ -82,22 +83,22 @@ type ResolutionAction = 'RELEASE' | 'CANCEL';
 
 interface DisputesTableProps {
   disputes: Dispute[];
+  onDisputeResolved: () => void | Promise<void>;
 }
 
-export function DisputesTable({ disputes }: DisputesTableProps) {
+export function DisputesTable({ disputes, onDisputeResolved }: DisputesTableProps) {
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [qrPreview, setQrPreview] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [resolutionAction, setResolutionAction] = useState<ResolutionAction | ''>('');
-  const [resolutionError, setResolutionError] = useState('');
   const [resolving, setResolving] = useState(false);
   const isMobile = useIsMobile();
+  const { toast } = useToast();
 
   const openDispute = (dispute: Dispute) => {
     setSelectedDispute(dispute);
     setNewMessage('');
     setResolutionAction('');
-    setResolutionError('');
   };
 
   const getStatusBadge = (status: Dispute['status']) => {
@@ -165,7 +166,6 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
   const handleResolveDispute = async () => {
     if (!selectedDispute || !resolutionAction || selectedDispute.status !== 'open') return;
     setResolving(true);
-    setResolutionError('');
     
     try {
       const note = newMessage.trim() || "Resolved by admin";
@@ -180,13 +180,27 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
 
       if (res.ok && data.success) {
         setSelectedDispute(null);
-        window.location.reload();
+        toast({
+          title: 'Dispute resolved',
+          description: resolutionAction === 'RELEASE'
+            ? 'The trade was completed and escrow released.'
+            : 'The trade was cancelled and escrow reversed.',
+        });
+        await onDisputeResolved();
       } else {
-        setResolutionError(data.error || 'Failed to resolve dispute.');
+        toast({
+          title: 'Resolution failed',
+          description: data.error || 'Failed to resolve dispute.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error('Error resolving dispute:', error);
-      setResolutionError('Unable to resolve dispute. Please try again.');
+      toast({
+        title: 'Resolution failed',
+        description: 'Unable to resolve dispute. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
         setResolving(false);
     }
@@ -512,7 +526,6 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
                             value={resolutionAction}
                             onValueChange={(value) => {
                               setResolutionAction(value as ResolutionAction);
-                              setResolutionError('');
                             }}
                             disabled={selectedDispute.status !== 'open' || resolving}
                           >
@@ -533,11 +546,6 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
                           {selectedDispute.status !== 'open' && (
                             <p className="text-xs text-amber-700" role="status">
                               Only pending disputes can be resolved.
-                            </p>
-                          )}
-                          {resolutionError && (
-                            <p className="text-sm text-red-600" role="alert">
-                              {resolutionError}
                             </p>
                           )}
                           <Button
