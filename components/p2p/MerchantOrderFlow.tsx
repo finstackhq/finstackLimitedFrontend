@@ -22,6 +22,7 @@ interface P2POrder {
   reference: string; // Order reference like P2P-1767112468832
   buyerName: string;
   cryptoAmount: number;
+  netCryptoAmount?: number;
   fiatAmount: number;
   cryptoCurrency: string;
   fiatCurrency: string;
@@ -357,7 +358,9 @@ export function MerchantOrderFlow({
               {isMerchantBuying ? "You Receive" : "You Release"}
             </p>
             <p className="text-lg font-bold">
-              {order.cryptoAmount} {order.cryptoCurrency}
+              {isMerchantBuying
+                ? (order.netCryptoAmount ?? "—")
+                : order.cryptoAmount} {order.cryptoCurrency}
             </p>
           </div>
           <div>

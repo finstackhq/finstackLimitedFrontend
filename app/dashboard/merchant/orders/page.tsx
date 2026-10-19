@@ -23,8 +23,7 @@ interface Order {
   buyerName: string;
   cryptoAmount: number;
   fiatAmount: number;
-  netCryptoAmount: number; // After platform fee
-  platformFee: number;
+  netCryptoAmount?: number;
   cryptoCurrency: string;
   fiatCurrency: string;
   paymentMethod: string;
@@ -75,10 +74,14 @@ export default function MerchantOrdersPage() {
             id: trade._id || trade.id,
             reference: trade.reference || trade._id || trade.id,
             buyerName: getBuyerName(trade.userId),
-            cryptoAmount: trade.amountCrypto || 0,
-            fiatAmount: trade.amountFiat || 0,
-            netCryptoAmount: trade.netCryptoAmount || 0,
-            platformFee: trade.platformFeeCrypto || 0,
+            cryptoAmount: trade.amountCrypto ?? 0,
+            fiatAmount: trade.amountFiat ?? 0,
+            netCryptoAmount:
+              trade.netCryptoAmount != null &&
+              Number.isFinite(Number(trade.netCryptoAmount)) &&
+              Number(trade.netCryptoAmount) > 0
+                ? Number(trade.netCryptoAmount)
+                : undefined,
             cryptoCurrency: trade.currencyTarget || "CNGN",
             fiatCurrency: trade.currencySource || "XAF",
             paymentMethod: trade.provider || "Fin Stack",
@@ -115,22 +118,60 @@ export default function MerchantOrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const selectedReference = selectedOrder?.reference;
+  const selectedSide = selectedOrder?.side;
+  const selectedStatus = selectedOrder?.status;
+
   useEffect(() => {
     // Fetch payment details for both flows:
     // - Merchant buying (side === 'SELL')
     // - Merchant selling (side === 'BUY' and status === 'PAYMENT_CONFIRMED_BY_BUYER')
     if (
-      selectedOrder?.reference &&
+      selectedReference &&
       (
-        selectedOrder.side === "SELL" ||
-        (selectedOrder.side === "BUY" && selectedOrder.status === "PAYMENT_CONFIRMED_BY_BUYER")
+        selectedSide === "SELL" ||
+        (selectedSide === "BUY" && selectedStatus === "PAYMENT_CONFIRMED_BY_BUYER")
       )
     ) {
-      fetch(`/api/fstack/trade/${selectedOrder.reference}`)
+      fetch(`/api/fstack/trade/${selectedReference}`)
         .then((res) => res.json())
         .then((data) => {
-          if (data.success && data.data?.paymentDetails) {
-            setPaymentDetails(data.data.paymentDetails);
+          if (data.success && data.data) {
+            const trade = data.data;
+            const netCryptoAmount = Number(trade.netCryptoAmount);
+            const cryptoAmount = Number(trade.amountCrypto ?? trade.amountTarget);
+
+            if (Number.isFinite(netCryptoAmount) && netCryptoAmount > 0) {
+              setOrders((current) =>
+                current.map((order) =>
+                  order.reference === selectedReference
+                    ? { ...order, netCryptoAmount }
+                    : order,
+                ),
+              );
+            }
+            if (Number.isFinite(cryptoAmount) && cryptoAmount > 0) {
+              setOrders((current) =>
+                current.map((order) =>
+                  order.reference === selectedReference
+                    ? { ...order, cryptoAmount }
+                    : order,
+                ),
+              );
+              setSelectedOrder((current) =>
+                current?.reference === selectedReference
+                  ? { ...current, cryptoAmount }
+                  : current,
+              );
+            }
+            if (Number.isFinite(netCryptoAmount) && netCryptoAmount > 0) {
+              setSelectedOrder((current) =>
+                current?.reference === selectedReference
+                  ? { ...current, netCryptoAmount }
+                  : current,
+              );
+            }
+            setPaymentDetails(trade.paymentDetails || null);
           } else {
             setPaymentDetails(null);
           }
@@ -141,7 +182,7 @@ export default function MerchantOrdersPage() {
     } else {
       setPaymentDetails(null);
     }
-  }, [selectedOrder]);
+  }, [selectedReference, selectedSide, selectedStatus]);
 
   const handleComplete = () => {
     if (!selectedOrder) return;
@@ -399,7 +440,7 @@ export default function MerchantOrdersPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Fiat Amount</p>
                   <p className="font-bold text-green-600">
@@ -407,21 +448,13 @@ export default function MerchantOrdersPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Crypto Amount</p>
+                  <p className="text-xs text-gray-500 mb-1">
+                    {order.side === "SELL" ? "Crypto Received" : "Crypto Amount"}
+                  </p>
                   <p className="font-bold">
-                    {order.cryptoAmount} {order.cryptoCurrency}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Net (After Fee)</p>
-                  <p className="font-medium text-blue-600">
-                    {order.netCryptoAmount} {order.cryptoCurrency}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">Platform Fee</p>
-                  <p className="font-medium text-orange-600">
-                    {order.platformFee} {order.cryptoCurrency}
+                    {order.side === "SELL"
+                      ? (order.netCryptoAmount ?? "—")
+                      : order.cryptoAmount} {order.cryptoCurrency}
                   </p>
                 </div>
               </div>
