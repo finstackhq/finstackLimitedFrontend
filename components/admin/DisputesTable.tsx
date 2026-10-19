@@ -5,7 +5,9 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useIsMobile } from '../../hooks/use-mobile';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Eye, 
   MessageCircle, 
@@ -37,7 +39,7 @@ interface Dispute {
   };
   amount: number;
   currency: string;
-  status: 'open' | 'under_review' | 'resolved' | 'escalated';
+  status: 'open' | 'under_review' | 'resolved' | 'cancelled' | 'escalated';
   priority: 'low' | 'medium' | 'high';
   category: 'payment_issue' | 'trade_terms' | 'account_issue' | 'fraud_suspicion';
   description: string;
@@ -77,21 +79,34 @@ interface Dispute {
   };
 }
 
+type ResolutionAction = 'RELEASE' | 'CANCEL';
+
 interface DisputesTableProps {
   disputes: Dispute[];
+  onDisputeResolved: () => void | Promise<void>;
 }
 
-export function DisputesTable({ disputes }: DisputesTableProps) {
+export function DisputesTable({ disputes, onDisputeResolved }: DisputesTableProps) {
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
+  const [qrPreview, setQrPreview] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
+  const [resolutionAction, setResolutionAction] = useState<ResolutionAction | ''>('');
   const [resolving, setResolving] = useState(false);
   const isMobile = useIsMobile();
+  const { toast } = useToast();
+
+  const openDispute = (dispute: Dispute) => {
+    setSelectedDispute(dispute);
+    setNewMessage('');
+    setResolutionAction('');
+  };
 
   const getStatusBadge = (status: Dispute['status']) => {
     const variants = {
       open: 'bg-yellow-100 text-yellow-800 border-yellow-200',
       under_review: 'bg-blue-100 text-blue-800 border-blue-200',
       resolved: 'bg-green-100 text-green-800 border-green-200',
+      cancelled: 'bg-gray-100 text-gray-700 border-gray-200',
       escalated: 'bg-red-100 text-red-800 border-red-200'
     };
 
@@ -99,6 +114,7 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
       open: 'Open',
       under_review: 'Under Review',
       resolved: 'Resolved',
+      cancelled: 'Cancelled',
       escalated: 'Escalated'
     };
 
@@ -148,7 +164,7 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
   };
 
   const handleResolveDispute = async () => {
-    if (!selectedDispute) return;
+    if (!selectedDispute || !resolutionAction || selectedDispute.status !== 'open') return;
     setResolving(true);
     
     try {
@@ -157,29 +173,37 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
       const res = await fetch(`/api/admin/trades/${selectedDispute.tradeId}/resolve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resolutionNote: note })
+        body: JSON.stringify({ action: resolutionAction, resolutionNote: note })
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
-      if (data.success) {
+      if (res.ok && data.success) {
         setSelectedDispute(null);
-        alert('Dispute resolved successfully');
-        window.location.reload(); 
+        toast({
+          title: 'Dispute resolved',
+          description: resolutionAction === 'RELEASE'
+            ? 'The trade was completed and escrow released.'
+            : 'The trade was cancelled and escrow reversed.',
+        });
+        await onDisputeResolved();
       } else {
-        alert(data.error || 'Failed to resolve dispute');
+        toast({
+          title: 'Resolution failed',
+          description: data.error || 'Failed to resolve dispute.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error('Error resolving dispute:', error);
-      alert('An error occurred');
+      toast({
+        title: 'Resolution failed',
+        description: 'Unable to resolve dispute. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
         setResolving(false);
     }
-  };
-
-  const handleSendMessage = async () => {
-      // Placeholder for sending message logic if implemented
-      alert("Message sending not implemented yet");
   };
 
   return (
@@ -187,7 +211,7 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
       {/* Mobile View */}
       <div className="md:hidden space-y-4">
         {disputes.map((dispute) => (
-          <div key={dispute.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4" onClick={() => setSelectedDispute(dispute)}>
+          <div key={dispute.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4" onClick={() => openDispute(dispute)}>
             <div className="flex justify-between items-start">
               <div>
                 <p className="font-semibold text-gray-900">{dispute.tradeId}</p>
@@ -229,7 +253,7 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {disputes.map((dispute) => (
-              <tr key={dispute.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setSelectedDispute(dispute)}>
+              <tr key={dispute.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => openDispute(dispute)}>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-gray-100 rounded-lg text-gray-500">
@@ -262,7 +286,7 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
                 </td>
 
                 <td className="px-6 py-4 text-right">
-                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedDispute(dispute); }}>
+                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openDispute(dispute); }}>
                     <Eye className="w-4 h-4 text-gray-500" />
                   </Button>
                 </td>
@@ -395,7 +419,14 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
                                  {selectedDispute.paymentDetails.alipayQrImage && (
                                      <div className="col-span-2 mt-2">
                                          <p className="text-xs text-gray-500 uppercase mb-2">Alipay QR Code</p>
-                                         <img src={selectedDispute.paymentDetails.alipayQrImage} alt="Alipay QR" className="w-32 h-32 object-contain border rounded-lg" />
+                                         <button
+                                           type="button"
+                                           onClick={() => setQrPreview(selectedDispute.paymentDetails!.alipayQrImage!)}
+                                           aria-label="Enlarge Alipay QR code"
+                                           className="cursor-zoom-in rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                                         >
+                                           <img src={selectedDispute.paymentDetails.alipayQrImage} alt="Alipay QR code. Activate to enlarge." className="h-32 w-32 rounded-lg border object-contain" />
+                                         </button>
                                      </div>
                                  )}
                               </div>
@@ -488,31 +519,70 @@ export function DisputesTable({ disputes }: DisputesTableProps) {
                        </div>
 
                        <div className="p-4 border-t border-gray-100 bg-white space-y-3">
+                          <label htmlFor="resolution-action" className="block text-sm font-medium text-gray-700">
+                            Resolution action
+                          </label>
+                          <Select
+                            value={resolutionAction}
+                            onValueChange={(value) => {
+                              setResolutionAction(value as ResolutionAction);
+                            }}
+                            disabled={selectedDispute.status !== 'open' || resolving}
+                          >
+                            <SelectTrigger id="resolution-action">
+                              <SelectValue placeholder="Choose an outcome" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="RELEASE">Release escrow and complete trade</SelectItem>
+                              <SelectItem value="CANCEL">Cancel trade and reverse escrow</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <Textarea 
                              value={newMessage}
                              onChange={(e) => setNewMessage(e.target.value)}
-                             placeholder="Type entry or resolution note..."
+                             placeholder="Optional resolution note..."
                              className="resize-none min-h-[80px]"
                           />
-                          <div className="grid grid-cols-2 gap-3">
-                             <Button variant="outline" onClick={handleSendMessage}>
-                                Add Note
-                             </Button>
-                             <Button 
-                                onClick={handleResolveDispute} 
-                                className="bg-green-600 hover:bg-green-700 text-white"
-                                disabled={selectedDispute.status === 'resolved' || resolving}
-                             >
-                                {resolving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                                {resolving ? 'Resolving...' : 'Resolve Dispute'}
-                             </Button>
-                          </div>
+                          {selectedDispute.status !== 'open' && (
+                            <p className="text-xs text-amber-700" role="status">
+                              Only pending disputes can be resolved.
+                            </p>
+                          )}
+                          <Button
+                            onClick={handleResolveDispute}
+                            className={resolutionAction === 'CANCEL' ? 'w-full bg-red-600 text-white hover:bg-red-700' : 'w-full bg-green-600 text-white hover:bg-green-700'}
+                            disabled={selectedDispute.status !== 'open' || !resolutionAction || resolving}
+                          >
+                            {resolving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            {resolving
+                              ? 'Resolving...'
+                              : resolutionAction === 'RELEASE'
+                                ? 'Confirm release and resolve'
+                                : resolutionAction === 'CANCEL'
+                                  ? 'Confirm cancellation and resolve'
+                                  : 'Choose an action to resolve'}
+                          </Button>
                        </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!qrPreview} onOpenChange={(open) => !open && setQrPreview(null)}>
+        <DialogContent className="max-h-[90vh] w-[90vw] max-w-2xl overflow-hidden sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Alipay QR Code</DialogTitle>
+          </DialogHeader>
+          {qrPreview && (
+            <img
+              src={qrPreview}
+              alt="Enlarged Alipay QR code"
+              className="mx-auto max-h-[75vh] max-w-full object-contain"
+            />
           )}
         </DialogContent>
       </Dialog>
