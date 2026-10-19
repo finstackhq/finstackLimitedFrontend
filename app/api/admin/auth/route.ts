@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 
 // Admin login now proxies to backend login and gates by role
 export async function POST(request: NextRequest) {
@@ -43,9 +42,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Set admin session cookie for middleware to authorize /admin routes
-    const cookieStore = await cookies();
-    cookieStore.set("admin_session", "authenticated", {
+    const response = NextResponse.json({
+      success: true,
+      user: (data as any)?.user ?? null,
+    });
+
+    // Set cookies on the response returned to the browser.
+    response.cookies.set("admin_session", "authenticated", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -59,29 +62,16 @@ export async function POST(request: NextRequest) {
       (data as any)?.accessToken ||
       (data as any)?.token;
     if (accessToken) {
-      try {
-        cookieStore.set("access_token", accessToken, {
-          httpOnly: true,
-          // Use secure cookies in production; allow non-secure on localhost dev
-          secure: process.env.NODE_ENV === "production",
-          // Lax is sufficient for same-site requests from the app
-          sameSite: "lax",
-          path: "/",
-          maxAge: 60 * 60 * 24,
-        });
-      } catch (e) {
-        console.warn(
-          "[admin/auth] failed to set access_token cookie:",
-          (e as any)?.message || e,
-        );
-      }
+      response.cookies.set("access_token", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24,
+      });
     }
 
-    // Optionally include user and role in response for the client
-    return NextResponse.json({
-      success: true,
-      user: (data as any)?.user ?? null,
-    });
+    return response;
   } catch (error: any) {
     console.error("[admin/auth] error:", error?.message || error);
     return NextResponse.json(
