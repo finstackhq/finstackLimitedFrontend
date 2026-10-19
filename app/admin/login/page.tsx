@@ -55,7 +55,7 @@ export default function AdminLogin() {
           title: "Welcome back!",
           description: "You have successfully logged in.",
         })
-        router.push('/admin');
+        window.location.assign('/admin');
       } else {
         setError(data.error || 'Invalid credentials');
       }
