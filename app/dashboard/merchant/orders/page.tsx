@@ -485,6 +485,18 @@ export default function MerchantOrdersPage() {
                         (order.expiresAt.getTime() - Date.now()) / 1000 / 60,
                       ),
                     )}{" "}
+                    min
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <Button size="sm">View Details</Button>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
 }
