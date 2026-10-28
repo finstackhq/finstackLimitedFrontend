@@ -10,24 +10,6 @@ export async function GET(request: NextRequest) {
         p2pTransfersEnabled: true,
         kycRequired: true,
       },
-      announcements: [
-        {
-          id: "ANN001",
-          title: "System Maintenance",
-          message: "Scheduled maintenance on Sunday 12AM - 2AM UTC",
-          type: "warning",
-          active: true,
-          createdAt: "2024-10-01T10:00:00Z",
-        },
-        {
-          id: "ANN002",
-          title: "New Feature",
-          message: "Introducing instant EUR transfers!",
-          type: "info",
-          active: false,
-          createdAt: "2024-09-28T14:30:00Z",
-        },
-      ],
     };
 
     return NextResponse.json(settings);
@@ -48,18 +30,6 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: "Setting updated successfully",
-      });
-    }
-
-    if (type === "announcement") {
-      const { id, action, announcement } = data;
-      if (action === "create") {
-      } else if (action === "toggle") {
-      } else if (action === "delete") {
-      }
-      return NextResponse.json({
-        success: true,
-        message: "Announcement updated successfully",
       });
     }
 
