@@ -188,6 +188,40 @@ function statusStyle(status: string): string {
   return 'bg-gray-100 text-gray-700';
 }
 
+function statusLabel(status: string): string {
+  switch (status) {
+    case 'QUEUED':
+      return 'Waiting in queue';
+    case 'PROCESSING':
+      return 'Sending';
+    case 'COMPLETED':
+      return 'Completed';
+    case 'COMPLETED_WITH_ERRORS':
+      return 'Completed with failures';
+    case 'FAILED':
+      return 'Failed';
+    default:
+      return status.replaceAll('_', ' ').toLowerCase();
+  }
+}
+
+function statusDescription(status: string): string {
+  switch (status) {
+    case 'QUEUED':
+      return 'The backend accepted this announcement, but the delivery worker has not finished processing it. Refresh progress later. If it stays queued, ask your technical team to check the email queue worker. Do not send it again; that creates a duplicate.';
+    case 'PROCESSING':
+      return 'The delivery worker is processing recipient emails. Progress refreshes automatically for up to 30 seconds; you can refresh manually afterward.';
+    case 'COMPLETED':
+      return 'All recipient emails were accepted by the email service. This confirms handoff to the service, not that every message reached an inbox.';
+    case 'COMPLETED_WITH_ERRORS':
+      return 'Delivery processing finished, but some recipient emails failed. Review the failed-recipient records below.';
+    case 'FAILED':
+      return 'The announcement could not be completed. Review the failure details and ask your technical team for help before creating another announcement.';
+    default:
+      return 'The backend returned an unrecognized status. Refresh progress or ask your technical team to investigate.';
+  }
+}
+
 export function AnnouncementSettings() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -197,6 +231,7 @@ export function AnnouncementSettings() {
   const [announcementSending, setAnnouncementSending] = useState(false);
   const testRequestInFlight = useRef(false);
   const announcementRequestInFlight = useRef(false);
+  const progressSectionRef = useRef<HTMLDivElement>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [queueResult, setQueueResult] = useState<QueueResult | null>(null);
@@ -297,6 +332,11 @@ export function AnnouncementSettings() {
         const record = payload as Record<string, unknown>;
         const announcement = normalizeAnnouncement(record.data);
         setSelectedAnnouncement(announcement);
+        setQueueResult((current) =>
+          current?.id === id
+            ? { ...current, status: announcement.status }
+            : current,
+        );
 
         if (includeRecipients) {
           if (!Array.isArray(record.recipients)) {
@@ -371,6 +411,15 @@ export function AnnouncementSettings() {
 
     return () => window.clearTimeout(timer);
   }, [loadDetails, pollCount, polling, selectedAnnouncement, selectedId]);
+
+  useEffect(() => {
+    if (selectedId) {
+      progressSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  }, [selectedId]);
 
   const handleTestEmail = async () => {
     if (testRequestInFlight.current) return;
@@ -609,7 +658,13 @@ export function AnnouncementSettings() {
 
           {queueResult && (
             <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-              <p className="font-semibold">Announcement queued (not delivered yet)</p>
+              <p className="font-semibold">
+                Announcement accepted · {statusLabel(queueResult.status)}
+              </p>
+              <p className="mt-1">
+                “Accepted” confirms the backend received it. Check delivery
+                progress below for the latest recipient counts.
+              </p>
               <dl className="mt-2 grid gap-1 sm:grid-cols-3">
                 <div>
                   <dt className="font-medium">ID</dt>
@@ -617,7 +672,7 @@ export function AnnouncementSettings() {
                 </div>
                 <div>
                   <dt className="font-medium">Status</dt>
-                  <dd>{queueResult.status}</dd>
+                  <dd>{statusLabel(queueResult.status)}</dd>
                 </div>
                 <div>
                   <dt className="font-medium">Recipients</dt>
@@ -671,6 +726,12 @@ export function AnnouncementSettings() {
             <p className="mt-1 text-sm text-gray-500">
               {history.total.toLocaleString()} announcements
             </p>
+            <p className="mt-1 max-w-2xl text-xs text-gray-500">
+              Queued = waiting to send · Sending = in progress · Completed =
+              accepted by the email service (not confirmation of inbox receipt)
+              · Completed with failures = some addresses failed · Failed =
+              processing stopped.
+            </p>
           </div>
           <Button
             variant="outline"
@@ -703,25 +764,22 @@ export function AnnouncementSettings() {
               {history.announcements.map((announcement) => (
                 <article
                   key={announcement.id}
-                  className="rounded-md border border-gray-200 p-4"
+                  className="rounded-md border border-gray-200 px-4 py-3"
                 >
-                  <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                  <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                     <div className="min-w-0">
-                      <div className="mb-1 flex flex-wrap items-center gap-2">
-                        <h3 className="font-medium text-gray-900">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate font-medium text-gray-900">
                           {announcement.title || 'Untitled announcement'}
                         </h3>
                         <Badge className={statusStyle(announcement.status)}>
-                          {announcement.status}
+                          {statusLabel(announcement.status)}
                         </Badge>
                       </div>
-                      <div className="max-h-24 overflow-hidden">
-                        <AnnouncementBody body={announcement.body} />
-                      </div>
-                      <p className="mt-2 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-gray-500">
                         Queued {formatDate(announcement.createdAt)} ·{' '}
                         {announcement.recipientCount.toLocaleString()} recipients ·{' '}
-                        {announcement.sentCount.toLocaleString()} sent ·{' '}
+                        {announcement.sentCount.toLocaleString()} accepted ·{' '}
                         {announcement.failedCount.toLocaleString()} failed
                       </p>
                     </div>
@@ -730,13 +788,19 @@ export function AnnouncementSettings() {
                       size="sm"
                       onClick={() => void openAnnouncement(announcement.id)}
                     >
-                      View progress
+                      Track delivery
                     </Button>
                   </div>
                 </article>
               ))}
             </div>
           )}
+
+          <p className="rounded-md bg-gray-50 px-3 py-2 text-xs text-gray-600">
+            History is retained for review. Deleting announcements is not
+            currently supported by the backend, so this page does not offer a
+            delete action.
+          </p>
 
           <div className="flex items-center justify-between border-t pt-4">
             <Button
@@ -765,11 +829,14 @@ export function AnnouncementSettings() {
       </Card>
 
       {selectedId && (
+        <div ref={progressSectionRef} className="scroll-mt-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <div>
-              <CardTitle>Delivery progress</CardTitle>
-              <p className="mt-1 break-all text-sm text-gray-500">{selectedId}</p>
+              <CardTitle>Delivery status</CardTitle>
+              <p className="mt-1 break-all text-xs text-gray-500">
+                Announcement ID: {selectedId}
+              </p>
             </div>
             <Button
               variant="outline"
@@ -796,14 +863,26 @@ export function AnnouncementSettings() {
                     {selectedAnnouncement.title || 'Untitled announcement'}
                   </h3>
                   <Badge className={statusStyle(selectedAnnouncement.status)}>
-                    {selectedAnnouncement.status}
+                    {statusLabel(selectedAnnouncement.status)}
                   </Badge>
                 </div>
+                <p className="rounded-md bg-gray-50 p-3 text-sm text-gray-700">
+                  {statusDescription(selectedAnnouncement.status)}
+                </p>
+
+                <details className="rounded-md border border-gray-200 px-3 py-2">
+                  <summary className="cursor-pointer text-sm font-medium text-gray-700">
+                    Review email content
+                  </summary>
+                  <div className="mt-3 border-t pt-3">
+                    <AnnouncementBody body={selectedAnnouncement.body} />
+                  </div>
+                </details>
 
                 <div className="grid gap-3 sm:grid-cols-4">
                   {[
                     ['Recipients', selectedAnnouncement.recipientCount],
-                    ['Sent', selectedAnnouncement.sentCount],
+                    ['Accepted by email service', selectedAnnouncement.sentCount],
                     ['Failed', selectedAnnouncement.failedCount],
                     ['Pending', selectedAnnouncement.pendingCount],
                   ].map(([label, count]) => (
@@ -961,6 +1040,7 @@ export function AnnouncementSettings() {
             ) : null}
           </CardContent>
         </Card>
+        </div>
       )}
 
       <AlertDialog
