@@ -9,7 +9,7 @@ A clean, modern admin dashboard for the Finstack money transfer platform.
 - **KYC Management**: Review and approve/reject KYC requests for foreign users
 - **User Management**: View, search, suspend/activate, and manage user accounts
 - **Transaction Monitoring**: View all transactions with filtering and CSV export
-- **System Settings**: Control system toggles and manage announcements
+- **System Settings**: Manage transaction fee settings and authenticated email announcements
 
 ## Access
 
@@ -69,7 +69,7 @@ ADMIN_PASSWORD=YourSecurePasswordHere
 - `TransactionsTable` - Transaction monitoring
 - `PasswordSettings` - Admin password change
 - `SystemSettings` - System toggle controls
-- `AnnouncementSettings` - User announcement management
+- `AnnouncementSettings` - Compose test emails, queue email announcements for all users, and review delivery history
 
 ## Usage
 
@@ -80,7 +80,7 @@ ADMIN_PASSWORD=YourSecurePasswordHere
 
 ## Data
 
-Currently uses mock data for demonstration. Replace API calls in the route handlers with actual database queries for production use.
+Admin email announcements use the authenticated backend announcement API. Other admin areas may still use mock data for demonstration; verify the corresponding route handlers before deploying them.
 
 ## Security Notes
 

@@ -6,6 +6,7 @@
     "build": "next build",
     "dev": "node --max-old-space-size=8192 node_modules/next/dist/bin/next dev",
     "lint": "next lint",
+    "test": "node --test tests/admin-announcement-utils.test.mjs",
     "start": "next start"
   },
   "dependencies": {
